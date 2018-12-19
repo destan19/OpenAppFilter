@@ -1,2 +1,2 @@
 # OpenAppFilter
-app filter kernel  module
+通过netfilter框架实现app过滤，类似企业级路由器行为管理模块
