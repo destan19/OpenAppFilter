@@ -3,7 +3,7 @@
 #define AF_DEBUG printk
 #define AF_ERROR printk
 #define AF_INFO printk
-
+#define AF_VERSION "1.0.1"
 //#define CONFIG_KERNEL_FUNC_TEST 1
 
 #define HTTP_GET_METHOD_STR "GET"
@@ -18,6 +18,10 @@
 
 #define AF_TRUE 1
 #define AF_FALSE 0
+
+#define HTTPS_URL_OFFSET		9
+#define HTTPS_LEN_OFFSET		7
+
 enum e_http_method{
 	HTTP_METHOD_GET = 1,
 	HTTP_METHOD_POST,
@@ -35,7 +39,7 @@ typedef struct http_proto{
 
 typedef struct https_proto{
 	int match;
-	char url_pos;
+	char *url_pos;
 	int url_len;
 }https_proto_t;
 

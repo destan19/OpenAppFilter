@@ -65,6 +65,56 @@ int parse_flow_base(struct sk_buff *skb, flow_info_t *flow)
 }
 
 
+/*
+	desc: 解析https url信息，保存到flow中
+	return:
+		-1: error
+		0: match
+	author: Derry
+	Date:2018/12/19
+*/
+int parse_https_proto(flow_info_t *flow) {
+	int i ;
+	short url_len = 0 ;
+	char * p = flow->l4_data;
+	int data_len = flow->l4_len;
+	
+	if (NULL == flow) {
+		AF_ERROR("flow is NULL\n");
+		return -1;
+	}
+	if (NULL == p || data_len == 0) {
+		return -1;
+	}
+	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01))
+		return -1;
+	
+	for(i = 0; i < data_len; i++) {
+		if(i + HTTPS_URL_OFFSET >= data_len) {
+			return -1;
+		}
+		
+		if(p[i] == 0x0 && p[i + 1] == 0x0 && p[i + 2] == 0x0 && p[i + 3] != 0x0) {
+			// 2 bytes
+			memcpy(&url_len , p + i + HTTPS_LEN_OFFSET, 2);
+			if(ntohs(url_len) <= 0 || ntohs(url_len) > data_len) {
+				continue ;
+			}
+			
+			if(i + HTTPS_URL_OFFSET + ntohs(url_len) < data_len) {
+				//dump_hex("https hex", p, data_len);
+				flow->https.match = AF_TRUE;
+				flow->https.url_pos = p + i + HTTPS_URL_OFFSET;
+				//dump_str("https url", flow->https.url_pos, 5);
+				flow->https.url_len = ntohs(url_len);
+				return 0;              
+			}
+		}
+	}
+	return -1;
+}
+
+
 void parse_http_proto(flow_info_t *flow) 
 {
 	if (!flow) {
@@ -140,6 +190,22 @@ static void dump_http_flow_info(http_proto_t *http) {
 
 	printk("--------------------------------------------------------\n\n\n");
 }
+static void dump_https_flow_info(https_proto_t *https) {
+	if (!https) {
+		AF_ERROR("https ptr is NULL\n");
+		return ;
+	}
+	if (!https->match)
+		return;	
+	
+
+	if (https->url_len > 0 && https->url_pos){
+		printk("url len = %d\n",https->url_len);
+		dump_str("https server name", https->url_pos, https->url_len);
+	}
+
+	printk("--------------------------------------------------------\n\n\n");
+}
 
 static void dump_flow_info(flow_info_t *flow)
 {
@@ -162,6 +228,9 @@ static void dump_flow_info(flow_info_t *flow)
 					flow->sport, flow->dport, flow->l4_len);
 			dump_http_flow_info(&flow->http);
 		}
+		if (AF_TRUE == flow->https.match) {
+			dump_https_flow_info(&flow->https);
+		}
 	}
 	else if (flow->l4_protocol == IPPROTO_UDP) {
 		//	printk("protocol:UDP ,sport: %-8d, dport: %-8d, data_len: %-8d\n",
@@ -182,12 +251,14 @@ static u_int32_t app_filter_hook(unsigned int hook,
 	struct nf_conn *ct = (struct nf_conn *)pskb->nfct;
 	
 	if (ct == NULL) {
+		AF_ERROR("ct is null\n");
         return NF_ACCEPT;
     }
 	flow_info_t flow;
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	parse_flow_base(pskb, &flow);
 	parse_http_proto(&flow);
+	parse_https_proto(&flow);
 	dump_flow_info(&flow);
 	// todo: match url rules
 	// this is example
@@ -195,7 +266,15 @@ static u_int32_t app_filter_hook(unsigned int hook,
 		if (flow.http.host_pos && 
 			strnstr(flow.http.host_pos, "sohu", flow.http.host_len)){
 			
-			dump_str("Drop url ",flow.http.host_pos, flow.http.host_len);
+			dump_str("Drop http url ",flow.http.host_pos, flow.http.host_len);
+			return NF_DROP;
+		}
+	}
+	if (flow.https.match == AF_TRUE) {
+		if (flow.https.url_pos && 
+			strnstr(flow.https.url_pos, "hao123", flow.https.url_len)){
+			
+			dump_str("Drop https url ",flow.https.url_pos, flow.https.url_len);
 			return NF_DROP;
 		}
 	}
@@ -227,6 +306,7 @@ static void app_filter_fini(void)
 */
 static int __init app_filter_init(void)
 {
+	AF_INFO("appfilter version:"AF_VERSION"\n");
 	AF_DEBUG("app filter module init\n");
 	nf_register_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));
 	printk("init app filter ........ok\n");

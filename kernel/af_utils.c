@@ -16,7 +16,7 @@ int check_local_network_ip(unsigned int ip)
 		return 0;
 }
 
-void dump_str(char *name, char *p, int len)
+void dump_str(char *name, unsigned char *p, int len)
 {
 	#define MAX_DUMP_STR_LEN 64
 	int i;
@@ -30,4 +30,19 @@ void dump_str(char *name, char *p, int len)
 	printk("\n");
 }
 
+void dump_hex(char *name, unsigned char *p, int len)
+{
+	#define MAX_DUMP_STR_LEN 64
+	int i;
+	if (len > MAX_DUMP_STR_LEN) {
+		len = MAX_DUMP_STR_LEN - 1;
+	}
+	printk("%s: ",name);
+	for (i = 0; i < len; i++) {
+		if (i % 16 == 0)
+			printk("\n");
+		printk("%02X ",*(p + i));
+	}
+	printk("\n");
+}
 
