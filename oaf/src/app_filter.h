@@ -1,6 +1,6 @@
 #ifndef APP_FILTER_H
 #define APP_FILTER_H
-#define AF_DEBUG printk
+#define AF_DEBUG  if(0) printk
 #define AF_ERROR printk
 #define AF_INFO printk
 #define AF_VERSION "1.0.1"
@@ -18,6 +18,9 @@
 
 #define AF_TRUE 1
 #define AF_FALSE 0
+
+#define AF_APP_TYPE(a) (a) / 1000
+#define AF_APP_ID(a) (a) % 1000
 
 #define HTTPS_URL_OFFSET		9
 #define HTTPS_LEN_OFFSET		7
@@ -55,5 +58,11 @@ typedef struct flow_info{
 	http_proto_t http;
 	https_proto_t https;
 }flow_info_t;
+
+int af_register_dev(void);
+void af_unregister_dev(void);
+void af_init_app_status(void);
+int af_get_app_status(int appid);
+int regexp_match(char *reg, char *text);
 
 #endif
