@@ -789,13 +789,14 @@ static u_int32_t app_filter_hook(unsigned int hook,
 					           const struct net_device *out,
 					           int (*okfn)(struct sk_buff *)){
 #endif
+	unsigned long long total_packets = 0;
+	flow_info_t flow;
 // 4.10-->4.11 nfct-->_nfct
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0)
 	struct nf_conn *ct = (struct nf_conn *)skb->_nfct;
 #else
 	struct nf_conn *ct = (struct nf_conn *)skb->nfct;
 #endif
-	unsigned long long total_packets = 0;
 
 	if (ct == NULL) {
 		//AF_ERROR("ct is null\n");
@@ -808,18 +809,25 @@ static u_int32_t app_filter_hook(unsigned int hook,
 		return NF_DROP;
 	}
 #endif
-
-	struct nf_conn_counter *acct;
+// 3.12.74-->3.13-rc1
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
+	struct nf_conn_acct *acct;
 	acct = nf_conn_acct_find(ct);
 	if (!acct)
 		return NF_ACCEPT;
-
-	total_packets = (unsigned long long)atomic64_read(&acct[IP_CT_DIR_ORIGINAL].packets) 
-		+ (unsigned long long)atomic64_read(&acct[IP_CT_DIR_REPLY].packets);
+	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) 
+		+ (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
+#else
+	struct nf_conn_counter *counter;
+	counter = nf_conn_acct_find(ct);
+	if (!counter)
+		return NF_ACCEPT;	
+	total_packets = (unsigned long long)atomic64_read(&counter[IP_CT_DIR_ORIGINAL].packets) 
+		+ (unsigned long long)atomic64_read(&counter[IP_CT_DIR_REPLY].packets);
+#endif
 	if (total_packets > MAX_PARSE_PKT_NUM){
 		return NF_ACCEPT;
 	}
-	flow_info_t flow;
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	parse_flow_base(skb, &flow);
 	parse_http_proto(&flow);
