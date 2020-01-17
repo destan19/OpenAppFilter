@@ -11,7 +11,11 @@ OpenWrt 19.07、 LEDE等主流版本
 	- 限制员工使用某些app， 如视频、招聘、购物、游戏、常用网站等
 	- 记录终端的上网记录，实时了解当前app使用情况，比如xxx正在访问抖音
 	
-	
+## 插件截图
+![main1] (https://github.com/destan19/images/blob/master/oaf/main1.png)
+
+![main2] (https://github.com/destan19/images/blob/master/oaf/main2.png)
+
 ## 支持app列表(只列主流)
  - 游戏
    王者荣耀 英雄联盟 欢乐斗地主 梦幻西游 明日之后 ...
