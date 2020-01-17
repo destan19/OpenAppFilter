@@ -16,6 +16,7 @@ OpenWrt 19.07、 LEDE等主流版本
 
 ![main2] (https://github.com/destan19/images/blob/master/oaf/main2.png)
 
+![image](https://github.com/AngelSXD/sxd_first_repository/blob/master/images/20160615165142.png)
 ## 支持app列表(只列主流)
  - 游戏
    王者荣耀 英雄联盟 欢乐斗地主 梦幻西游 明日之后 ...
