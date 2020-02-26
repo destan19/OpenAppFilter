@@ -51,7 +51,6 @@ open-app-filter  	应用层服务和脚本
 make package/oaf/compile V=s
 make package/open-app-filter/compile V=s
 make package/luci-app-oaf/compile V=s
-
 编译完成后在bin目录的子目录中会出现四个ipk文件
 可以直接用
 find bin/ -name "*oaf*"
