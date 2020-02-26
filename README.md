@@ -33,9 +33,9 @@ OpenWrt 19.07、 LEDE等主流版本
 
 ## 编译说明
 1. 下载OpenWrt源码，并完成编译(OpenWrt公众号有相关教程）
-git clone https://github.com/destan19/openwrt.git
+> git clone https://github.com/destan19/openwrt.git
 2. 下载应用过滤源码放到OpenWrt的package 目录
-cd package
+> cd package
 git clone https://github.com/destan19/OpenAppFilter.git
 下载成功后目录中悔有三个文件夹
 luci-app-oaf   		luci界面安装包，包含中文语言包
@@ -43,12 +43,12 @@ oaf   			内核模块包
 open-app-filter  	应用层服务和脚本
 	
 3. make menuconfig 勾选应用过滤模块，
-在luci app中选上 luci oaf模块并保存
+> 在luci app中选上 luci oaf模块并保存
 
 4. 编译应用过滤模块
 - 方案1： OpenWrt项目全部重新编译   make V=s 
 - 方案2:  只编译应用过滤单个模块
-make package/oaf/compile V=s
+> make package/oaf/compile V=s
 make package/open-app-filter/compile V=s
 make package/luci-app-oaf/compile V=s
 编译完成后在bin目录的子目录中会出现四个ipk文件
