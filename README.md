@@ -46,8 +46,8 @@ open-app-filter  	应用层服务和脚本
 在luci app中选上 luci oaf模块并保存
 
 4. 编译应用过滤模块
-方案1： OpenWrt项目全部重新编译   make V=s
-方案2:  只编译应用过滤单个模块
+- 方案1： OpenWrt项目全部重新编译   make V=s 
+- 方案2:  只编译应用过滤单个模块
 make package/oaf/compile V=s
 make package/open-app-filter/compile V=s
 make package/luci-app-oaf/compile V=s
