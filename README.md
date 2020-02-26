@@ -54,8 +54,9 @@ make package/luci-app-oaf/compile V=s
 
 编译完成后在bin目录的子目录中会出现四个ipk文件
 可以直接用
-> find bin/ -name "*oaf*"
-> find bin/ -name "*appfilter*" 查询出ipk文件的位置
+- find bin/ -name "*oaf*"
+- find bin/ -name "*appfilter*" 
+查询出ipk文件的位置
 ## 使用说明
 - 建议小白直接刷固件来只用应用过滤功能，因为ipk文件安装很可能安装失败，因为版本不一致。
 - 刷机后第一次可能出现页面没有显示app列表的问题，可以保存下进行初始化。
