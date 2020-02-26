@@ -1,4 +1,4 @@
-# OpenAppFilter功能简介
+## OpenAppFilter功能简介
 
 OpenAppFilter模块基于数据流深度识别技术，实现对单个app进行管控的功能，并支持上网记录统计
 
@@ -6,20 +6,20 @@ OpenAppFilter模块基于数据流深度识别技术，实现对单个app进行�
 
 OpenWrt 19.07、 LEDE等主流版本
 
-## 主要使用场景
+### 主要使用场景
 	- 家长对小孩上网行为进行管控，限制小孩玩游戏等
 	- 限制员工使用某些app， 如视频、招聘、购物、游戏、常用网站等
 	- 记录终端的上网记录，实时了解当前app使用情况，比如xxx正在访问抖音
 	
-## 插件截图
-### 1
+### 插件截图
+#### 1
 ![main1](https://github.com/destan19/images/blob/master/oaf/main1.png)
 
 
-### 2
+#### 2
 ![main2](https://github.com/destan19/images/blob/master/oaf/main2.png)
 
-## 支持app列表(只列主流)
+### 支持app列表(只列主流)
  - 游戏
    王者荣耀 英雄联盟 欢乐斗地主 梦幻西游 明日之后 ...
  - 音乐
@@ -31,7 +31,6 @@ OpenWrt 19.07、 LEDE等主流版本
  - 视频
    抖音小视频 斗鱼直播 腾讯视频 爱奇艺 火山小视频 YY 微视 虎牙直播 快手 小红书 ...
 
-# 使用说明
 ## 编译说明
 1. 下载OpenWrt源码，并完成编译(OpenWrt公众号有相关教程）
 git clone https://github.com/destan19/openwrt.git
@@ -59,7 +58,7 @@ make package/luci-app-oaf/compile V=s
 - 建议小白直接刷固件来只用应用过滤功能，因为ipk文件安装很可能安装失败，因为版本不一致。
 - 刷机后第一次可能出现页面没有显示app列表的问题，可以保存下进行初始化。
 - 建议用18.06及以上版本，低版本可能存在访问记录luci页面问题。
-## 模块使用限制
+## 使用限制
 - 必须关闭各种加速模块，如软加速、硬加速等
 - 模块可能与qos等用到了netfilter mark字段的模块冲突， 自行检查
 - 该模块只工作在路由模式， 交换机(桥)模式不会生效
@@ -67,7 +66,7 @@ make package/luci-app-oaf/compile V=s
 - 抖音等视频软件，会出现缓存，多刷几次再测试是否能过滤
 - 可能出现某些app不能过滤的问题，一个可能是app特征码改变，也可能是添加的特征库存在问题，可以在Issues中反馈，后面尽可能快速更新
 
-# 技术支持
+## 技术支持
 
 - 微信公众号: OpenWrt
 
