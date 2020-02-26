@@ -33,16 +33,39 @@ OpenWrt 19.07、 LEDE等主流版本
 
 # 使用说明
 ## 编译说明
-- 将该项目clone到openwrt package目录
-- make menuconfig 在luci app中选上 luci oaf模块，保存
-- 编译生成OpenWrt固件升级， 如果出现页面没有app的情况，保存并应用初始化
+1. 下载OpenWrt源码，并完成编译(OpenWrt公众号有相关教程）
+git clone https://github.com/destan19/openwrt.git
+2. 下载应用过滤源码放到OpenWrt的package 目录
+cd package
+git clone https://github.com/destan19/OpenAppFilter.git
+下载成功后目录中悔有三个文件夹
+luci-app-oaf   		luci界面安装包，包含中文语言包
+oaf   			内核模块包
+open-app-filter  	应用层服务和脚本
+	
+3. make menuconfig 勾选应用过滤模块，
+在luci app中选上 luci oaf模块并保存
 
+4. 编译应用过滤模块
+方案1： OpenWrt项目全部重新编译   make V=s
+方案2:  只编译应用过滤单个模块
+make package/oaf/compile V=s
+make package/open-app-filter/compile V=s
+make package/luci-app-oaf/compile V=s
+
+编译完成后在bin目录的子目录中会出现四个ipk文件
+可以直接用find bin/ -name "*oaf*"和find bin/ -name "*appfilter*" 查询出ipk文件的位置
+## 使用说明
+- 建议小白直接刷固件来只用应用过滤功能，因为ipk文件安装很可能安装失败，因为版本不一致。
+- 刷机后第一次可能出现页面没有显示app列表的问题，可以保存下进行初始化。
+- 建议用18.06及以上版本，低版本可能存在访问记录luci页面问题。
 ## 模块使用限制
 - 必须关闭各种加速模块，如软加速、硬加速等
 - 模块可能与qos等用到了netfilter mark字段的模块冲突， 自行检查
 - 该模块只工作在路由模式， 交换机(桥)模式不会生效
 - 可能会存在小概率误判的情况，特别是同一个公司的app，比如淘宝、支付宝等，如果需要过滤，建议相似的app全部勾选
 - 抖音等视频软件，会出现缓存，多刷几次再测试是否能过滤
+- 可能出现某些app不能过滤的问题，一个可能是app特征码改变，也可能是添加的特征库存在问题，可以在Issues中反馈，后面尽可能快速更新
 
 # 技术支持
 
