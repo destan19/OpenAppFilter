@@ -820,6 +820,9 @@ static u_int32_t app_filter_hook(unsigned int hook,
 #else
 	struct nf_conn *ct = (struct nf_conn *)skb->nfct;
 #endif
+	if (!g_oaf_enable){
+		return NF_ACCEPT;
+	}
 	if(ct == NULL) {
         return NF_ACCEPT;
     }

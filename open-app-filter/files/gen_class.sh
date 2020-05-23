@@ -13,7 +13,7 @@ do
         class=`echo $line| grep '#class' | awk '{print $2}'`
 	if ! test -z "$class";then
 		cur_class=$class
-		cur_class_file="/etc/appfilter/${cur_class}.class"
+		cur_class_file="/tmp/appfilter/${cur_class}.class"
 		if [ -e "$cur_class_file" ];then
 			rm $cur_class_file 
 		fi
