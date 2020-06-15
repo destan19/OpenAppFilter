@@ -681,27 +681,36 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 int app_filter_match(flow_info_t *flow)
 {
 	af_feature_node_t *n,*node;
+	af_client_info_t *client = NULL;
 	feature_list_read_lock();
 	if(!list_empty(&af_feature_head)) { 
 		list_for_each_entry_safe(node, n, &af_feature_head, head) {
 			if(af_match_one(flow, node)) 
 			{
 				flow->app_id = node->app_id;
+				client = find_af_client_by_ip(flow->src);
+				if (!client){
+					goto EXIT;
+				}
+				// 如果开启了基于用户的过滤，但没有匹配到用户
+				if (is_user_match_enable() && !find_af_mac(client->mac)){
+					AF_ERROR("not match mac:"MAC_FMT"\n", MAC_ARRAY(client->mac));
+					goto EXIT;
+				}
 				if (af_get_app_status(node->app_id)){
 					flow->drop = AF_TRUE;
 					feature_list_read_unlock();
 					return AF_TRUE;
 				}
 				else {
-					flow->drop = AF_FALSE;
-					feature_list_read_unlock();
-					return AF_FALSE;
+					goto EXIT;
 				}
 			}
 			
-		
 		}
 	}
+EXIT:
+	flow->drop = AF_FALSE;
 	feature_list_read_unlock();
 	return AF_FALSE;
 }
@@ -940,6 +949,7 @@ static int __init app_filter_init(void)
 	AF_INFO("appfilter version:"AF_VERSION"\n");
 	af_log_init();
 	af_register_dev();
+	af_mac_list_init();
 	af_init_app_status();
 	load_feature_config();
 	init_af_client_procfs();
@@ -970,6 +980,7 @@ static void app_filter_fini(void)
 #endif
 
 	af_clean_feature_list();
+	af_mac_list_clear();
 	af_unregister_dev();
 	af_log_exit();
 	af_client_exit();

@@ -22,6 +22,7 @@
 #include "af_client_fs.h"
 #include "af_log.h"
 #include "af_utils.h"
+#include "app_filter.h"
 
 DEFINE_RWLOCK(af_client_lock);            
 

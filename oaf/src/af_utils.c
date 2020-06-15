@@ -296,6 +296,7 @@ static int k_vsscanf(const char *buf, const char *fmt, va_list args)
 	return num;
 }
 
+
 int k_sscanf(const char *buf, const char *fmt, ...)
 {
 	va_list args;
