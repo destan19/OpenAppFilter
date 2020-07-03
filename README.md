@@ -1,10 +1,9 @@
+# 由于最新luci版本修改了架构，应用过滤页面还没有做适配，自编译建议用OpenWrt 18.06
 ## OpenAppFilter功能简介
 
 OpenAppFilter模块基于数据流深度识别技术，实现对单个app进行管控的功能，并支持上网记录统计
 
-该模块支持主流linux版本，目前主要在OpenWrt各版本中测试，支持OpenWrt 15.05、OpenWrt 18.06、
-
-OpenWrt 19.07等主流版本
+该模块支持主流linux版本，目前主要在OpenWrt各版本中测试，支持OpenWrt 15.05、OpenWrt 18.06等主流版本
 
 ### 主要使用场景
 	- 家长对小孩上网行为进行管控，限制小孩玩游戏等
