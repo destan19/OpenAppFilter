@@ -30,7 +30,8 @@ OpenAppFilter模块基于数据流深度识别技术，实现对单个app进行�
 
 ## 编译说明
 1. 下载OpenWrt源码，并完成编译(OpenWrt公众号有相关教程）
-> git clone https://github.com/destan19/openwrt.git
+> git clone https://github.com/coolsnowwolf/lede.git  
+> 或 https://github.com/openwrt/openwrt.git  
 2. 下载应用过滤源码放到OpenWrt的package 目录
 > cd package  
 git clone https://github.com/destan19/OpenAppFilter.git  
