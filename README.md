@@ -40,15 +40,15 @@ cd -
 4. make V=s 编译出带应用过滤功能的OpenWrt固件 
 
 ### 备注 
-在lede中编译，需要去除加速模块，可以直接删除或者make menuconfig不编译加速模块 
- rm package/lean/luci-app-flowoffload -fr 
- rm package/lean/shortcut-fe/ -fr 
- rm package/lean/luci-app-sfe/ -fr 
+在lede中编译，需要去除加速模块，可以直接删除或者make menuconfig不编译加速模块  
+ rm package/lean/luci-app-flowoffload -fr   
+ rm package/lean/shortcut-fe/ -fr   
+ rm package/lean/luci-app-sfe/ -fr   
 
 ## 存在的问题
-- 该模块只工作在路由模式， 旁路模式、桥模式不生效
-- 存在小概率误判的情况，特别是同一个公司的app，比如淘宝、支付宝等，如果需要过滤，建议相似的app全部勾选
-- 暂不兼容OpenWrt主干的luci，如果报错，请使用老一点的版本（OpenWrt18.06或lean 的lede源码）
+- 该模块只工作在路由模式， 旁路模式、桥模式不生效  
+- 存在小概率误判的情况，特别是同一个公司的app，比如淘宝、支付宝等，如果需要过滤，建议相似的app全部勾选  
+- 暂不兼容OpenWrt主干的luci，如果报错，请使用老一点的版本（OpenWrt18.06或lean 的lede源码）  
 ## 技术支持
 
 - 微信公众号: OpenWrt (获取应用过滤最新固件和OpenWrt教程)
