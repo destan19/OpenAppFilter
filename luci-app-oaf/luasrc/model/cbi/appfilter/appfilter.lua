@@ -94,7 +94,15 @@ function get_hostname_by_mac(dst_mac)
 	fd:close()
     return nil
 end
-
+function get_cmd_result(command)
+	local fd      
+	local result
+	fd = io.popen(command);
+	if not fd then return "" end                                              
+	result = fd:read("*l");
+	fd:close()                
+	return result  
+end
 users.widget="checkbox"
 --users.widget="select"
 users.size=1
@@ -107,10 +115,12 @@ while true do
 		break
 	end
 	if not line:match("Ip*") then
-		local ip, hw_type, flags, mac, mask, device = line:match("(%S+) %s+ (%S+) %s+ (%S+) %s+ (%S+) %s+ (%S+) %s+ (%S+)")
+		local ip=get_cmd_result(string.format("echo '%s' | awk '{print $1}'", line))
+		local mac=get_cmd_result(string.format("echo '%s' | awk '{print $4}'", line))
+		local device=get_cmd_result(string.format("echo '%s' | awk '{print $6}'", line))
 		if device ~= nil and mac ~= nil and device:match("lan") then
 			local hostname=get_hostname_by_mac(mac)
-			if not hostname then
+			if not hostname or hostname == "*" then
 				users:value(mac, mac);
 			else
 				users:value(mac, hostname);
