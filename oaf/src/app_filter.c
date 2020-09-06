@@ -854,12 +854,12 @@ static u_int32_t app_filter_hook(unsigned int hook,
 	if (TEST_MODE())
 		dump_flow_info(&flow);
 	app_filter_match(&flow);
-	af_update_client_app_info(&flow);
 	
 	if(flow.drop){
 #if defined(CONFIG_NF_CONNTRACK_MARK)
 		ct->mark |= APP_FILTER_DROP_BITS;
 #endif
+		af_update_client_app_info(&flow);
 		AF_LMT_INFO("##drop appid = %d\n\n\n", flow.app_id);
 		return NF_DROP;
 	}
