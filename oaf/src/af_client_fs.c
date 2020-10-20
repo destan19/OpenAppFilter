@@ -160,6 +160,8 @@ static int af_client_seq_show(struct seq_file *s, void *v)
 	cJSON_Minify(out);
 	seq_printf(s, "%s", out);
 	kfree(out);
+
+    cJSON_Delete(root_obj);
     return 0;
 }
 
