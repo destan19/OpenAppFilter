@@ -41,9 +41,10 @@ cd -
 
 ### 备注 
 在lede中编译，需要去除加速模块，可以直接删除或者make menuconfig不编译加速模块  
- rm package/lean/luci-app-flowoffload -fr   
- rm package/lean/shortcut-fe/ -fr   
- rm package/lean/luci-app-sfe/ -fr   
+冲突的package如下：
+luci-app-flowoffload 
+shortcut-fe
+luci-app-sfe
 
 ## 存在的问题
 - 该模块只工作在路由模式， 旁路模式、桥模式不生效  
