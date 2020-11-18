@@ -24,7 +24,7 @@ local ubus
 
 cfg.__index = cfg
 class.__index = class
-function cfg:init_table(file)
+function cfg:init(file)
     local f = io.open(file, "r")
     local t = {}
     local t2 = {}
@@ -84,15 +84,15 @@ function cfg:lookup(o)
     return nil
 end
 
-function cfg:lookup_class(class)
-    if not class then return UBUS_STATUS_INVALID_ARGUMENT end
-	local t1, t2 = self:lookup(class)
+function cfg:lookup_class(m)
+    if not m then return UBUS_STATUS_INVALID_ARGUMENT end
+	local t1, t2 = self:lookup(m)
 	if type(t1) ~= "table" then return nil end
 	return t1, t2
 end
 
-function cfg:add_class(class)
-    if not class then return UBUS_STATUS_INVALID_ARGUMENT end
+function cfg:add_class(m)
+    if not m then return UBUS_STATUS_INVALID_ARGUMENT end
     local f = io.open(cfg_file, "r+")
     local tab = self
     if f then
@@ -101,7 +101,7 @@ function cfg:add_class(class)
             io.write(v)
             io.write("\n")
         end
-        io.write("#class "..class)
+        io.write("#class "..m)
         f:flush()
         f:close()
         return UBUS_STATUS_OK
@@ -110,12 +110,12 @@ function cfg:add_class(class)
     end
 end
 
-function cfg:add_app(class, name, proto, sport, dport, url, request, dict)
+function cfg:add_app(m, name, proto, sport, dport, url, request, dict)
     if not name then return UBUS_STATUS_INVALID_ARGUMENT end
     local f = io.open(cfg_file, "r+")
     io.output(f)
-    local t1,t2 = self:lookup_class(class)
-    local id = math.modf(string.match(t1[#t1], "(%d+) %S+:") +1)
+    local t1,t2 = self:lookup_class(m)
+    local id = math.modf(string.match(t1[#t1-1], "(%d+) %S+:") +1)
     local str = string.format("%d %s:[%s;%s;%s;%s;%s;%s]", id, name, proto, sport or "", dport or "", url or "", request or "", dict or "")
     table.insert(t1, str)
     if f then
@@ -177,11 +177,10 @@ local methods = {
 		add_class = {
             function(req, msg)
                 if not msg.class then return UBUS_STATUS_INVALID_ARGUMENT end
-				local class = msg.class
-                local t = cfg:init_table(cfg_file)
+                local t = cfg:init(cfg_file)
                 local ret
-                if t:lookup_class(class) then return ubus.reply(req, {ret = UBUS_STATUS_ALREADY_EXISTS}) end
-                ret = t:add_class(class)
+                if t:lookup_class(msg.class) then return ubus.reply(req, {ret = UBUS_STATUS_ALREADY_EXISTS}) end
+                ret = t:add_class(msg.class)
 				ubus.reply(req, {msg = ret})
 			end, {class = libubus.STRING}
         },
@@ -189,7 +188,8 @@ local methods = {
             function (req, msg)
                 if not msg.class then return UBUS_STATUS_INVALID_ARGUMENT end
                 if not msg.name then return UBUS_STATUS_INVALID_ARGUMENT end
-                local t = cfg:init_table(cfg_file)
+				if not msg.proto then return UBUS_STATUS_INVALID_ARGUMENT end
+                local t = cfg:init(cfg_file)
                 local ret
                 if t:lookup(msg.name) then return ubus.reply(req, {ret = UBUS_STATUS_ALREADY_EXISTS}) end
                 ret = t:add_app(msg.class, msg.name, msg.proto, msg.sport, msg.dport, msg.url, msg.request, msg.dict)
@@ -198,21 +198,21 @@ local methods = {
         },
         del_app = {
             function(req, msg)
-                local t = cfg:init_table(cfg_file)
-                ret = t:del_app(msg.id, msg.name)
+                local t = cfg:init(cfg_file)
+                local ret = t:del_app(msg.id, msg.name)
                 ubus.reply(req, {ret = ret})
             end,{id = libubus.INT32, name = libubus.STRING}
         },
         list_class = {
             function (req, msg)
-                local _, c = cfg:init_table(cfg_file)
+                local _, c = cfg:init(cfg_file)
                 ubus.reply(req, {result = c})
             end,{}
         },
         list_app = {
             function (req, msg)
                 if not msg.class then return UBUS_STATUS_INVALID_ARGUMENT end
-                local t  = cfg:init_table(cfg_file)
+                local t  = cfg:init(cfg_file)
                 local ret = {}
                 for i, v in ipairs(t:lookup_class(msg.class)) do
 					if not v:match("#class") then
