@@ -112,12 +112,21 @@ end
 
 function cfg:add_app(m, name, proto, sport, dport, url, request, dict)
     if not name then return UBUS_STATUS_INVALID_ARGUMENT end
+	local id
+	local offset
     local f = io.open(cfg_file, "r+")
     io.output(f)
     local t1,t2 = self:lookup_class(m)
-    local id = math.modf(string.match(t1[#t1-1], "(%d+) %S+:") +1)
+    if t1[#t1] == nil or "" then
+    	offset = 0
+    	id = math.modf(string.match(t1[#t1-1], "(%d+) %S+:") +1)
+    else
+		offset = 1
+		id = math.modf(string.match(t1[#t1], "(%d+) %S+:") +1)
+    end
+     
     local str = string.format("%d %s:[%s;%s;%s;%s;%s;%s]", id, name, proto, sport or "", dport or "", url or "", request or "", dict or "")
-    table.insert(t1, str)
+    table.insert(t1, #t1+offset, str)
     if f then
         for _, v in ipairs(t2) do
 			if v then
@@ -126,7 +135,7 @@ function cfg:add_app(m, name, proto, sport, dport, url, request, dict)
             end
         end
         for _, v in ipairs(t1) do
-			if v then 
+			if v then
 				io.write(v)
 				io.write("\n")
             end
