@@ -4,6 +4,7 @@ START=96
 start() {
 	gen_class.sh /etc/appfilter/feature.cfg
 	appfilter.sh
+	/usr/bin/appfilter &
 }
 
 stop() {

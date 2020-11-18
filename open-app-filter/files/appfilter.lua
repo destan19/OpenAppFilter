@@ -16,144 +16,214 @@ local UBUS_STATUS_UNKNOWN_ERROR = 9
 local UBUS_STATUS_CONNECTION_FAILED = 10
 local UBUS_STATUS_ALREADY_EXISTS = 11
 
-local cfg = "/etc/appfilter/feature.cfg"
+local cfg_file = "/etc/appfilter/feature.cfg"
 
+local cfg = {}
+local class = {}
 local ubus
 
-local function init_table()
-    local f = io.open(cfg, "r")
+cfg.__index = cfg
+class.__index = class
+function cfg:init_table(file)
+    local f = io.open(file, "r")
     local t = {}
+    local t2 = {}
     if f then
-        for l in f:lines() do
-            table.insert(t, l)
-        end
-    end
-    f:close()
-    return t
-end
-
-local function lookup(t, o)
-    if type(t) ~= "table" then return UBUS_STATUS_INVALID_ARGUMENT end
-    if not o then return UBUS_STATUS_INVALID_ARGUMENT end
-
-    for _, v in ipairs(t) do
-        if v:match(o) then
-            if v:match("#class") then
-                local tt = {}
-                local found
-
-                for _, v in ipairs(t) do
-                    repeat
-                        if v:match(o) then
-                            found = true
-                            table.insert(tt, v)
-                            break
-                        end
-
-                        if v:match("#class") then
-                            found = false
-                            break
-                        end
-
-                        if found then
-                            table.insert(tt, v)
-                        end
-                    until true
-                end
-                return tt
-            else
-                return v
+        for line in f:lines() do
+            table.insert(t, line)
+            local tt = line:match("#class (%S+)")
+            if tt then 
+                table.insert(t2, tt)
             end
-        else
-            return nil
+        end
+        setmetatable(t, self)
+        setmetatable(t2, self)
+        return t,t2
     end
     return nil
 end
 
-local function lookup_class(t, c)
-    if type(t) ~= "table" then return UBUS_STATUS_INVALID_ARGUMENT end
-    if not c then return UBUS_STATUS_INVALID_ARGUMENT end
+function cfg:lookup(o)
+    if not o then return UBUS_STATUS_INVALID_ARGUMENT end
+	local tab = self
+    for _, v in ipairs(tab) do
+        if v:match(o) then
+            if v:match("#class") then
+                local tt = {}
+                local t2 = {}
+                local found
+                for _, t in ipairs(tab) do
+                    repeat
+                        if t:match(o) then
+                            found = true
+                            table.insert(tt, t)
+                            break
+                        end
 
-    local ret = lookup(t, c)
-    if type(ret) ~= "table" then return UBUS_STATUS_NOT_FOUND then
-    return ret
+                        if t:match("#class") then
+                            found = false
+                            table.insert(t2, t)
+                            break
+                        end
+
+                        if found then
+                            table.insert(tt, t)
+                        else
+                            table.insert(t2, t)
+                        end
+                    until true
+                end
+                setmetatable(tt,  self)
+                setmetatable(t2, self)
+                return tt, t2
+            else
+                return v
+            end
+        end
+    end
+    return nil
 end
 
-local function lookup_app(t, c)
-    if type(t) ~= "table" then return UBUS_STATUS_INVALID_ARGUMENT end
-    if not c then return UBUS_STATUS_INVALID_ARGUMENT end
-
-    local ret = lookup(t, c)
-
-    if type(ret) ~= "string" then return UBUS_STATUS_NOT_FOUND end
-    return ret
+function cfg:lookup_class(class)
+    if not class then return UBUS_STATUS_INVALID_ARGUMENT end
+	local t1, t2 = self:lookup(class)
+	if type(t1) ~= "table" then return nil end
+	return t1, t2
 end
 
-local function add_class(t, c)
-    if not c then return UBUS_STATUS_INVALID_ARGUMENT end
-    local f = io.open(cfg, "r+")
+function cfg:add_class(class)
+    if not class then return UBUS_STATUS_INVALID_ARGUMENT end
+    local f = io.open(cfg_file, "r+")
+    local tab = self
     if f then
         io.output(f)
-        for v in f:lines() do
+        for _, v in ipairs(tab) do
             io.write(v)
             io.write("\n")
         end
-        io.write("#class "..c)
+        io.write("#class "..class)
+        f:flush()
+        f:close()
+        return UBUS_STATUS_OK
+    else
+        return UBUS_STATUS_NOT_FOUND
     end
-    f:flush()
-    f:close()
 end
 
-local function list_class(t)
-    if type(t) ~= "table" then return UBUS_STATUS_INVALID_ARGUMENT end
+function cfg:add_app(class, name, proto, sport, dport, url, request, dict)
+    if not name then return UBUS_STATUS_INVALID_ARGUMENT end
+    local f = io.open(cfg_file, "r+")
+    io.output(f)
+    local t1,t2 = self:lookup_class(class)
+    local id = math.modf(string.match(t1[#t1], "(%d+) %S+:") +1)
+    local str = string.format("%d %s:[%s;%s;%s;%s;%s;%s]", id, name, proto, sport or "", dport or "", url or "", request or "", dict or "")
+    table.insert(t1, str)
+    if f then
+        for _, v in ipairs(t2) do
+			if v then
+				io.write(v)
+				io.write("\n")
+            end
+        end
+        for _, v in ipairs(t1) do
+			if v then 
+				io.write(v)
+				io.write("\n")
+            end
+        end
+        f:flush()
+        f:close()
+    end
+    return id
+end
 
-    local tt = {}
+function cfg:del_app(id, name)
+    local t = self
+    local f = io.open(cfg_file, "r+")
+    local ret
+    if id then
+        for i, v in ipairs(t) do
+            if v:match(id) then
+                table.remove(t, i)
+                ret = i
+            end
+        end
 
-    for _, v in ipairs(t) do
-        if v:match("#class (%S+)") then
-            table.insert(tt, v)
+    end
+
+    if name then
+        for i, v in ipairs(t) do
+            if v:match(name) then
+                table.remove(t, i)
+                ret = i
+            end
         end
     end
-    return tt
+
+    if f then
+        io.output(f)
+        for _, v in ipairs(t) do
+            io.write(v)
+            io.write("\n")
+        end
+        f:flush()
+        f:close()
+    end
+    return ret
 end
 
 local methods = {
-    ["appfilter"] = {
-        add_class = {
+	["appfilter"] = {
+		add_class = {
             function(req, msg)
-                if not msg.class return UBUS_STATUS_INVALID_ARGUMENT end
-                local t = init_table()
+                if not msg.class then return UBUS_STATUS_INVALID_ARGUMENT end
+				local class = msg.class
+                local t = cfg:init_table(cfg_file)
                 local ret
-                local tmp = lookup_class(t, msg.class)
-                if type(tmp) ~= "table" then
-                    add_class(t, msg.class)
-                else
-                    ret = UBUS_STATUS_ALREADY_EXISTS
-                end
-                ubus.reply(req, {status = ret})
-            end,{class = libubus.STRING}
+                if t:lookup_class(class) then return ubus.reply(req, {ret = UBUS_STATUS_ALREADY_EXISTS}) end
+                ret = t:add_class(class)
+				ubus.reply(req, {msg = ret})
+			end, {class = libubus.STRING}
+        },
+        add_app = {
+            function (req, msg)
+                if not msg.class then return UBUS_STATUS_INVALID_ARGUMENT end
+                if not msg.name then return UBUS_STATUS_INVALID_ARGUMENT end
+                local t = cfg:init_table(cfg_file)
+                local ret
+                if t:lookup(msg.name) then return ubus.reply(req, {ret = UBUS_STATUS_ALREADY_EXISTS}) end
+                ret = t:add_app(msg.class, msg.name, msg.proto, msg.sport, msg.dport, msg.url, msg.request, msg.dict)
+                ubus.reply(req, {ret = ret})
+            end,{class = libubus.STRING, name = libubus.STRING, proto = libubus.STRING, sport = libubus.INT32, dport = libubus.INT32, url = libubus.STRING, request = libubus.STRING, dict = libubus.STRING}
+        },
+        del_app = {
+            function(req, msg)
+                local t = cfg:init_table(cfg_file)
+                ret = t:del_app(msg.id, msg.name)
+                ubus.reply(req, {ret = ret})
+            end,{id = libubus.INT32, name = libubus.STRING}
         },
         list_class = {
-            function(req, msg)
-                local t = init_table()
-                local class = list_class(t)
-                if not ret then ubus.reply(req, { class = class}) then
+            function (req, msg)
+                local _, c = cfg:init_table(cfg_file)
+                ubus.reply(req, {result = c})
             end,{}
         },
         list_app = {
-            function(req,msg)
-                if not msg.class return UBUS_STATUS_INVALID_ARGUMENT end
-                local t = init_table()
-                local tt = lookup_class(t, msg.class)
+            function (req, msg)
+                if not msg.class then return UBUS_STATUS_INVALID_ARGUMENT end
+                local t  = cfg:init_table(cfg_file)
                 local ret = {}
-                for i, v in ipairs(tt) do
-                    local id, name = v:match("(%d+) (%S+)")
-                    ret[i] = {id = id, name = name}
+                for i, v in ipairs(t:lookup_class(msg.class)) do
+					if not v:match("#class") then
+						local id, name = v:match("(%d+) (%S+):%[")
+						ret[i-1] = {id = id,  name = name}
+					end
                 end
-                ubus.reply(req, {app = ret})
+                ubus.reply(req, {result = ret})
             end,{class = libubus.STRING}
         }
-    }
+	}
 }
 
 function ubus_init()
