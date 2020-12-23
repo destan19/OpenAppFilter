@@ -281,7 +281,7 @@ void load_feature_buf_from_file(char **config_buf)
 
 	inode = fp->f_inode;
 	size = inode->i_size;
-	AF_INFO("feature file size: %u\n", size);
+	printk("feature file size: %u\n", size);
 	if (size == 0) {
 		AF_WARN("warning, file size = %u\n", size);
 		return;
@@ -305,14 +305,14 @@ void load_feature_buf_from_file(char **config_buf)
 	return size;
 }
 
-void load_feature_config(void)
+int load_feature_config(void)
 {
 	AF_INFO("begin load feature config.....\n");
 	char *feature_buf = NULL;
 	load_feature_buf_from_file(&feature_buf);
 	if (!feature_buf) {
 		AF_ERROR("error, feature buf is null\n");
-		return;
+		return -1;
 	}
 	
 	char *p;
@@ -333,7 +333,7 @@ void load_feature_config(void)
 	}
 	if (p != begin) {
 		if (p - begin < MIN_FEATURE_LINE_LEN || p - begin > MAX_FEATURE_LINE_LEN ) 
-			return;
+			return 0;
 		memset(line, 0x0, sizeof(line));
 		strncpy(line, begin, p - begin);
 		af_init_feature(line);
@@ -341,6 +341,7 @@ void load_feature_config(void)
 	}
 	if (feature_buf)
 		kfree(feature_buf);
+	return 0;
 }
 
 static void af_clean_feature_list(void)
@@ -687,16 +688,15 @@ int app_filter_match(flow_info_t *flow)
 		list_for_each_entry_safe(node, n, &af_feature_head, head) {
 			if(af_match_one(flow, node)) 
 			{
+				AF_DEBUG("appid = %d\n", node->app_id);
 				flow->app_id = node->app_id;
-				client = find_af_client_by_ip(flow->src);
-				if (!client){
-					goto EXIT;
+				if (is_user_match_enable()){
+					client = find_af_client_by_ip(flow->src);
+					if (!client || !find_af_mac(client->mac)){
+						goto EXIT;
+					}
 				}
-				// 如果开启了基于用户的过滤，但没有匹配到用户
-				if (is_user_match_enable() && !find_af_mac(client->mac)){
-					AF_ERROR("not match mac:"MAC_FMT"\n", MAC_ARRAY(client->mac));
-					goto EXIT;
-				}
+		
 				if (af_get_app_status(node->app_id)){
 					flow->drop = AF_TRUE;
 					feature_list_read_unlock();
@@ -947,11 +947,15 @@ void fini_port_timer(void)
 static int __init app_filter_init(void)
 {
 	AF_INFO("appfilter version:"AF_VERSION"\n");
+	if (0 != load_feature_config()){
+		printk("load feature failed\n");
+		return -1;
+	}
 	af_log_init();
 	af_register_dev();
 	af_mac_list_init();
 	af_init_app_status();
-	load_feature_config();
+
 	init_af_client_procfs();
 //	show_feature_list();
 	af_client_init();
@@ -961,7 +965,6 @@ static int __init app_filter_init(void)
 	nf_register_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));
 #endif
 	init_oaf_timer();
-
 	AF_INFO("init app filter ........ok\n");
 	return 0;
 }
