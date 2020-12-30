@@ -173,7 +173,6 @@ void flush_expired_visit_info(af_client_info_t *node)
 		}
 		
 		if (cur_timep - node->visit_info[i].latest_time > timeout){
-			// ³¬Ê±Çå³ý¼ÇÂ¼
 			memset(&node->visit_info[i], 0x0, sizeof(app_visit_info_t));
 			count++;
 		}

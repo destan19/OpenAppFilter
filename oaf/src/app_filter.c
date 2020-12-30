@@ -186,7 +186,7 @@ int add_app_feature(int appid, char *name, char *feature)
 		begin = p + 1;
 	}
 	if (AF_DICT_PARAM_INDEX != param_num && strlen(feature) > MIN_FEATURE_STR_LEN) {
-		AF_ERROR("22 invalid feature:%s\n", feature);
+		AF_ERROR("invalid feature:%s\n", feature);
 		return -1;
 	}
 	strncpy(dict, begin, p - begin);
@@ -281,7 +281,7 @@ void load_feature_buf_from_file(char **config_buf)
 
 	inode = fp->f_inode;
 	size = inode->i_size;
-	printk("feature file size: %u\n", size);
+	AF_DEBUG("feature file size: %u\n", size);
 	if (size == 0) {
 		AF_WARN("warning, file size = %u\n", size);
 		return;
@@ -655,7 +655,6 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	if (flow->l4_len == 0)
 		return AF_FALSE;
 
-	// 匹配端口
 	if (node->sport != 0 && flow->sport != node->sport ){
 		return AF_FALSE;
 	}
@@ -780,9 +779,6 @@ void af_update_client_app_info(flow_info_t *flow)
 	}
 	AF_CLIENT_UNLOCK_W();
 }
-
-/* 在netfilter框架注册的钩子 */
-
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 static u_int32_t app_filter_hook(void *priv,
@@ -941,9 +937,6 @@ void fini_port_timer(void)
 }
 
 
-/*
-	模块初始化
-*/
 static int __init app_filter_init(void)
 {
 	AF_INFO("appfilter version:"AF_VERSION"\n");
@@ -957,7 +950,6 @@ static int __init app_filter_init(void)
 	af_init_app_status();
 
 	init_af_client_procfs();
-//	show_feature_list();
 	af_client_init();
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
     nf_register_net_hooks(&init_net, app_filter_ops, ARRAY_SIZE(app_filter_ops));
@@ -969,9 +961,6 @@ static int __init app_filter_init(void)
 	return 0;
 }
 
-/*
-	模块退出
-*/
 static void app_filter_fini(void)
 {
 	AF_INFO("app filter module exit\n");

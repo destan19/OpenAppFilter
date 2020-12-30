@@ -1,9 +1,4 @@
 
-/*
-	author: destan19@126.com
-	Î¢ÐÅ¹«ÖÚºÅ: OpenWrt
-	date:2019/1/10
-*/
 #include <linux/init.h>
 #include <linux/module.h>
 #include <net/tcp.h>
@@ -59,19 +54,19 @@ char g_app_id_array[AF_MAX_APP_TYPE_NUM][AF_MAX_APP_NUM] = {0};
 void af_show_app_status(void)
 {
 	int i, j;
-	printk("#########show app status##########\n");
+	AF_DEBUG("#########show app status##########\n");
 	for (i = 0; i < AF_MAX_APP_TYPE_NUM; i++) {
 		for (j = 0; j < AF_MAX_APP_NUM; j++) {
 			
 			af_rule_read_lock();
 			if (g_app_id_array[i][j] == AF_TRUE) {
-				printk("%d, %d\n", i, j);
+				AF_DEBUG("%d, %d\n", i, j);
 			}
 			af_rule_read_unlock();
 		}
 	}
 	
-	printk("\n\n\n");
+	AF_DEBUG("\n\n\n");
 }
 
 int af_change_app_status(cJSON * data_obj, int status)
@@ -243,7 +238,7 @@ int af_set_mac_list(cJSON * data_obj)
 		}
 		af_mac_add(mac_hex);
 	}
-	printk("## mac num = %d\n", total_mac);
+	AF_DEBUG("## mac num = %d\n", total_mac);
 	return 0;
 }
 
@@ -351,7 +346,7 @@ static ssize_t af_cdev_read(struct file *filp, char *buf, size_t count, loff_t *
 static int af_cdev_release(struct inode *inode, struct file *filp)
 {
     struct af_cdev_file *file = filp->private_data;
-    printk("config size: %d,data = %s\n", (int)file->size, file->buf);
+    AF_DEBUG("config size: %d,data = %s\n", (int)file->size, file->buf);
 	af_config_handle(file->buf, file->size);
     filp->private_data = NULL;
     mutex_unlock(&af_cdev_mutex);
@@ -364,7 +359,7 @@ static ssize_t af_cdev_write(struct file *filp, const char *buffer, size_t count
     struct af_cdev_file *file = filp->private_data;
     int ret;
     if (file->size + count > sizeof(file->buf)) {
-        printk("config overflow, cur_size: %d, block_size: %d, max_size: %d",
+        AF_ERROR("config overflow, cur_size: %d, block_size: %d, max_size: %d",
             (int)file->size, (int)count, (int)sizeof(file->buf));
         return -EINVAL;
     }
