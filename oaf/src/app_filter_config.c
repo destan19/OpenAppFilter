@@ -196,8 +196,8 @@ int is_user_match_enable(void){
 	return total_mac > 0;
 }
 int mac_to_hex(u8 *mac, u8 *mac_hex){
-	u8 mac_tmp[MAC_ADDR_LEN];
-	int ret = 0;
+	u32 mac_tmp[MAC_ADDR_LEN];
+	int ret = 0, i = 0;
 	ret = sscanf(mac, "%02x:%02x:%02x:%02x:%02x:%02x", 
 		(unsigned int *)&mac_tmp[0],
 		(unsigned int *)&mac_tmp[1],
@@ -207,7 +207,10 @@ int mac_to_hex(u8 *mac, u8 *mac_hex){
 		(unsigned int *)&mac_tmp[5]);
 	if (MAC_ADDR_LEN != ret)
 		return -1;
-	memcpy(mac_hex, mac_tmp, MAC_ADDR_LEN);
+	for (i = 0; i < MAC_ADDR_LEN; i++)
+	{
+		mac_hex[i] = mac_tmp[i];
+	}
 	return 0;
 }
 int af_set_mac_list(cJSON * data_obj)
