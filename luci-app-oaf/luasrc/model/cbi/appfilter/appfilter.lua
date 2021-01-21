@@ -1,5 +1,6 @@
 
 local ds = require "luci.dispatcher"
+local utl = require "luci.util"
 
 local m, s
 
@@ -36,7 +37,7 @@ if class_fd then
 		--apps.delimiter=";"
 		-- select 
 		apps.widget="checkbox"
-		apps.size=12
+		apps.size=10
 
 		local fd = io.open(path)
 		if fd then
@@ -108,7 +109,7 @@ users.widget="checkbox"
 users.size=1
 
 local fd = io.open("/proc/net/arp", "r")
-if not fd then return end
+if not fd then return m end
 while true do
 	local line = fd:read("*l")
 	if not line then
@@ -129,6 +130,12 @@ while true do
 	end
 end
 
+local config_users=m.uci:get_all("appfilter.user.users")
+local r=utl.split(config_users, "%s+", nil, true)
+local max = table.getn(r)
+for i=1,max,1 do
+	users:value(r[i], r[i]);
+end
 m:section(SimpleSection).template = "admin_network/user_status"
 
 
