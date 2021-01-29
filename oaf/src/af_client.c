@@ -216,6 +216,8 @@ static u_int32_t nfclient_hook(unsigned int hook,
 	unsigned char smac[ETH_ALEN];
 	af_client_info_t *nfc = NULL;
 	int pkt_dir = 0;
+	struct iphdr *iph = NULL;
+
 // 4.10-->4.11 nfct-->_nfct
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0)
 	struct nf_conn *ct = (struct nf_conn *)skb->_nfct;
@@ -249,7 +251,6 @@ static u_int32_t nfclient_hook(unsigned int hook,
         memcpy(smac, &skb->cb[40], ETH_ALEN);
     }
 
-	struct iphdr *iph = NULL;
 	iph = ip_hdr(skb);
 	if (!iph) {
 		return NF_ACCEPT;

@@ -36,7 +36,6 @@ void dump_str(char *name, unsigned char *p, int len)
 {
 	#define MAX_DUMP_STR_LEN 64
 	char buf[MAX_DUMP_STR_LEN] = {0};
-	int i;
 	if (len > MAX_DUMP_STR_LEN) {
 		len = MAX_DUMP_STR_LEN - 1;
 	}

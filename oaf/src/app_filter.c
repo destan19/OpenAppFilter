@@ -93,6 +93,11 @@ int __add_app_feature(int appid,
 					char *dict)
 {
 	af_feature_node_t *node = NULL;
+	char *p = dict;
+	char *begin = dict;
+	char pos[32] = {0};
+	int index = 0;
+	int value = 0;
 	node = kzalloc(sizeof(af_feature_node_t), GFP_KERNEL);
 	if (node == NULL) {
 		printk("malloc feature memory error\n");
@@ -107,11 +112,10 @@ int __add_app_feature(int appid,
 		strcpy(node->host_url, host_url);
 		strcpy(node->request_url, request_url);
 		// 00:0a-01:11
-		char *p = dict;
-		char *begin = dict;
-		char pos[32] = {0};
-		int index = 0;
-		int value = 0;
+		p = dict;
+		begin = dict;
+		index = 0;
+		value = 0;
 		
 		while (*p++) {
 			if (*p == '|'){
@@ -143,21 +147,23 @@ int add_app_feature(int appid, char *name, char *feature)
 {
 	char proto_str[16] = {0};
 	char src_port_str[16] = {0};
-	
 	char dst_port_str[16] = {0};
 	char host_url[32] = {0};
 	char request_url[128] = {0};
 	char dict[128] = {0};
 	int proto = IPPROTO_TCP;
+	char *p = feature;
+	char *begin = feature;
+	int param_num = 0;
+	int dst_port = 0;
+	int src_port = 0;
+	
 	if (!name || !feature) {
 		AF_ERROR("error, name or feature is null\n");
 		return -1;
 	}
 	// tcp;8000;www.sina.com;0:get_name;00:0a-01:11
-	
-	char *p = feature;
-	char *begin = feature;
-	int param_num = 0;
+
 	while(*p++) {
 		if (*p != ';')
 			continue;
@@ -199,9 +205,7 @@ int add_app_feature(int appid, char *name, char *feature)
 		AF_DEBUG("proto %s is not support\n", proto_str);
 		return -1;
 	}
-	int dst_port = 0;
-	
-	int src_port = 0;
+
 	sscanf(src_port_str, "%d", &src_port);
 	
 	sscanf(dst_port_str, "%d", &dst_port);
@@ -224,14 +228,17 @@ void af_init_feature(char *feature_str)
 	int app_id;
 	char app_name[128] = {0};
 	char feature_buf[MAX_FEATURE_LINE_LEN] = {0};
+	char *p = feature_str;
+	char *pos = NULL;	
+	int len = 0;
+	char *begin = NULL;
+	char feature[MAX_FEATURE_STR_LEN];;
+
 	if (strstr(feature_str,"#"))
 		return;
 	
 	k_sscanf(feature_str, "%d%[^:]", &app_id, app_name);
 
-	char *p = feature_str;
-	char *pos = NULL;	
-	int len = 0;
 	while(*p++) {
 		if (*p == '['){
 			pos = p + 1;
@@ -244,11 +251,9 @@ void af_init_feature(char *feature_str)
 
 	if (pos && len)
 		strncpy(feature_buf, pos, len);
-	char feature[MAX_FEATURE_STR_LEN];;
-	int i;
 	memset(feature, 0x0, sizeof(feature));
 	p = feature_buf;
-	char *begin = feature_buf;
+	begin = feature_buf;
 
 	while(*p++){
 		if (*p == ',') {
@@ -281,16 +286,14 @@ void load_feature_buf_from_file(char **config_buf)
 
 	inode = fp->f_inode;
 	size = inode->i_size;
-	AF_DEBUG("feature file size: %u\n", size);
 	if (size == 0) {
-		AF_WARN("warning, file size = %u\n", size);
 		return;
 	}
 	*config_buf = (char *) kzalloc( sizeof(char) * size, GFP_KERNEL);
 	if(NULL == *config_buf ) {
 		AF_ERROR("alloc buf fail\n");
 		filp_close(fp, NULL);
-		return -1;
+		return;
 	}
 	fs = get_fs();
 	set_fs(KERNEL_DS);
@@ -302,23 +305,23 @@ void load_feature_buf_from_file(char **config_buf)
 #endif
 	set_fs(fs);
 	filp_close(fp, NULL);
-	return size;
 }
 
 int load_feature_config(void)
 {
-	AF_INFO("begin load feature config.....\n");
 	char *feature_buf = NULL;
+	char *p;
+	char *begin;
+	char line[MAX_FEATURE_LINE_LEN] = {0};
+	AF_INFO("begin load feature config.....\n");
 	load_feature_buf_from_file(&feature_buf);
 	if (!feature_buf) {
 		AF_ERROR("error, feature buf is null\n");
 		return -1;
 	}
 	
-	char *p;
-	char *begin;
+
 	p = begin = feature_buf;
-	char line[MAX_FEATURE_LINE_LEN] = {0};
 	while(*p++) {
 		if (*p == '\n'){
 			if (p - begin < MIN_FEATURE_LINE_LEN || p - begin > MAX_FEATURE_LINE_LEN ) {
@@ -346,7 +349,7 @@ int load_feature_config(void)
 
 static void af_clean_feature_list(void)
 {
-	af_feature_node_t *n,*node;
+	af_feature_node_t *node;
 	feature_list_write_lock();
 	while(!list_empty(&af_feature_head)) {
 		node = list_first_entry(&af_feature_head, af_feature_node_t, head);
@@ -459,6 +462,10 @@ int parse_https_proto(flow_info_t *flow) {
 
 void parse_http_proto(flow_info_t *flow) 
 {
+	int i = 0;
+	int start = 0;
+	char *data = NULL;
+	int data_len = 0;
 	if (!flow) {
 		AF_ERROR("flow is null\n");
 		return;
@@ -467,10 +474,8 @@ void parse_http_proto(flow_info_t *flow)
 		return;
 	}
 
-	int i = 0;
-	int start = 0;
-	char *data = flow->l4_data;
-	int data_len = flow->l4_len;
+	data = flow->l4_data;
+	data_len = flow->l4_len;
 	if (data_len < MIN_HTTP_DATA_LEN) {
 		return;
 	}
@@ -732,14 +737,12 @@ static int af_get_visit_index(af_client_info_t *node, int app_id){
 
 int __af_update_client_app_info(flow_info_t *flow, af_client_info_t *node)
 {
-	int i;
 	int index = -1;
 	if(!node)
 		return -1;
 	if(!flow)
 		return -1;
 	AF_INFO("%s %d visit_app_num = %d\n", __func__, __LINE__, node->visit_app_num);
-	int found = 0;
 
 	index = af_get_visit_index(node, flow->app_id);
 
@@ -754,9 +757,9 @@ int __af_update_client_app_info(flow_info_t *flow, af_client_info_t *node)
 	
 	node->visit_info[index].app_id = flow->app_id;
 	node->visit_info[index].latest_time = af_get_timestamp_sec();
-	AF_DEBUG("update time = %u\n", node->visit_info[index].latest_time);
+	AF_DEBUG("update time = %lu\n", node->visit_info[index].latest_time);
 	node->visit_info[index].latest_action = flow->drop;
-	AF_INFO("[%d] %pI4 visit %d, time=%d action=%s, %d/%d\n", index, &node->ip, flow->app_id, 
+	AF_INFO("[%d] %pI4 visit %d, time=%lu action=%s, %d/%d\n", index, &node->ip, flow->app_id, 
 		node->visit_info[index].latest_time, node->visit_info[index].latest_action ? "Drop" : "Accept",
 		node->visit_info[index].drop_num, node->visit_info[index].total_num);
 	// todo: history
@@ -765,8 +768,6 @@ int __af_update_client_app_info(flow_info_t *flow, af_client_info_t *node)
 
 void af_update_client_app_info(flow_info_t *flow)
 {
-	int i;
-	int index = 0;
 	af_client_info_t *node = NULL;
 	if(!flow)
 		return;
@@ -791,7 +792,6 @@ static u_int32_t app_filter_hook(unsigned int hook,
 					           const struct net_device *out,
 					           int (*okfn)(struct sk_buff *)){
 #endif
-	unsigned long long total_packets = 0;
 	flow_info_t flow;
 // 4.10-->4.11 nfct-->_nfct
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0)
