@@ -55,8 +55,7 @@ cd -
 ## 技术交流
 
 - 微信公众号: OpenWrt (获取应用过滤最新固件和OpenWrt教程)
-![1](https://gitee.com/destan19/images/blob/master/qr.png)
-![main1](https://github.com/destan19/images/blob/master/oaf/main1.png)
+
 - 技术交流QQ群 
 群一:943396288(已满)
 群二:1046680252
