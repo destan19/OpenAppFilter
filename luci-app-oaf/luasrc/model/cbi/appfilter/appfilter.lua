@@ -1,6 +1,14 @@
 
 local ds = require "luci.dispatcher"
+local nxo = require "nixio"
+local nfs = require "nixio.fs"
+local ipc = require "luci.ip"
+local sys = require "luci.sys"
 local utl = require "luci.util"
+local dsp = require "luci.dispatcher"
+local uci = require "luci.model.uci"
+local lng = require "luci.i18n"
+local jsc = require "luci.jsonc"
 
 local m, s
 
@@ -108,18 +116,17 @@ users.widget="checkbox"
 --users.widget="select"
 users.size=1
 
-local fd = io.open("/proc/net/arp", "r")
+local fd = io.open("/tmp/dev_list", "r")
 if not fd then return m end
 while true do
 	local line = fd:read("*l")
 	if not line then
 		break
 	end
-	if not line:match("Ip*") then
-		local ip=get_cmd_result(string.format("echo '%s' | awk '{print $1}'", line))
-		local mac=get_cmd_result(string.format("echo '%s' | awk '{print $4}'", line))
-		local device=get_cmd_result(string.format("echo '%s' | awk '{print $6}'", line))
-		if device ~= nil and mac ~= nil and device:match("lan") then
+	if not line:match("Id*") then
+		local ip=get_cmd_result(string.format("echo '%s' | awk '{print $3}'", line))
+		local mac=get_cmd_result(string.format("echo '%s' | awk '{print $2}'", line))
+		if mac ~= nil then
 			local hostname=get_hostname_by_mac(mac)
 			if not hostname or hostname == "*" then
 				users:value(mac, mac);
