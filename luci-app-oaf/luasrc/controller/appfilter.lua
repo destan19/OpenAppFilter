@@ -25,6 +25,9 @@ function index()
 	page = entry({"admin", "network", "dev_visit_list"}, call("get_dev_visit_list"), nil)
 	page.leaf = true
 
+	page = entry({"admin", "network", "feature_upgrade"}, call("handle_feature_upgrade"), nil)
+	page.leaf = true
+
 	page = entry({"admin", "network", "dev_visit_time"}, call("get_dev_visit_time"), nil)
 	page.leaf = true
 	page = entry({"admin", "network", "app_class_visit_time"}, call("get_app_class_visit_time"), nil)
@@ -48,6 +51,30 @@ function get_hostname_by_mac(dst_mac)
     end
 	fd:close()
     return ""
+end
+
+
+function handle_feature_upgrade()
+	local fs = require "nixio.fs"
+	local http = require "luci.http"
+	local image_tmp = "/tmp/feature.cfg"
+
+	local fp
+	http.setfilehandler(
+		function(meta, chunk, eof)
+	
+			fp = io.open(image_tmp, "w")
+			
+			if fp and chunk then
+				fp:write(chunk)
+			end
+			if fp and eof then
+				fp:close()
+			end
+		end
+	)
+
+
 end
 
 function get_app_name_by_id(appid)

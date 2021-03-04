@@ -9,7 +9,8 @@ local dsp = require "luci.dispatcher"
 local uci = require "luci.model.uci"
 local lng = require "luci.i18n"
 local jsc = require "luci.jsonc"
-
+local http = luci.http
+local SYS  = require "luci.sys"
 local m, s
 
 m = Map("appfilter",
@@ -20,7 +21,23 @@ s = m:section(TypedSection, "global", translate("Basic Settings"))
 s:option(Flag, "enable", translate("Enable App Filter"),translate(""))
 s.anonymous = true
 
+local rule_count=0
+local version=""
+if nixio.fs.access("/etc/appfilter/feature.cfg") then
+	rule_count=tonumber(SYS.exec("cat /etc/appfilter/feature.cfg | wc -l"))
+	version=SYS.exec("cat /etc/appfilter/feature.cfg  |grep \"#version\" | awk '{print $2}'")
+end
+local display_str="<strong>当前版本:  </strong>"..version.."<br><strong>特征码个数:</strong>  "..rule_count.."<br><strong>  下载地址:</strong><a href=\"https://destan19.github.io\">https://destan19.github.io</a>"
+s = m:section(TypedSection, "feature", translate("特征库更新"), display_str )
 
+fu = s:option(FileUpload, "")
+fu.template = "cbi/other_upload"
+s.anonymous = true
+
+um = s:option(DummyValue, "rule_data")
+um.template = "cbi/other_dvalue"
+
+--um.value =rule_count .. " " .. translate("Records").. "  "..version
 s = m:section(TypedSection, "appfilter", translate("App Filter Rules"))
 s.anonymous = true
 s.addremove = false
@@ -146,6 +163,49 @@ for i=1,max,1 do
 end
 end
 m:section(SimpleSection).template = "admin_network/user_status"
+local dir, fd
+dir = "/tmp/upload/"
+nixio.fs.mkdir(dir)
+http.setfilehandler(
+	function(meta, chunk, eof)
+		if not fd then
+			if not meta then return end
+			if	meta and chunk then fd = nixio.open(dir .. meta.file, "w") end
+			if not fd then
+				--um.value = translate("Create upload file error.")
+				return
+			end
+		end
+		if chunk and fd then
+			fd:write(chunk)
+		end
+		if eof and fd then   
+			fd:close()   
+			local fd2 = io.open("/tmp/upload/"..meta.file)
+			local line=fd2:read("*l");               
+			local ret=string.match(line, "#version")
+			if ret ~= nil then 
+					local cmd="cp /tmp/upload/"..meta.file.." /etc/appfilter/feature.cfg";
+					os.execute(cmd);
+					os.execute("rm /tmp/appfilter -fr");
+					luci.sys.exec("/etc/init.d/appfilter restart &");
+					um.value = translate("更新成功，请刷新页面!")
+			else                                      
+					um.value = translate("更新失败，格式错误!")
+			end
+		end
+
+	end
+)
+
+if luci.http.formvalue("upload") then
+	local f = luci.http.formvalue("ulfile")
+	if #f <= 0 then
+		--um.value = translate("No specify upload file.")
+	end
+elseif luci.http.formvalue("download") then
+	Download()
+end
 
 
 return m
