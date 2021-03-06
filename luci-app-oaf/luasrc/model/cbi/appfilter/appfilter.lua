@@ -19,6 +19,14 @@ m = Map("appfilter",
 	
 s = m:section(TypedSection, "global", translate("Basic Settings"))
 s:option(Flag, "enable", translate("Enable App Filter"),translate(""))
+um = s:option(DummyValue, "")
+um.template="cbi/oaf_dvalue"
+local fullcone=SYS.exec("uci get firewall.@defaults[0].fullcone");
+local bbr=SYS.exec("uci get flowoffload.@flow[0].bbr");
+local flow_offloading=SYS.exec("uci get flowoffload.@flow[0].flow_offloading");
+if string.match(fullcone, "1")  or string.match(bbr, "1") or string.match(flow_offloading, "1") then
+    um.value="运行环境检测失败，请先关闭ACC加速模块!"
+end
 s.anonymous = true
 
 local rule_count=0
@@ -35,12 +43,11 @@ fu.template = "cbi/oaf_upload"
 s.anonymous = true
 
 um = s:option(DummyValue, "rule_data")
-
+um.template="cbi/oaf_dvalue"
 --um.value =rule_count .. " " .. translate("Records").. "  "..version
 s = m:section(TypedSection, "appfilter", translate("App Filter Rules"))
 s.anonymous = true
 s.addremove = false
-
 
 local class_fd = io.popen("find /tmp/appfilter/ -type f -name '*.class'")
 if class_fd then
@@ -192,6 +199,7 @@ http.setfilehandler(
 			else                                      
 					um.value = translate("更新失败，格式错误!")
 			end
+			os.execute("rm /tmp/upload/* -fr");
 		end
 
 	end
