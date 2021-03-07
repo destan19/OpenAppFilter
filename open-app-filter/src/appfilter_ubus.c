@@ -274,23 +274,19 @@ appfilter_handle_dev_list(struct ubus_context *ctx, struct ubus_object *obj,
 			struct blob_attr *msg)
 {
 	int i, j;
-	printf("%s %d\n", __func__, __LINE__);
 	struct json_object * root_obj = json_object_new_object();	
 	
 	struct json_object * dev_array = json_object_new_array();	
-	printf("%s %d\n", __func__, __LINE__);
     for (i = 0;i < MAX_DEV_NODE_HASH_SIZE; i++){
 		
         dev_node_t *node = dev_hash_table[i];
         while(node){
-			printf("add mac:%s\n", node->mac);
 			struct json_object * dev_obj = json_object_new_object();
 			struct json_object * app_array = json_object_new_array();
 			app_visit_time_info_t top5_app_list[5];
 			memset(top5_app_list, 0x0, sizeof(top5_app_list));
 			update_top5_app(node, top5_app_list);
 			
-			printf("22 add mac:%s\n", node->mac);
 			for (j = 0; j < 5; j++){
 				if (top5_app_list[j].app_id == 0)
 					break;
@@ -300,7 +296,6 @@ appfilter_handle_dev_list(struct ubus_context *ctx, struct ubus_object *obj,
 				json_object_array_add(app_array, app_obj);
 			}
 			
-			printf("333 add mac:%s\n", node->mac);
 			json_object_object_add(dev_obj, "applist", app_array);
 			json_object_object_add(dev_obj, "mac", json_object_new_string(node->mac));
 			char hostname[32] = {0};
@@ -313,19 +308,10 @@ appfilter_handle_dev_list(struct ubus_context *ctx, struct ubus_object *obj,
         }
     }
 	json_object_object_add(root_obj, "devlist", dev_array);
-	printf("%s %d\n", __func__, __LINE__);
 	blob_buf_init(&b, 0);
-	
-	printf("%s %d\n", __func__, __LINE__);
 	blobmsg_add_object(&b, root_obj);
-	
-	printf("%s %d\n", __func__, __LINE__);
 	ubus_send_reply(ctx, req, b.head);
-	
-	printf("%s %d\n", __func__, __LINE__);
 	json_object_put(root_obj);
-	
-	printf("%s %d\n", __func__, __LINE__);
 	return 0;
 }
 

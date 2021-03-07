@@ -29,11 +29,48 @@
 #include "appfilter_netlink.h"
 #include "appfilter_ubus.h"
 #include "appfilter_config.h"
+#include <time.h>
+void check_appfilter_enable(void){
+	int enable = 1;
+	struct tm *t;
+	time_t tt;
+	time(&tt);
+	af_ctl_time_t *af_t = load_appfilter_ctl_time_config();
+	if (!af_t){
+		enable = 0;
+		goto EXIT;
+	}
+
+	t = localtime(&tt);
+	if (af_t->days[t->tm_wday] != 1){
+		printf("cur weekday not match");
+		enable = 0;
+		goto EXIT;
+	}
+	if (af_t->start.hour <= af_t->end.hour){
+		int cur_mins = t->tm_hour * 60 + t->tm_min;
+		if ((af_t->start.hour * 60 + af_t->start.min > cur_mins )
+			|| (cur_mins > af_t->end.hour * 60 + af_t->end.min)){
+			enable = 0;
+			printf(" not match hour and min\n");
+		}
+	}
+	else
+		enable = 0;
+EXIT:
+	if (enable){
+		system("echo 1 >/proc/sys/oaf/enable ");
+	}
+	else
+		system("echo 0 >/proc/sys/oaf/enable ");
+	free(af_t);
+}
 
 void dev_list_timeout_handler(struct uloop_timeout *t){
     dump_dev_list();
 	dump_dev_visit_list();
-	uloop_timeout_set(t, 5000);
+	check_appfilter_enable();
+	uloop_timeout_set(t, 10000);
 }
 
 struct uloop_timeout dev_tm={

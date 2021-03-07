@@ -27,6 +27,15 @@
 extern int g_cur_class_num;
 extern int g_app_count;
 extern char CLASS_NAME_TABLE[MAX_APP_TYPE][MAX_CLASS_NAME_LEN];
+typedef struct af_time{
+	int hour;
+	int min;
+}af_time_t;
+typedef struct af_ctl_time{
+	af_time_t start;
+	af_time_t end;
+	int days[7];
+}af_ctl_time_t;
 
 typedef struct app_name_info{
 	int id;
@@ -35,4 +44,11 @@ typedef struct app_name_info{
 void init_app_name_table(void);
 void init_app_class_name_table(void);
 char *get_app_name_by_id(int id);
+
+int appfilter_config_alloc(void);
+
+int appfilter_config_free(void);
+af_ctl_time_t *load_appfilter_ctl_time_config(void);
+
+
 #endif

@@ -23,12 +23,45 @@
 #include <string.h>
 #include <stdlib.h>
 #include "appfilter_config.h"
+#include <uci.h>
 
 app_name_info_t app_name_table[MAX_SUPPORT_APP_NUM];
 int g_app_count = 0;
 int g_cur_class_num = 0;
 char CLASS_NAME_TABLE[MAX_APP_TYPE][MAX_CLASS_NAME_LEN];
 
+const char *config_path = "./config";
+static struct uci_context *uci_ctx = NULL;
+static struct uci_package *uci_appfilter;
+//
+static struct uci_package *
+config_init_package(const char *config)
+{
+	struct uci_context *ctx = uci_ctx;
+	struct uci_package *p = NULL;
+
+	if (!ctx) {
+		printf("alloc context\n");
+		ctx = uci_alloc_context();
+		uci_ctx = ctx;
+		
+		ctx->flags &= ~UCI_FLAG_STRICT;
+		//if (config_path)
+		//	uci_set_confdir(ctx, config_path);
+
+	} else {
+	
+	printf("find context\n");
+		p = uci_lookup_package(ctx, config);
+		if (p)
+			uci_unload(ctx, p);
+	}
+
+	if (uci_load(ctx, config, &p))
+		return NULL;
+
+	return p;
+}
 char *get_app_name_by_id(int id){
 	int i;
 	for (i = 0;i < g_app_count; i++){
@@ -85,4 +118,119 @@ void init_app_class_name_table(void){
 		g_cur_class_num++;
 	}
 	fclose(fp);
+}
+//00:00 9:1
+int check_time_valid(char *t)
+{
+	if (!t)
+		return 0;
+	if (strlen(t) < 3 || strlen(t) > 5 || (!strstr(t, ":")))
+		return 0;
+	else
+		return 1;
+}
+
+void dump_af_time(af_ctl_time_t *t){
+	int i;
+	printf("---------dump af time-------------\n");
+	printf("%d:%d ---->%d:%d\n", t->start.hour, t->start.min,
+		t->end.hour, t->end.min);
+	for (i = 0; i < 7; i++){
+		printf("%d ", t->days[i]);
+	}
+	printf("\n");
+}
+af_ctl_time_t *load_appfilter_ctl_time_config(void){
+	int ret = 0;
+	af_ctl_time_t *t = NULL;
+
+	appfilter_config_alloc();
+	printf("load  time \n");
+	struct uci_section *time_sec = uci_lookup_section(
+		uci_ctx, uci_appfilter, "time");
+	if (!time_sec){
+		printf("get time section failed\n");
+		return NULL;
+	}
+	t = malloc(sizeof(af_ctl_time_t));
+	if (!t){
+		return NULL;
+	}
+	memset(t, 0x0, sizeof(af_ctl_time_t));
+	char *start_time_str = uci_lookup_option_string(uci_ctx, time_sec, "start_time");
+
+	if (check_time_valid(start_time_str)){
+		sscanf(start_time_str, "%d:%d", &t->start.hour, &t->start.min);
+	}
+	else{
+		printf("start time check failed\n");
+		free(t);
+		t = NULL;
+		goto EXIT1;
+	}
+	char *end_time_str = uci_lookup_option_string(uci_ctx, time_sec, "end_time");	
+
+	if (check_time_valid(end_time_str)){
+		sscanf(end_time_str, "%d:%d", &t->end.hour, &t->end.min);
+	}
+	else{
+		printf("end time check failed\n");
+		free(t);
+		t = NULL;
+		goto EXIT2;
+	}
+
+	char *days_str = uci_lookup_option_string(uci_ctx, time_sec, "days");	
+
+	char *p = strtok(days_str, " ");
+	do{
+		int day = atoi(p);
+		if (day >= 0 && day <= 6)
+			t->days[day] = 1;
+		else
+			ret = 0;
+	}
+	while(p = strtok(NULL, " "));
+	
+	//printf("start:%s, end:%s, days:%s\n", start_time_str, end_time_str, 
+	//	days_str);
+EXIT3:
+	if (days_str)
+		free(days_str);
+EXIT2:
+	if (end_time_str)
+		free(end_time_str);
+EXIT1:
+	if (start_time_str)
+		free(start_time_str);
+	appfilter_config_free();
+	//if (t)
+	//	dump_af_time(t);
+	printf("load af time............ok\n");
+	return t;
+}
+
+int appfilter_config_alloc(void){
+	char *err;
+	uci_appfilter = config_init_package("appfilter");
+	if (!uci_appfilter) {
+		uci_get_errorstr(uci_ctx, &err, NULL);
+		printf("Failed to load appfilter config (%s)\n", err);
+		free(err);
+		return -1;
+	}
+
+	return 0;
+}
+
+int appfilter_config_free(void){
+	if (uci_appfilter){
+		uci_unload(uci_ctx, uci_appfilter);
+		uci_appfilter = NULL;
+	}
+	if (uci_ctx){
+		uci_free_context(uci_ctx);
+		uci_ctx = NULL;
+	}
+	
 }
