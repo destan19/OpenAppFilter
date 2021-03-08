@@ -32,7 +32,7 @@
 #include "appfilter_user.h"
 
 dev_node_t *dev_hash_table[MAX_DEV_NODE_HASH_SIZE];
-
+int g_cur_user_num = 0;
 unsigned int hash_mac(unsigned char *mac)
 {
 	if (!mac)
@@ -64,6 +64,10 @@ void init_dev_node_htable(){
 
 dev_node_t *add_dev_node(char *mac){
     unsigned int hash = 0;
+	if (g_cur_user_num >= MAX_SUPPORT_USER_NUM){
+		printf("error, user num reach max %d\n", g_cur_user_num);
+		return NULL;
+	}
     hash = hash_mac(mac);
     if (hash >= MAX_DEV_NODE_HASH_SIZE){
         printf("hash code error %d\n", hash);
@@ -80,6 +84,7 @@ dev_node_t *add_dev_node(char *mac){
         node->next = dev_hash_table[hash];
         dev_hash_table[hash] = node;
     }
+	g_cur_user_num++;
     printf("add mac:%s to htable[%d]....success\n", mac, hash);
     return node;
 }
@@ -124,9 +129,38 @@ char * format_time(int timetamp){
 	return strdup(time_buf);
 }
 
+void update_dev_from_dhcp_lease_file(void){
+    char line_buf[256] = {0};
+    char hostname_buf[128] = {0};
+    char mac_buf[32] = {0};
+	char ip_buf[32] = {0};
+	
+    FILE *fp = fopen("/tmp/dhcp.leases", "r");
+	if (!fp){
+		printf("open dhcp lease file....failed\n");
+		return;
+	}
+    while(fgets(line_buf, sizeof(line_buf), fp)){
+		if (strlen(line_buf) <= 16)
+			continue;
+        sscanf(line_buf, "%*s %s %s %s", mac_buf, ip_buf, hostname_buf);
+		dev_node_t *node = find_dev_node(mac_buf);
+		if (!node){
+			node = add_dev_node(mac_buf);
+		}
+		if (node && strlen(ip_buf) > 0)
+			strcpy(node->ip, ip_buf);
+
+		if (node && strlen(hostname_buf) > 0)
+			strcpy(node->hostname, hostname_buf);
+    }   
+    fclose(fp);
+}
+
 void dump_dev_list(void){
     int i, j;
 	int count = 0;
+	update_dev_from_dhcp_lease_file();
 	FILE *fp = fopen(OAF_DEV_LIST_FILE, "w");
 	if (!fp){
 		return;

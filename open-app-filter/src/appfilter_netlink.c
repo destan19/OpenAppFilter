@@ -97,6 +97,11 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
     
     if (!node){
 	    node = add_dev_node(mac);
+		if (!node){
+			printf("add dev node failed\n");
+			json_object_put(root);
+			return;
+		}
     }
     
     struct json_object *ip_obj = json_object_object_get(root, "ip");

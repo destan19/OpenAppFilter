@@ -51,17 +51,12 @@ void get_hostname_by_mac(char *mac, char *hostname){
 		}
         char line_buf[256] = {0};
         while(fgets(line_buf, sizeof(line_buf), fp)){
-                printf("line buf = %s\n", line_buf);    
-                char hostname_buf[128] = {0};
-                char mac_buf[32] = {0};
-                sscanf(line_buf, "%*s %s %*s %s", mac_buf, hostname_buf);
-                if (0 == strcmp(mac, mac_buf)){
-                        printf("match mac:%s\n", mac_buf);
-						strcpy(hostname, hostname_buf);
-                }   
-                else{
-                        printf("not match mac:%s\n", mac_buf);
-                }   
+            char hostname_buf[128] = {0};
+            char mac_buf[32] = {0};
+            sscanf(line_buf, "%*s %s %*s %s", mac_buf, hostname_buf);
+            if (0 == strcmp(mac, mac_buf)){
+				strcpy(hostname, hostname_buf);
+            }   
         }   
         fclose(fp);
     
@@ -214,23 +209,11 @@ appfilter_handle_visit_list(struct ubus_context *ctx, struct ubus_object *obj,
 }
 
 
-
-#if 0
-blobmsg_add_string(b, "hostname", "unknown");
-blobmsg_add_string(b, "mac", node->mac);
-blobmsg_add_string(b, "ip", node->ip);
-blobmsg_add_string(b, "appname", "unknown");
-blobmsg_add_u32(b, "appid", p_info->appid);
-blobmsg_add_u32(b, "latest_action", p_info->action);
-blobmsg_add_u32(b, "first_time", p_info->first_time);
-blobmsg_add_u32(b, "latest_time", p_info->latest_time);
-
-#endif
-
 typedef struct app_visit_time_info{
 	int app_id;
 	unsigned long long total_time;
 }app_visit_time_info_t;
+
 int visit_time_compare(const void *a, const void *b){
 	app_visit_time_info_t *p1 = (app_visit_time_info_t *)a;
 	app_visit_time_info_t *p2 = (app_visit_time_info_t *)b;
@@ -257,14 +240,16 @@ void update_top5_app(dev_node_t *node, app_visit_time_info_t top5_app_list[]){
 	
 
 	qsort((void *)app_visit_array, app_visit_num, sizeof(app_visit_time_info_t), visit_time_compare);
+	#if 0
 	for (i = 0; i < app_visit_num; i++){
 		printf("appid %d-----------total time %llu\n", app_visit_array[i].app_id,
 			app_visit_array[i].total_time);
 	}
+	#endif
 	for (i = 0; i < 5; i++){
 		top5_app_list[i] = app_visit_array[i];
-		printf("appid %d-----------total time %llu\n", app_visit_array[i].app_id,
-			app_visit_array[i].total_time);
+		//printf("appid %d-----------total time %llu\n", app_visit_array[i].app_id,
+		//	app_visit_array[i].total_time);
 	}
 }
 

@@ -43,7 +43,6 @@ void check_appfilter_enable(void){
 
 	t = localtime(&tt);
 	if (af_t->days[t->tm_wday] != 1){
-		printf("cur weekday not match");
 		enable = 0;
 		goto EXIT;
 	}
@@ -52,7 +51,6 @@ void check_appfilter_enable(void){
 		if ((af_t->start.hour * 60 + af_t->start.min > cur_mins )
 			|| (cur_mins > af_t->end.hour * 60 + af_t->end.min)){
 			enable = 0;
-			printf(" not match hour and min\n");
 		}
 	}
 	else
@@ -68,8 +66,9 @@ EXIT:
 
 void dev_list_timeout_handler(struct uloop_timeout *t){
     dump_dev_list();
-	dump_dev_visit_list();
+//	dump_dev_visit_list();
 	check_appfilter_enable();
+//todo: dev list expire
 	uloop_timeout_set(t, 10000);
 }
 

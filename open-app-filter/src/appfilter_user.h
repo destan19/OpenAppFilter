@@ -26,6 +26,7 @@
 #define MAX_VISIT_HASH_SIZE       64
 #define MAX_DEV_NODE_HASH_SIZE    64
 #define MAX_HOSTNAME_SIZE         64
+#define MAX_SUPPORT_USER_NUM      64
 #define OAF_VISIT_LIST_FILE "/tmp/visit_list"
 #define OAF_DEV_LIST_FILE "/tmp/dev_list"
 #define MIN_VISIT_TIME 5 // default 5s
