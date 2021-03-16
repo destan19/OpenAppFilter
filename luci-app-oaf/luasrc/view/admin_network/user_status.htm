@@ -108,12 +108,15 @@ table.imagetable td {
 					tr.insertCell(-1).innerHTML = hostname;
 					tr.insertCell(-1).innerHTML = "<a href='<%=url('admin/network/appfilter/')%>"+devlist[i].mac+"'>"+devlist[i].mac+"</a>";
 					tr.insertCell(-1).innerHTML = devlist[i].ip;
-					var app_list_str="--";
+					var app_list_str="";
 					for (var j = 0; j < devlist[i].applist.length; j++){
 						console.log(devlist[i].applist[j].name);
 						app_list_str+=devlist[i].applist[j].name;
 						if (j != devlist[i].applist.length - 1)
 						app_list_str+=","
+					}
+					if(app_list_str == ""){
+						app_list_str="--"
 					}
 					tr.insertCell(-1).innerHTML = app_list_str;
 				}
