@@ -1,5 +1,8 @@
 
-## OpenAppFilter功能简介
+### 固件和特征库发布地址
+
+https://destan19.github.io/
+### OpenAppFilter功能简介
 
 OpenAppFilter模块基于数据流深度识别技术，实现对单个app进行管控的功能，并支持上网记录统计
 
