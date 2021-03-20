@@ -4,7 +4,7 @@
 uci -q batch <<-EOF >/dev/null
 	del ucitrack.@appfilter[-1]
 	add ucitrack appfilter
-	set ucitrack.@appfilter[-1].exec="/etc/init.d/appfilter restart"
+	set ucitrack.@appfilter[-1].exec="/usr/bin/oaf_rule reload"
 	commit ucitrack
 EOF
 

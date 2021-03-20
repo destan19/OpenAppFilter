@@ -51,6 +51,25 @@ enum AF_FEATURE_PARAM_INDEX{
 	AF_DICT_PARAM_INDEX,
 };
 
+
+#define OAF_NETLINK_ID 29
+#define MAX_OAF_NL_MSG_LEN 1024
+
+enum E_MSG_TYPE{
+	AF_MSG_INIT,
+	AF_MSG_MAX
+};
+
+typedef struct af_msg{
+	int action;
+	void *data;
+}af_msg_t;
+
+struct af_msg_hdr{
+    int magic;
+    int len;
+};
+
 enum e_http_method{
 	HTTP_METHOD_GET = 1,
 	HTTP_METHOD_POST,

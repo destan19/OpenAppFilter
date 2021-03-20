@@ -129,7 +129,8 @@ char * format_time(int timetamp){
 	return strdup(time_buf);
 }
 
-void update_dev_from_dhcp_lease_file(void){
+
+void update_dev_hostname(void){
     char line_buf[256] = {0};
     char hostname_buf[128] = {0};
     char mac_buf[32] = {0};
@@ -145,14 +146,10 @@ void update_dev_from_dhcp_lease_file(void){
 			continue;
         sscanf(line_buf, "%*s %s %s %s", mac_buf, ip_buf, hostname_buf);
 		dev_node_t *node = find_dev_node(mac_buf);
-		if (!node){
-			node = add_dev_node(mac_buf);
-		}
-		if (node && strlen(ip_buf) > 0)
-			strcpy(node->ip, ip_buf);
-
-		if (node && strlen(hostname_buf) > 0)
-			strcpy(node->hostname, hostname_buf);
+		if (!node)
+			continue;
+		if (strlen(hostname_buf) > 0)
+			strncpy(node->hostname, hostname_buf, sizeof(node->hostname));
     }   
     fclose(fp);
 }
@@ -160,7 +157,7 @@ void update_dev_from_dhcp_lease_file(void){
 void dump_dev_list(void){
     int i, j;
 	int count = 0;
-	update_dev_from_dhcp_lease_file();
+	update_dev_hostname();
 	FILE *fp = fopen(OAF_DEV_LIST_FILE, "w");
 	if (!fp){
 		return;

@@ -95,6 +95,10 @@ int main(int argc, char **argv)
 
     appfilter_nl_fd.fd = appfilter_nl_init();
     uloop_fd_add(&appfilter_nl_fd, ULOOP_READ);
+	af_msg_t msg;
+	msg.action = AF_MSG_INIT;
+	
+	send_msg_to_kernel(appfilter_nl_fd.fd, (void *)&msg, sizeof(msg));
 	uloop_timeout_set(&dev_tm, 5000);
     uloop_timeout_add(&dev_tm);
 	uloop_run();

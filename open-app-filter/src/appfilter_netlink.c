@@ -153,6 +153,43 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
 	json_object_put(root);
 }
 
+#define MAX_NL_MSG_LEN 1024
+int send_msg_to_kernel(int fd, void *msg, int len){
+	struct sockaddr_nl saddr, daddr;
+	memset(&daddr, 0, sizeof(daddr));
+    daddr.nl_family = AF_NETLINK;
+    daddr.nl_pid = 0; // to kernel 
+    daddr.nl_groups = 0;
+
+	int ret = 0;
+	struct nlmsghdr *nlh = NULL;
+	nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_NL_MSG_LEN));
+    nlh->nlmsg_len = NLMSG_SPACE(MAX_NL_MSG_LEN);
+    nlh->nlmsg_flags = 0;
+    nlh->nlmsg_type = 0;
+    nlh->nlmsg_seq = 0;
+    nlh->nlmsg_pid = DEFAULT_USR_NL_PID; 
+
+	char msg_buf[MAX_NL_MSG_LEN] = {0};
+	struct af_msg_hdr *hdr = (struct af_msg_hdr *)msg_buf;
+	hdr->magic = 0xa0b0c0d0;
+	hdr->len = len;
+	char *p_data = msg_buf + sizeof(struct af_msg_hdr);
+	memcpy(p_data, msg, len);
+
+
+ //   memset(nlh, 0, sizeof(struct nlmsghdr));
+
+    memcpy(NLMSG_DATA(nlh), msg_buf, len + sizeof(struct af_msg_hdr));
+ 
+    ret = sendto(fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr *)&daddr, sizeof(struct sockaddr_nl));
+    if(!ret)
+    {
+        perror("sendto error\n");
+		return -1;
+    }
+	return 0;
+}
 
 int appfilter_nl_init(void)
 {
@@ -173,6 +210,7 @@ int appfilter_nl_init(void)
         printf("Bind failed %s\n", strerror(errno));
         exit(1);
 	}
+	
     return fd;
 }
 

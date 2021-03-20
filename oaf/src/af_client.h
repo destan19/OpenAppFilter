@@ -66,6 +66,8 @@ af_client_info_t * find_af_client_by_ip(unsigned int ip);
 
 void check_client_expire(void);
 
-void af_visit_info_timer_handle(void);
+void af_visit_info_report(void);
+
+void af_client_list_reset_report_num(void);
 
 #endif

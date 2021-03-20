@@ -66,6 +66,24 @@ nf_client_list_clear(void)
 	AF_CLIENT_UNLOCK_W();
 }
 
+
+void af_client_list_reset_report_num(void)
+{
+	int i;
+	af_client_info_t * node = NULL;
+	char mac_str[32] = {0};
+	
+	AF_INFO("reset report num");
+	AF_CLIENT_LOCK_W();
+	for (i = 0; i < MAX_AF_CLIENT_HASH_SIZE;i++){
+		list_for_each_entry(node, &af_client_list_table[i], hlist){
+			node->report_count = 0;
+			printk("reset  mac="MAC_FMT" report num to 0\n", MAC_ARRAY(node->mac));
+		}
+	}
+	AF_CLIENT_UNLOCK_W();
+}
+
 int get_mac_hash_code(unsigned char *mac)
 {
 	if (!mac)
@@ -184,7 +202,7 @@ void flush_expired_visit_info(af_client_info_t *node)
 
 }
 
-int af_report_visit_info(af_client_info_t *node){
+int __af_visit_info_report(af_client_info_t *node){
 	unsigned char mac_str[32] = {0};
 	unsigned char ip_str[32] = {0};
 	int i, j;
@@ -235,7 +253,7 @@ int af_report_visit_info(af_client_info_t *node){
 	kfree(out);
 	return 0;
 }
-void af_visit_info_timer_handle(void){
+void af_visit_info_report(void){
 	af_client_info_t  *node;
 	int i;
 	AF_CLIENT_LOCK_W();
@@ -243,7 +261,7 @@ void af_visit_info_timer_handle(void){
 		list_for_each_entry(node, &af_client_list_table[i], hlist) {
 			//flush_expired_visit_info(node);
 			AF_INFO("report %s\n", node->mac);
-			af_report_visit_info(node);
+			__af_visit_info_report(node);
 		}
 	}
 	AF_CLIENT_UNLOCK_W();
@@ -259,11 +277,11 @@ static inline int get_packet_dir(struct net_device *in)
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-static u_int32_t nfclient_hook(void *priv,
+static u_int32_t af_client_hook(void *priv,
 			       struct sk_buff *skb,
 			       const struct nf_hook_state *state) {
 #else
-static u_int32_t nfclient_hook(unsigned int hook,
+static u_int32_t af_client_hook(unsigned int hook,
 						    	struct sk_buff *skb,
 					           const struct net_device *in,
 					           const struct net_device *out,
@@ -334,7 +352,7 @@ static u_int32_t nfclient_hook(unsigned int hook,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 static struct nf_hook_ops af_client_ops[] = {
 	{
-		.hook		= nfclient_hook,
+		.hook		= af_client_hook,
 		.pf			= PF_INET,
 		.hooknum	= NF_INET_FORWARD,
 		.priority	= NF_IP_PRI_FIRST + 1,
@@ -343,7 +361,7 @@ static struct nf_hook_ops af_client_ops[] = {
 #else
 static struct nf_hook_ops af_client_ops[] = {
 	{
-		.hook		= nfclient_hook,
+		.hook		= af_client_hook,
 		.owner		= THIS_MODULE,
 		.pf			= PF_INET,
 		.hooknum	= NF_INET_FORWARD,

@@ -29,6 +29,17 @@ struct af_msg_hdr{
     int magic;
     int len;
 };
+
+enum E_MSG_TYPE{
+	AF_MSG_INIT,
+	AF_MSG_MAX
+};
+
+typedef struct af_msg{
+	int action;
+	void *data;
+}af_msg_t;
 int appfilter_nl_init(void);
 void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev);
+int send_msg_to_kernel(int fd, void *msg, int len);
 #endif
