@@ -16,11 +16,17 @@ https://www.bilibili.com/video/BV11z4y1z7tQ/
 	
 ### 插件截图
 #### 1
-![main1](https://github.com/destan19/images/blob/master/oaf/main1.png)
-
+![main1](https://destan19.github.io/assets/img/oaf/oaf1.png)
 
 #### 2
-![main2](https://github.com/destan19/images/blob/master/oaf/main2.png)
+![main1](https://destan19.github.io/assets/img/oaf/oaf2.png)
+
+#### 3
+![main2](https://destan19.github.io/assets/img/oaf/oaf3.png)
+
+
+#### 4
+![main2](https://destan19.github.io/assets/img/oaf/oaf4.png)
 
 ### 支持app列表(只列主流)
  - 游戏
