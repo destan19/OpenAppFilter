@@ -13,6 +13,7 @@ service_triggers()
 
 stop_service(){
 	killall -9 oafd
+	rmmod oaf
 }
 
 start_service(){

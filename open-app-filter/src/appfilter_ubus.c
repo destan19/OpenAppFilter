@@ -262,10 +262,16 @@ appfilter_handle_dev_list(struct ubus_context *ctx, struct ubus_object *obj,
 	struct json_object * root_obj = json_object_new_object();	
 	
 	struct json_object * dev_array = json_object_new_array();	
+	int count = 0;
     for (i = 0;i < MAX_DEV_NODE_HASH_SIZE; i++){
 		
         dev_node_t *node = dev_hash_table[i];
         while(node){
+			if (node->online == 0){
+				
+				node = node->next;
+				continue;
+			}
 			struct json_object * dev_obj = json_object_new_object();
 			struct json_object * app_array = json_object_new_array();
 			app_visit_time_info_t top5_app_list[5];
@@ -286,12 +292,62 @@ appfilter_handle_dev_list(struct ubus_context *ctx, struct ubus_object *obj,
 			char hostname[32] = {0};
 			get_hostname_by_mac(node->mac, hostname);
 			json_object_object_add(dev_obj, "ip", json_object_new_string(node->ip));
+			
+			json_object_object_add(dev_obj, "online", json_object_new_int(1));
 			json_object_object_add(dev_obj, "hostname", json_object_new_string(hostname));
 			json_object_object_add(dev_obj, "latest_app", json_object_new_string("test"));
 			json_object_array_add(dev_array, dev_obj);
+
 			node = node->next;
+			count++;
+			if (count >= MAX_SUPPORT_DEV_NUM)
+				goto END;
         }
     }
+	for (i = 0;i < MAX_DEV_NODE_HASH_SIZE; i++){
+		  dev_node_t *node = dev_hash_table[i];
+		  while(node){
+		  	  if (node->online != 0){
+			  	
+				node = node->next;
+			  	continue;
+		  	  }
+			  struct json_object * dev_obj = json_object_new_object();
+			  struct json_object * app_array = json_object_new_array();
+			  app_visit_time_info_t top5_app_list[5];
+			  memset(top5_app_list, 0x0, sizeof(top5_app_list));
+			  update_top5_app(node, top5_app_list);
+			  
+			  for (j = 0; j < 5; j++){
+				  if (top5_app_list[j].app_id == 0)
+					  break;
+				  struct json_object * app_obj = json_object_new_object();
+				  json_object_object_add(app_obj, "id", json_object_new_int(top5_app_list[j].app_id));
+				  json_object_object_add(app_obj, "name", json_object_new_string(get_app_name_by_id(top5_app_list[j].app_id))); 			  
+				  json_object_array_add(app_array, app_obj);
+			  }
+			  
+			  json_object_object_add(dev_obj, "applist", app_array);
+			  json_object_object_add(dev_obj, "mac", json_object_new_string(node->mac));
+			  char hostname[32] = {0};
+			  get_hostname_by_mac(node->mac, hostname);
+			  json_object_object_add(dev_obj, "ip", json_object_new_string(node->ip));
+			  
+			  json_object_object_add(dev_obj, "online", json_object_new_int(0));
+			  json_object_object_add(dev_obj, "hostname", json_object_new_string(hostname));
+			  json_object_object_add(dev_obj, "latest_app", json_object_new_string("test"));
+			  json_object_array_add(dev_array, dev_obj);
+			  node = node->next;
+			  count++;
+			  if (count >= MAX_SUPPORT_DEV_NUM)
+				goto END;
+		  }
+	  }
+	
+	
+END:	  
+
+	
 	json_object_object_add(root_obj, "devlist", dev_array);
 	blob_buf_init(&b, 0);
 	blobmsg_add_object(&b, root_obj);

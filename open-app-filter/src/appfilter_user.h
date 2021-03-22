@@ -34,6 +34,8 @@
 #define MAX_VISITLIST_DUMP_NUM 16
 #define MAX_APP_TYPE              16
 #define MAX_APP_ID_NUM            128
+#define MAX_SUPPORT_DEV_NUM 64
+
 //extern dev_node_t *dev_hash_table[MAX_DEV_NODE_HASH_SIZE];
 
 /*
@@ -71,6 +73,9 @@ typedef struct dev_node{
     char mac[MAX_MAC_LEN];
     char ip[MAX_IP_LEN];
 	char hostname[MAX_HOSTNAME_SIZE];
+	int online;
+	int offline_time;
+	int online_time;
 	visit_info_t *visit_htable[MAX_VISIT_HASH_SIZE];
 	visit_stat_t stat[MAX_APP_TYPE][MAX_APP_ID_NUM];
     struct dev_node *next;

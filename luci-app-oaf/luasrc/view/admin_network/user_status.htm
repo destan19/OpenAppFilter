@@ -28,62 +28,6 @@ table.imagetable td {
 }-->
 </style>
 <script type="text/javascript">//<![CDATA[
-
-/*
-	XHR.poll(10, '<%=url('admin/network/user_status')%>', null,
-		function(x, st)
-		{
-			var tb = document.getElementById('user_status_table');
-			var str=JSON.stringify(st);
-			if (st && tb)
-			{
-				while(tb.rows.length > 1)
-					tb.deleteRow(1);
-				for(var i = 0; i < st.length; i++ )
-				{
-					var action_status=""
-					if(st[i].latest_action == 1)
-						action_status="已过滤"
-					else
-						action_status="未过滤"
-					var hostname=""
-					if(st[i].hostname == "" || st[i].hostname == "*"){
-						hostname="?";
-					}
-					else{
-						hostname=st[i].hostname;
-					}
-					var tr = tb.insertRow(-1);
-					//tr.className = 'cbi-section-table-row cbi-rowstyle-' + ((i % 2) + 1);
-					tr.insertCell(-1).innerHTML = st[i].appname;
-					tr.insertCell(-1).innerHTML = hostname;
-					tr.insertCell(-1).innerHTML = "<a href='<%=url('admin/network/appfilter/')%>"+st[i].mac+"'>"+st[i].mac+"</a>";
-					tr.insertCell(-1).innerHTML = st[i].first_time;
-					var hour=parseInt(st[i].total_time / 3600);
-					var seconds=st[i].total_time % 3600;
-					var min=parseInt(seconds / 60)
-					var total_time_str;
-					if (st[i].latest_action == 1)
-						total_time_str="-"
-					else {
-						if (hour > 0)
-							total_time_str=hour + "小时" + min + "分"
-						else{
-							if (min == 0)
-								min = 1;
-							total_time_str=min + "分"
-						}
-					}
-
-					tr.insertCell(-1).innerHTML = total_time_str;
-					tr.insertCell(-1).innerHTML = action_status;
-
-				}
-			}
-		}
-	);
-*/
-
 	XHR.poll(5, '<%=url('admin/network/dev_app_status')%>', null,
 		function(x, st)
 		{
@@ -105,6 +49,7 @@ table.imagetable td {
 					}
 					var tr = tb.insertRow(-1);
 					//tr.className = 'cbi-section-table-row cbi-rowstyle-' + ((i % 2) + 1);
+					tr.insertCell(-1).innerHTML = i + 1;
 					tr.insertCell(-1).innerHTML = hostname;
 					tr.insertCell(-1).innerHTML = "<a href='<%=url('admin/network/appfilter/')%>"+devlist[i].mac+"'>"+devlist[i].mac+"</a>";
 					tr.insertCell(-1).innerHTML = devlist[i].ip;
@@ -119,6 +64,10 @@ table.imagetable td {
 						app_list_str="--"
 					}
 					tr.insertCell(-1).innerHTML = app_list_str;
+					if (devlist[i].online == 1)
+						tr.insertCell(-1).innerHTML = "在线";
+					else
+						tr.insertCell(-1).innerHTML = "离线";
 				}
 			}
 		}
@@ -130,21 +79,13 @@ table.imagetable td {
 <fieldset class="cbi-section">
 	<legend><%:终端列表%></legend>
 	<table class="imagetable" id="user_status_table">
-		<!--
 		<tr>
-			<th ><%:App%></th>
-			<th ><%:主机名%></th>
-			<th ><%:mac地址%></th>
-			<th><%:开始时间%></th>
-			<th><%:访问时长%></th>
-			<th><%:过滤状态%></th>
-		</tr>
-		-->
-		<tr>
+			<th ><%:编号%></th>
 			<th ><%:主机名%></th>
 			<th ><%:mac地址%></th>
 			<th ><%:ip地址%></th>
 			<th><%:常用APP(TOP5)%></th>
+			<th><%:在线状态%></th>
 		</tr>
 		<tr>
 			<td colspan="8"><em><br /><%:Collecting data...%></em></td>

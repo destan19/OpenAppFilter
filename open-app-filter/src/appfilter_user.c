@@ -40,6 +40,11 @@ unsigned int hash_mac(unsigned char *mac)
 	else
 		return mac[0] & (MAX_DEV_NODE_HASH_SIZE - 1);
 }
+int get_timestamp(void){
+	struct timeval cur_time;
+	gettimeofday(&cur_time, NULL);
+	return cur_time.tv_sec;
+}
 
 int hash_appid(int appid){
 	return appid % (MAX_VISIT_HASH_SIZE - 1);
@@ -62,6 +67,8 @@ void init_dev_node_htable(){
     }
 }
 
+
+
 dev_node_t *add_dev_node(char *mac){
     unsigned int hash = 0;
 	if (g_cur_user_num >= MAX_SUPPORT_USER_NUM){
@@ -77,7 +84,8 @@ dev_node_t *add_dev_node(char *mac){
     if (!node)
         return NULL;
     strncpy(node->mac, mac, sizeof(node->mac));
-
+	node->online = 1;
+	node->online_time = get_timestamp();
     if (dev_hash_table[hash] == NULL)
         dev_hash_table[hash] = node;
     else{
@@ -154,20 +162,83 @@ void update_dev_hostname(void){
     fclose(fp);
 }
 
+void clean_dev_online_status(void){
+	int i;
+	for (i = 0;i < MAX_DEV_NODE_HASH_SIZE; i++){
+        dev_node_t *node = dev_hash_table[i];
+		while(node){
+			node->online = 0;
+			node->offline_time = get_timestamp();
+			node = node->next;
+		}
+    }
+}
+
+/*
+
+	Id   Mac                  Ip                  
+	1    10:bf:48:37:0c:94    192.168.66.244 
+*/
+void check_dev_expire(void){
+	char line_buf[256] = {0};
+	char mac_buf[32] = {0};
+	char ip_buf[32] = {0};
+	printf("check dev expire...\n");
+	FILE *fp = fopen("/proc/net/af_client", "r");
+	if (!fp){
+		printf("open dev file....failed\n");
+		return;
+	}
+	while(fgets(line_buf, sizeof(line_buf), fp)){
+		if (strlen(line_buf) <= 16)
+			continue;
+		sscanf(line_buf, "%*s %s %s", mac_buf, ip_buf);
+		printf("mac = %s, ip = %s\n", mac_buf, ip_buf);
+		dev_node_t *node = find_dev_node(mac_buf);
+		if (!node)
+			continue;
+		node->online = 1;
+		printf("node is online, mac = %s\n" , node->mac);
+	}	
+	fclose(fp);
+
+}
 void dump_dev_list(void){
     int i, j;
 	int count = 0;
+	clean_dev_online_status();
 	update_dev_hostname();
+	check_dev_expire();
 	FILE *fp = fopen(OAF_DEV_LIST_FILE, "w");
 	if (!fp){
 		return;
 	}
 		
-	fprintf(fp, "%-4s %-20s %-20s %-32s\n", "Id", "Mac Addr", "Ip Addr", "Hostname");
+	fprintf(fp, "%-4s %-20s %-20s %-32s %-8s\n", "Id", "Mac Addr", "Ip Addr", "Hostname", "Online");
     for (i = 0;i < MAX_DEV_NODE_HASH_SIZE; i++){
         dev_node_t *node = dev_hash_table[i];
 		while(node){
-			fprintf(fp, "%-4d %-20s %-20s %-32s\n", i + 1, node->mac, node->ip, node->hostname);
+			if (node->online != 0){
+				fprintf(fp, "%-4d %-20s %-20s %-32s %-8d\n", 
+					i + 1, node->mac, node->ip, node->hostname, node->online);
+				count++;
+			}
+			if (count >= MAX_SUPPORT_DEV_NUM){
+				goto EXIT;
+			}
+			node = node->next;
+		}
+    }
+
+	for (i = 0;i < MAX_DEV_NODE_HASH_SIZE; i++){
+        dev_node_t *node = dev_hash_table[i];
+		while(node){
+			if (node->online == 0){
+				fprintf(fp, "%-4d %-20s %-20s %-32s %-8d\n", 
+					i + 1, node->mac, node->ip, node->hostname, node->online);
+			}
+			if (count >= MAX_SUPPORT_DEV_NUM)
+				goto EXIT;
 			node = node->next;
 		}
     }
