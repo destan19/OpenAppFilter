@@ -156,8 +156,9 @@ void update_dev_hostname(void){
 		dev_node_t *node = find_dev_node(mac_buf);
 		if (!node)
 			continue;
-		if (strlen(hostname_buf) > 0)
+		if (strlen(hostname_buf) > 0){
 			strncpy(node->hostname, hostname_buf, sizeof(node->hostname));
+		}
     }   
     fclose(fp);
 }
@@ -219,6 +220,8 @@ void dump_dev_list(void){
         dev_node_t *node = dev_hash_table[i];
 		while(node){
 			if (node->online != 0){
+				if (strlen(node->hostname) == 0)
+					strcpy(node->hostname, "*");
 				fprintf(fp, "%-4d %-20s %-20s %-32s %-8d\n", 
 					i + 1, node->mac, node->ip, node->hostname, node->online);
 				count++;
@@ -233,7 +236,10 @@ void dump_dev_list(void){
 	for (i = 0;i < MAX_DEV_NODE_HASH_SIZE; i++){
         dev_node_t *node = dev_hash_table[i];
 		while(node){
+
 			if (node->online == 0){
+				if (strlen(node->hostname) == 0)
+					strcpy(node->hostname, "*");
 				fprintf(fp, "%-4d %-20s %-20s %-32s %-8d\n", 
 					i + 1, node->mac, node->ip, node->hostname, node->online);
 			}
