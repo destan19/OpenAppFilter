@@ -26,7 +26,7 @@ https://www.bilibili.com/video/BV11z4y1z7tQ/
 
 
 ## 编译说明
-1. 下载OpenWrt源码，并完成编译(OpenWrt公众号有相关教程）
+1. 下载OpenWrt源码，并完成编译
 > git clone https://github.com/coolsnowwolf/lede.git  
 > 或 https://github.com/openwrt/openwrt.git  
 2. 下载应用过滤源码放到OpenWrt的package 目录
@@ -37,17 +37,9 @@ cd -
 4. make V=s 编译出带应用过滤功能的OpenWrt固件 
 
 ## 使用说明
-应用过滤和加速模块（Turbo ACC)有冲突，需要关闭Turboo ACC后使用
+应用过滤和加速模块、广告过滤等模块有冲突,请关闭后使用
 
-
-## 技术交流
-
-### 微信公众号
-OpenWrt (获取应用过滤最新固件和OpenWrt教程)
-![weixin](https://github.com/destan19/images/blob/master/oaf/qr.png)
-### 技术交流QQ群 
-- 群一:943396288(已满)  
-- 群二:1046680252（已满）
-- 群三:868508199  
+## 技术交流QQ群 
+868508199  
 点击链接加入群聊【OpenWrt技术交流】：https://jq.qq.com/?_wv=1027&k=vbmB1SUX
 
