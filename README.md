@@ -40,6 +40,6 @@ cd -
 应用过滤和加速模块、广告过滤等模块有冲突,请关闭后使用
 
 ## 技术交流QQ群 
-868508199  
-点击链接加入群聊【OpenWrt技术交流】：https://jq.qq.com/?_wv=1027&k=vbmB1SUX
+943396288  
+点击链接加入群聊【OpenWrt交流群(OAF)】：https://jq.qq.com/?_wv=1027&k=YQaeDqTY
 
