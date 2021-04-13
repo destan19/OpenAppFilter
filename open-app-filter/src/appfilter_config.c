@@ -113,7 +113,6 @@ void init_app_class_name_table(void){
 	}
 	while (fgets(line_buf, sizeof(line_buf), fp)){
 		sscanf(line_buf, "%d %s", &class_id, class_name);
-		printf("class id = %d, class name = %s\n", class_id, class_name);
 		strcpy(CLASS_NAME_TABLE[class_id - 1], class_name);
 		g_cur_class_num++;
 	}
@@ -140,6 +139,7 @@ void dump_af_time(af_ctl_time_t *t){
 	}
 	printf("\n");
 }
+
 af_ctl_time_t *load_appfilter_ctl_time_config(void){
 	int ret = 0;
 	af_ctl_time_t *t = NULL;
@@ -209,6 +209,32 @@ EXIT1:
 	printf("load af time............ok\n");
 	return t;
 }
+
+
+
+int config_get_appfilter_enable(void){
+	int ret = 0;
+    int enable = 0;
+	af_ctl_time_t *t = NULL;
+
+	appfilter_config_alloc();
+	struct uci_section *global_sec = uci_lookup_section(uci_ctx, uci_appfilter, "global");
+	if (!global_sec){
+		printf("get time section failed\n");
+		return NULL;
+	}
+
+	char *enable_opt = uci_lookup_option_string(uci_ctx, global_sec, "enable");
+    if (!enable_opt){
+        return 0;
+    }
+    enable = atoi(enable_opt); 
+    printf("enable str = %s, enable = %d\n", enable_opt, enable);
+	free(enable_opt);
+	appfilter_config_free();
+	return enable;
+}
+
 
 int appfilter_config_alloc(void){
 	char *err;

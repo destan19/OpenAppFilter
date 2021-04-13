@@ -176,33 +176,35 @@ void clean_dev_online_status(void){
 }
 
 /*
-
-	Id   Mac                  Ip                  
-	1    10:bf:48:37:0c:94    192.168.66.244 
+    Id   Mac                  Ip                  
+    1    10:bf:48:37:0c:94    192.168.66.244 
 */
 void check_dev_expire(void){
-	char line_buf[256] = {0};
-	char mac_buf[32] = {0};
-	char ip_buf[32] = {0};
-	printf("check dev expire...\n");
-	FILE *fp = fopen("/proc/net/af_client", "r");
-	if (!fp){
-		printf("open dev file....failed\n");
-		return;
-	}
-	while(fgets(line_buf, sizeof(line_buf), fp)){
-		if (strlen(line_buf) <= 16)
-			continue;
-		sscanf(line_buf, "%*s %s %s", mac_buf, ip_buf);
-		printf("mac = %s, ip = %s\n", mac_buf, ip_buf);
-		dev_node_t *node = find_dev_node(mac_buf);
-		if (!node)
-			continue;
-		node->online = 1;
-		printf("node is online, mac = %s\n" , node->mac);
-	}	
-	fclose(fp);
-
+    char line_buf[256] = {0};
+    char mac_buf[32] = {0};
+    char ip_buf[32] = {0};
+    
+    FILE *fp = fopen("/proc/net/af_client", "r");
+    if (!fp){
+        printf("open dev file....failed\n");
+        return;
+    }
+    fgets(line_buf, sizeof(line_buf), fp); // title
+    while(fgets(line_buf, sizeof(line_buf), fp)){
+        sscanf(line_buf, "%*s %s %s", mac_buf, ip_buf);
+        if (strlen(mac_buf) < 17){
+            printf("invalid mac:%s\n", mac_buf);
+            continue;
+        }
+        dev_node_t *node = find_dev_node(mac_buf);
+        if (!node){
+            node = add_dev_node(mac_buf);
+            if (!node)
+                continue;
+        }
+        node->online = 1;
+    }
+    fclose(fp);
 }
 void dump_dev_list(void){
     int i, j;
