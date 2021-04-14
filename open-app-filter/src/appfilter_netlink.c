@@ -147,7 +147,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         visit_info_t *head = node->visit_htable[hash];
         if (head && (cur_time.tv_sec - head->latest_time) < 300)
         {
-            printf("update visit info curtime=%d, last time=%d\n", cur_time.tv_sec, head->latest_time);
             head->latest_time = cur_time.tv_sec;
         }
         else

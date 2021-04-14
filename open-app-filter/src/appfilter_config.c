@@ -153,25 +153,25 @@ af_ctl_time_t *load_appfilter_ctl_time_config(void)
     int ret = 0;
     af_ctl_time_t *t = NULL;
     appfilter_config_alloc();
-    struct uci_section *time_sec = uci_lookup_section(
-        uci_ctx, uci_appfilter, "time");
+
+    struct uci_section *time_sec = uci_lookup_section(uci_ctx, uci_appfilter, "time");
     if (!time_sec)
     {
         printf("get time section failed\n");
+        appfilter_config_free();
         return NULL;
     }
     t = malloc(sizeof(af_ctl_time_t));
     if (!t)
     {
+        appfilter_config_free();
         return NULL;
     }
     memset(t, 0x0, sizeof(af_ctl_time_t));
     char *start_time_str = uci_lookup_option_string(uci_ctx, time_sec, "start_time");
 
     if (check_time_valid(start_time_str))
-    {
         sscanf(start_time_str, "%d:%d", &t->start.hour, &t->start.min);
-    }
     else
     {
         printf("start time check failed\n");
@@ -182,9 +182,7 @@ af_ctl_time_t *load_appfilter_ctl_time_config(void)
     char *end_time_str = uci_lookup_option_string(uci_ctx, time_sec, "end_time");
 
     if (check_time_valid(end_time_str))
-    {
         sscanf(end_time_str, "%d:%d", &t->end.hour, &t->end.min);
-    }
     else
     {
         printf("end time check failed\n");
@@ -194,8 +192,14 @@ af_ctl_time_t *load_appfilter_ctl_time_config(void)
     }
 
     char *days_str = uci_lookup_option_string(uci_ctx, time_sec, "days");
-
+    if (!days_str)
+    {
+        printf("not found days\n");
+        goto EXIT2;
+    }
     char *p = strtok(days_str, " ");
+    if (!p)
+        goto EXIT3;
     do
     {
         int day = atoi(p);
@@ -205,8 +209,6 @@ af_ctl_time_t *load_appfilter_ctl_time_config(void)
             ret = 0;
     } while (p = strtok(NULL, " "));
 
-//printf("start:%s, end:%s, days:%s\n", start_time_str, end_time_str,
-//	days_str);
 EXIT3:
     if (days_str)
         free(days_str);
@@ -217,8 +219,6 @@ EXIT1:
     if (start_time_str)
         free(start_time_str);
     appfilter_config_free();
-    //if (t)
-    //	dump_af_time(t);
     return t;
 }
 
@@ -232,13 +232,16 @@ int config_get_appfilter_enable(void)
     struct uci_section *global_sec = uci_lookup_section(uci_ctx, uci_appfilter, "global");
     if (!global_sec)
     {
-        printf("get time section failed\n");
+        printf("get global section failed\n");
+        appfilter_config_free();
         return NULL;
     }
 
     char *enable_opt = uci_lookup_option_string(uci_ctx, global_sec, "enable");
     if (!enable_opt)
     {
+        printf("enable option not found.\n");
+        appfilter_config_free();
         return 0;
     }
     enable = atoi(enable_opt);
