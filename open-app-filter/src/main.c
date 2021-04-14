@@ -34,12 +34,13 @@ void check_appfilter_enable(void)
 {
     int enable = 1;
     struct tm *t;
+	af_ctl_time_t *af_t = NULL;
     time_t tt;
     time(&tt);
     enable = config_get_appfilter_enable();
     if (0 == enable)
         goto EXIT;
-    af_ctl_time_t *af_t = load_appfilter_ctl_time_config();
+    af_t = load_appfilter_ctl_time_config();
     if (!af_t)
     {
         enable = 0;
@@ -69,7 +70,8 @@ EXIT:
     }
     else
         system("echo 0 >/proc/sys/oaf/enable ");
-    free(af_t);
+	if (af_t)
+   		free(af_t);
 }
 
 void dev_list_timeout_handler(struct uloop_timeout *t)
