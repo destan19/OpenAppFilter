@@ -77,7 +77,10 @@ EXIT:
 void dev_list_timeout_handler(struct uloop_timeout *t)
 {
     dump_dev_list();
-    //	dump_dev_visit_list();
+    
+    check_dev_visit_info_expire();
+    flush_expire_visit_info();
+    //dump_dev_visit_list();
     check_appfilter_enable();
     //todo: dev list expire
     uloop_timeout_set(t, 10000);

@@ -304,6 +304,90 @@ void dump_dev_list(void)
 EXIT:
     fclose(fp);
 }
+// 记录最大保存时间 todo: support config
+#define MAX_RECORD_TIME (7 * 24 * 60 * 60) // 7day
+// 超过1天后清除短时间的记录
+#define RECORD_REMAIN_TIME (24 * 60 * 60) // 1day
+#define INVALID_RECORD_TIME (5 * 60) // 5min
+
+void check_dev_visit_info_expire(void)
+{
+    int i, j;
+    int count = 0;
+    int cur_time = get_timestamp();
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
+    {
+        dev_node_t *node = dev_hash_table[i];
+        while (node)
+        {
+            for (j = 0; j < MAX_VISIT_HASH_SIZE; j++)
+            {
+                visit_info_t *p_info = node->visit_htable[j];
+                while (p_info)
+                {
+                    int total_time = p_info->latest_time - p_info->first_time;
+                    int interval_time = cur_time - p_info->first_time; 
+                    if (interval_time > MAX_RECORD_TIME || interval_time < 0){
+                        p_info->expire = 1;
+                    }
+                    else if (interval_time > RECORD_REMAIN_TIME){
+                        if (total_time < INVALID_RECORD_TIME)
+                            p_info->expire = 1;
+                    }
+                    p_info = p_info->next;
+                }
+            }
+            node = node->next;
+        }
+    }
+}
+
+void flush_expire_visit_info(void)
+{
+    int i, j;
+    int count = 0;
+    visit_info_t *prev = NULL;
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
+    {
+        dev_node_t *node = dev_hash_table[i];
+        while (node)
+        {
+            for (j = 0; j < MAX_VISIT_HASH_SIZE; j++)
+            {
+                visit_info_t *p_info = node->visit_htable[j];
+                prev = NULL;
+                while (p_info)
+                {
+                    if (p_info->expire){
+                        printf("del node %-20s %-20s %d\n",
+                                                  node->mac, node->ip, p_info->appid
+                                                  );
+                        if (NULL == prev){
+                            node->visit_htable[j] = p_info->next;
+                            free(p_info);
+                            p_info = node->visit_htable[j];
+                            prev = NULL;
+                        }
+                        else{
+                            prev->next = p_info->next;
+                            free(p_info);
+                            p_info = prev->next;
+                        }
+                    }
+                    else{
+                        prev = p_info;
+                        p_info = p_info->next;
+                    }
+  
+                }
+            }
+            node = node->next;
+        }
+    }
+}
+
+
+
 
 void dump_dev_visit_list(void)
 {
@@ -315,8 +399,8 @@ void dump_dev_visit_list(void)
         return;
     }
 
-    fprintf(fp, "%-4s %-20s %-20s %-8s %-32s %-32s %-32s\n", "Id", "Mac Addr",
-            "Ip Addr", "Appid", "First Time", "Latest Time", "Total Time(s)");
+    fprintf(fp, "%-4s %-20s %-20s %-8s %-32s %-32s %-32s %-8s\n", "Id", "Mac Addr",
+            "Ip Addr", "Appid", "First Time", "Latest Time", "Total Time(s)", "Expire");
     for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
     {
         dev_node_t *node = dev_hash_table[i];
@@ -330,9 +414,9 @@ void dump_dev_visit_list(void)
                     char *first_time_str = format_time(p_info->first_time);
                     char *latest_time_str = format_time(p_info->latest_time);
                     int total_time = p_info->latest_time - p_info->first_time;
-                    fprintf(fp, "%-4d %-20s %-20s %-8d %-32s %-32s %-32d\n",
+                    fprintf(fp, "%-4d %-20s %-20s %-8d %-32s %-32s %-32d %-4d\n",
                             count, node->mac, node->ip, p_info->appid, first_time_str,
-                            latest_time_str, total_time);
+                            latest_time_str, total_time, p_info->expire);
                     if (first_time_str)
                         free(first_time_str);
                     if (latest_time_str)

@@ -60,6 +60,7 @@ typedef struct visit_info
     int first_time;
     int latest_time;
     int action;
+    int expire; /*定期清除无效数据*/
     struct visit_info *next;
 } visit_info_t;
 
@@ -107,4 +108,7 @@ void dump_dev_visit_list(void);
 dev_node_t *find_dev_node(char *mac);
 void dev_foreach(void *arg, iter_func iter);
 void add_visit_info_node(visit_info_t **head, visit_info_t *node);
+void check_dev_visit_info_expire(void);
+void flush_expire_visit_info();
+
 #endif
