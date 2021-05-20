@@ -42,7 +42,7 @@ cd -
 ## 技术交流QQ群 
 943396288  
 点击链接加入群聊【OpenWrt交流群(OAF)】：https://jq.qq.com/?_wv=1027&k=YQaeDqTY
-
+## 捐赠
 如果项目对你有帮助，请我喝杯奶茶呗，这样加班写代码更有动力，也能促进项目的持续更新！感谢！
 扫码打赏
 ![](https://gitee.com/destan19/picture/raw/master/picgo/20210520151219.png)
