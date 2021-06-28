@@ -299,15 +299,19 @@ void load_feature_buf_from_file(char **config_buf)
 		filp_close(fp, NULL);
 		return;
 	}
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,7,19)
 	fs = get_fs();
 	set_fs(KERNEL_DS);
+#endif
+	
 // 4.14rc3 vfs_read-->kernel_read
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
 	kernel_read(fp, *config_buf, size, &(fp->f_pos));
 #else
 	vfs_read(fp, *config_buf, size, &(fp->f_pos));
 #endif
-	set_fs(fs);
+///	set_fs(fs);
 	filp_close(fp, NULL);
 }
 

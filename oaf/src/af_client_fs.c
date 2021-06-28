@@ -149,6 +149,8 @@ static int af_client_open(struct inode *inode, struct file *file)
     return 0;
 }
 
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,5,0)
 static const struct file_operations af_client_fops = {
     .owner      = THIS_MODULE,
     .open       = af_client_open,
@@ -156,7 +158,15 @@ static const struct file_operations af_client_fops = {
     .llseek     = seq_lseek,
     .release    = seq_release_private,
 };
-
+#else
+static const struct proc_ops af_client_fops = {
+	.proc_flags	= PROC_ENTRY_PERMANENT,
+	.proc_read	= seq_read,
+	.proc_open	= af_client_open,
+	.proc_lseek	= seq_lseek,
+	.proc_release	= seq_release_private,
+};
+#endif
 
 #define AF_CLIENT_PROC_STR "af_client"
 
@@ -165,7 +175,10 @@ int init_af_client_procfs(void)
 {
     struct proc_dir_entry *pde;
     struct net *net = &init_net;
-    pde = proc_create(AF_CLIENT_PROC_STR, 0440, net->proc_net, &af_client_fops);
+   // pde = proc_create(AF_CLIENT_PROC_STR, 0440, net->proc_net, &af_client_fops);
+	
+	pde = proc_create(AF_CLIENT_PROC_STR, 0440, net->proc_net, &af_client_fops);
+
     if (!pde) {
         AF_ERROR("nf_client proc file created error\n");
         return -1;
