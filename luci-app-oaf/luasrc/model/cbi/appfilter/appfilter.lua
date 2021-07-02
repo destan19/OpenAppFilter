@@ -167,7 +167,7 @@ while true do
 	if not line then
 		break
 	end
-	if not line:match("Id*") then
+	if not string.match(line, "^Id") then
 		local ip=get_cmd_result(string.format("echo '%s' | awk '{print $3}'", line))
 		local mac=get_cmd_result(string.format("echo '%s' | awk '{print $2}'", line))
 		local hostname=get_cmd_result(string.format("echo '%s' | awk '{print $4}'", line))
@@ -176,7 +176,7 @@ while true do
 			if not hostname or hostname == "*" then
 				users:value(mac, mac);
 			else
-				users:value(mac, hostname);
+				users:value(mac, hostname.."("..mac..")");
 			end
 		end
 	end
