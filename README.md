@@ -6,24 +6,6 @@ https://destan19.github.io/
 
 OpenAppFilter基于数据流深度识别技术，可以实现游戏、视频、直播等app过滤和审计。
 
-### 过滤效果演示视频
-https://www.bilibili.com/video/BV11z4y1z7tQ/  
-
-	
-### 插件截图
-#### 1
-![main1](https://destan19.github.io/assets/img/oaf/oaf1.png)
-
-#### 2
-![main1](https://destan19.github.io/assets/img/oaf/oaf2.png)
-
-#### 3
-![main2](https://destan19.github.io/assets/img/oaf/oaf3.png)
-
-
-#### 4
-![main2](https://destan19.github.io/assets/img/oaf/oaf4.png)
-
 
 ## 编译说明
 1. 下载OpenWrt源码，并完成编译
