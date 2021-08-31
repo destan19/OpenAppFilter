@@ -42,7 +42,7 @@ table.imagetable td {
 				{
 					var hostname=""
 					if(devlist[i].hostname == "" || devlist[i].hostname == "*"){
-						hostname="?";
+						hostname="--";
 					}
 					else{
 						hostname=devlist[i].hostname;
@@ -65,9 +65,9 @@ table.imagetable td {
 					}
 					tr.insertCell(-1).innerHTML = app_list_str;
 					if (devlist[i].online == 1)
-						tr.insertCell(-1).innerHTML = "在线";
+						tr.insertCell(-1).innerHTML = "<%:Online%>";
 					else
-						tr.insertCell(-1).innerHTML = "离线";
+						tr.insertCell(-1).innerHTML = "<%:Offline%>";
 				}
 			}
 		}
@@ -77,15 +77,15 @@ table.imagetable td {
 
 
 <fieldset class="cbi-section">
-	<legend><%:终端列表%></legend>
+	<legend><%:Client List%></legend>
 	<table class="imagetable" id="user_status_table">
 		<tr>
-			<th ><%:编号%></th>
-			<th ><%:主机名%></th>
-			<th ><%:mac地址%></th>
-			<th ><%:ip地址%></th>
-			<th><%:常用APP(TOP5)%></th>
-			<th><%:在线状态%></th>
+			<th ><%:Id%></th>
+			<th ><%:Hostname%></th>
+			<th ><%:Mac%></th>
+			<th ><%:Ip%></th>
+			<th><%:Common App(TOP5)%></th>
+			<th><%:Online Status%></th>
 		</tr>
 		<tr>
 			<td colspan="8"><em><br /><%:Collecting data...%></em></td>

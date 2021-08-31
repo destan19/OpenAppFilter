@@ -5,6 +5,9 @@ msgstr "常用网站"
 msgid "appfilter"
 msgstr "应用过滤"
 
+msgid "App Filter"
+msgstr "应用过滤"
+
 msgid "game"
 msgstr "游戏"
 
@@ -46,6 +49,110 @@ msgstr "至少选择一个用户，否则对所有用户生效"
 
 msgid "Select users"
 msgstr "选择用户"
+
+msgid "Id"
+msgstr "编号"
+
+msgid "Hostname"
+msgstr "主机名"
+
+msgid "Common App(TOP5)"
+msgstr "常用APP(TOP5)"
+
+msgid "Online Status"
+msgstr "在线状态"
+
+msgid "Client List"
+msgstr "终端列表"
+
+msgid "Online"
+msgstr "在线"
+
+msgid "Offline"
+msgstr "离线"
+
+msgid "App Time Statistics"
+msgstr "App 时间统计"
+
+msgid "Filter Status"
+msgstr "过滤状态"
+
+msgid "Data Statistics"
+msgstr "数据统计"
+
+
+
+msgid "Current Version"
+msgstr "当前版本"
+
+msgid "App Feature Num"
+msgstr "特征码个数"
+
+msgid "Update feature"
+msgstr "特征库更新"
+
+msgid "Time Setting"
+msgstr "时间控制"
+
+msgid "Sun"
+msgstr "周日"
+
+msgid "Mon"
+msgstr "周一"
+
+msgid "Tue"
+msgstr "周二"
+
+msgid "Wed"
+msgstr "周三"
+
+msgid "Thur"
+msgstr "周四"
+
+msgid "Fri"
+msgstr "周五"
+
+msgid "Sat"
+msgstr "周六"
+
+msgid "Update the feature file successfully, please refresh the page"
+msgstr "更新特征库成功，请刷新页面!"
+
+msgid "Failed to update feature file, format error"
+msgstr "更新特征库失败，格式错误!"
+
+msgid "Select feature file:"
+msgstr "选择本地特征库文件:"
+
+msgid "Start Time"
+msgstr "开始时间"
+
+msgid "End Time"
+msgstr "结束时间"
+
+msgid "App Name"
+msgstr "App名称"
+
+msgid "Visit Time"
+msgstr "访问时间"
+
+msgid "App classification time statistics"
+msgstr "App分类时间统计"
+
+msgid "Percentage"
+msgstr "占比"
+
+msgid "Filtered"
+msgstr "已过滤"
+
+msgid "Unfiltered"
+msgstr "未过滤"
+
+msgid "h"
+msgstr "小时"
+
+msgid "m"
+msgstr "分"
 
 msgid "Enable App Filter"
 msgstr "开启应用过滤"

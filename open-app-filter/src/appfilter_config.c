@@ -76,7 +76,7 @@ void init_app_name_table(void)
     int count = 0;
     char line_buf[2048] = {0};
 
-    FILE *fp = fopen("/etc/appfilter/feature.cfg", "r");
+    FILE *fp = fopen("/tmp/feature.cfg", "r");
     if (!fp)
     {
         printf("open file failed\n");
@@ -110,7 +110,7 @@ void init_app_class_name_table(void)
     char line_buf[2048] = {0};
     int class_id;
     char class_name[64] = {0};
-    FILE *fp = fopen("/etc/appfilter/app_class.txt", "r");
+    FILE *fp = fopen("/tmp/app_class.txt", "r");
     if (!fp)
     {
         printf("open file failed\n");

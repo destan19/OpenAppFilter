@@ -51,11 +51,11 @@ table.imagetable td {
         var total_time_str;
 
         if (hour > 0)
-            total_time_str=hour + "小时" + min + "分"
+            total_time_str=hour + "<%:h%>" + min + "<%:m%>"
         else{
             if (min == 0 && seconds2 != 0)
                 min = 1;
-            total_time_str=min + "分"
+            total_time_str=min + "<%:m%>"
         }
         return total_time_str;
     }
@@ -82,7 +82,7 @@ table.imagetable td {
         option = {
         title: [
         {
-            text: 'APP时间统计',
+            text: "<%:App Time Statistics%>",
             textStyle: {
                 fontSize: 16,
                 color: "black"
@@ -110,8 +110,8 @@ table.imagetable td {
                 var total_time = get_display_time(parms.data.value);
                 var str=  parms.seriesName+"</br>"+
                 parms.marker+""+parms.data.legendname+"</br>"+
-                "时间："+ total_time+"</br>"+
-                "占比："+ parms.percent+"%";
+                "<%:Visit Time%>: "+ total_time+"</br>"+
+                "<%:Percentage%>: "+ parms.percent+"%";
                 return  str ;
             }
         },
@@ -128,11 +128,11 @@ table.imagetable td {
         },
         series: [
             {
-                name: "访问时间",
+                name: "<%:Visit Time%>",
                 type:'pie',
                 center: ['35%', '50%'],
                 radius: ['40%', '65%'],
-                    clockwise: false, //饼图的扇区是否是顺时针排布
+                    clockwise: false,
                 avoidLabelOverlap: false,
                 label: {
                     normal: {
@@ -164,8 +164,6 @@ table.imagetable td {
         var m2R2Data=new Array()
         var total_time=0
         for(var i = 0; i < data.length; i++){
-            console.log("begin display222.");
-
             var dev_obj = data[i];
             if (dev_obj.visit_time == 0)
                 continue;
@@ -186,7 +184,7 @@ table.imagetable td {
         option = {
             title: [
             {
-                text: 'APP分类时间统计',
+                text: "<%:App classification time statistics%>",
                 textStyle: {
                     fontSize: 16,
                     color: "black"
@@ -213,9 +211,8 @@ table.imagetable td {
                 formatter:function (parms){
                     var total_time = get_display_time(parms.data.value);
                     var str=  parms.seriesName+"</br>"+
-                    parms.marker+""+parms.data.legendname+"</br>"+
-                    "时间："+ total_time +"</br>"+
-                    "占比："+ parms.percent+"%";
+                    parms.marker+""+parms.data.legendname+"</br>"+"<%:Visit Time%>: "+ total_time +"</br>" +
+                    "<%:Percentage%>: "+ parms.percent+"%";
                     return  str ;
                 }
             },
@@ -232,11 +229,11 @@ table.imagetable td {
             },
             series: [
                 {
-                    name:'访问时间',
+                    name:"<%:Visit Time%>",
                     type:'pie',
                     center: ['35%', '50%'],
                     radius: ['40%', '65%'],
-                    clockwise: false, //饼图的扇区是否是顺时针排布
+                    clockwise: false, 
                     avoidLabelOverlap: false,
                     label: {
                         normal: {
@@ -289,12 +286,12 @@ table.imagetable td {
 				{
 					var action_status=""
 					if(st[i].latest_action == 1)
-						action_status="已过滤"
+						action_status="<%:Filtered%>"
 					else
-						action_status="未过滤"
+						action_status="<%:Unfiltered%>"
 					var hostname=""
 					if(st[i].hostname == "" || st[i].hostname == "*"){
-						hostname="?";
+						hostname="--";
 					}
 					else{
 						hostname=st[i].hostname;
@@ -313,11 +310,11 @@ table.imagetable td {
 						total_time_str="-"
 					else {
 						if (hour > 0)
-							total_time_str=hour + "小时" + min + "分"
+							total_time_str=hour + "<%:h%>" + min + "<%:m%>"
 						else{
 							if (min == 0)
 								min = 1;
-							total_time_str=min + "分"
+							total_time_str=min + "<%:m%>"
 						}
 					}
 
@@ -331,6 +328,7 @@ table.imagetable td {
 
 //]]></script>
 
+
 <fieldset class="cbi-section">
     <div id="display">
 	<div id="main" style="width: 500px;height:300px;"></div>
@@ -338,12 +336,12 @@ table.imagetable td {
     </div>
 	<table class="imagetable" id="user_status_table">
 		<tr>
-			<th ><%:App%></th>
-			<th ><%:主机名%></th>
-			<th ><%:mac地址%></th>
-			<th><%:开始时间%></th>
-			<th><%:访问时长%></th>
-			<th><%:过滤状态%></th>
+			<th ><%:App Name%></th>
+			<th ><%:Hostname%></th>
+			<th ><%:Mac%></th>
+			<th><%:Start Time%></th>
+			<th><%:Visit Time%></th>
+			<th><%:Filter Status%></th>
 		</tr>
 		<tr>
 			<td colspan="8"><em><br /><%:Collecting data...%></em></td>

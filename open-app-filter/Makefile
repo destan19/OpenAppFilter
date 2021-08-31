@@ -46,8 +46,8 @@ define Package/appfilter/install
 	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/etc/appfilter
 	$(INSTALL_DIR) $(1)/etc/config
-	$(CP) ./files/feature.cfg $(1)/etc/appfilter/ 
-	$(CP) ./files/app_class.txt $(1)/etc/appfilter/
+	$(CP) ./files/*.cfg $(1)/etc/appfilter/ 
+	$(CP) ./files/*.txt $(1)/etc/appfilter/
 	$(INSTALL_BIN) ./files/appfilter.init $(1)/etc/init.d/appfilter
 	$(INSTALL_BIN) ./files/oaf_rule $(1)/usr/bin
 	$(INSTALL_BIN) ./files/gen_class.sh $(1)/usr/bin
