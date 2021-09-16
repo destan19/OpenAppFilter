@@ -35,3 +35,6 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 2. 关闭软硬加速、广告过滤、QOS、多WAN等涉及到nf_conn mark的模块  
 3. 开启应用过滤并选择需要过滤的app即可生效  
 
+### OpenWrt应用过滤交流群
+群号： 943396288
+点击链接加入群聊【OpenWrt交流群(OAF)】：https://jq.qq.com/?_wv=1027&k=TqQ6VvtV
