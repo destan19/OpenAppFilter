@@ -59,12 +59,12 @@ load_mac_list()
     json_add_int "op" 4
     json_add_object "data"
     json_add_array "mac_list"
-	config_get appid_list "user" "users"
-	echo "appid list=$appid_list"
-	for appid in $appid_list:
+	config_get mac_list "user" "users"
+	echo "mac list=$mac_list"
+	for mac in $mac_list:
 	do
-		echo "appid=$appid"
-		json_add_string "" $appid
+		echo "mac=$mac"
+		json_add_string "" $mac
 	done
     json_str=`json_dump`
     config_apply "$json_str"

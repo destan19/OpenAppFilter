@@ -5,7 +5,8 @@
 START=96
 USE_PROCD=1
 OAFD_BIN="/usr/bin/oafd"
-
+FEATURE_FILE="/tmp/feature.cfg"
+CLASS_FILE="/tmp/app_class.txt"
 service_triggers()
 {
 	procd_add_reload_trigger "appfilter"
@@ -17,7 +18,26 @@ stop_service(){
 }
 
 start_service(){
-	gen_class.sh /etc/appfilter/feature.cfg
+	lang=`uci get luci.main.lang`
+	test -f $FEATURE_FILE && rm $FEATURE_FILE
+	test -f $CLASS_FILE && rm $CLASS_FILE
+	if [ x"" == x"$lang" -o x"auto" == x"$lang" ];then
+		ln -s /etc/appfilter/feature.cfg $FEATURE_FILE
+		ln -s /etc/appfilter/app_class.txt $CLASS_FILE
+	else
+		if [ -f "/etc/appfilter/feature_$lang.cfg" ];then
+			ln -s /etc/appfilter/feature_$lang.cfg $FEATURE_FILE
+		else
+			ln -s /etc/appfilter/feature.cfg $FEATURE_FILE
+		fi
+
+		if [ -f "/etc/appfilter/app_class_$lang.txt" ];then
+			ln -s /etc/appfilter/app_class_$lang.txt $CLASS_FILE
+		else
+			ln -s /etc/appfilter/app_class.txt $CLASS_FILE
+		fi
+	fi
+	gen_class.sh /tmp/feature.cfg
 	insmod oaf
 	/usr/bin/oaf_rule reload
 	procd_open_instance
