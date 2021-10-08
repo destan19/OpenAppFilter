@@ -37,7 +37,6 @@ load_rule()
     do
 	class_name=`echo "$file" | awk -F/ '{print $4}'| awk -F. '{print $1}'`
 	config_get appid_list "appfilter" "${class_name}apps"
-	echo "appid_list=$appid_list"
 
 	if ! test -z "$appid_list";then
 	    for appid in $appid_list:
@@ -59,24 +58,24 @@ load_mac_list()
     json_add_int "op" 4
     json_add_object "data"
     json_add_array "mac_list"
-	config_get mac_list "user" "users"
-	echo "mac list=$mac_list"
-	for mac in $mac_list:
-	do
-		echo "mac=$mac"
-		json_add_string "" $mac
-	done
+    config_get mac_list "user" "users"
+    echo "mac list=$mac_list"
+    if [ x"$mac_list" != x"" ];then    
+        for mac in $mac_list:          
+        do                             
+            json_add_string "" $mac
+        done                           
+    fi  
     json_str=`json_dump`
     config_apply "$json_str"
-	echo "json str=$json_str"
     json_cleanup
 }
 
 reload_rule(){
-	config_load appfilter
-	clean_rule
-	load_rule
-	load_mac_list
+    config_load appfilter
+    clean_rule
+    load_rule
+    load_mac_list
 }
 
 
