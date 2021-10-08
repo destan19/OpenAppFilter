@@ -21,13 +21,14 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 https://zhuanlan.zhihu.com/p/419053529
 
 ### 演示视频
-https://www.bilibili.com/video/BV11z4y1z7tQ/
-抖音：Linux开发者-Derry
+https://www.bilibili.com/video/BV11z4y1z7tQ/   
+抖音：Linux开发者-Derry   
 
 ### OpenWrt应用过滤交流群
 群号： 943396288
-点击链接加入群聊【OpenWrt交流群(OAF)】：
+点击链接加入群聊【OpenWrt交流群(OAF)】：   
 https://jq.qq.com/?_wv=1027&k=TqQ6VvtV
+
 
 
 App filtering is a parent management plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, etc.
