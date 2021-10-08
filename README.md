@@ -1,22 +1,4 @@
 
-App filtering is a parent management plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, etc.
-### How to compile application filtering firmware
-1. Prepare OpenWrt source code and compile successfully  
-    Recommended source code repository:  
-    https://github.com/coolsnowwolf/lede.git  
-    If you use the official source code, do not use the master branch, because the luci version is not compatible, version 18.06 is recommended.  
-2. Clone the application filtering source code to the OpenWrt source code package directory  
-git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
-3. make menuconfig to open the application filter plug-in macro  
-     Execute make menuconfig in the OpenWrt source code directory, enter the luci app menu and select luci-app-oaf to save  
-4. Compile and generate firmware  
-     make V=s  
-### Instructions for use
-1. Make the application filtering device the main route  
-2. Turn off software and hardware acceleration, advertising filtering, QOS, multi-WAN and other modules related to nf_conn mark  
-3. Turn on application filtering and select the app that needs to be filtered to take effect  
-
-
 
 应用过滤是一款基于OpenWrt的家长管理插件，支持游戏、视频、聊天、下载等app过滤  
 ### 如何编译应用过滤固件
@@ -35,6 +17,33 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 2. 关闭软硬加速、广告过滤、QOS、多WAN等涉及到nf_conn mark的模块  
 3. 开启应用过滤并选择需要过滤的app即可生效  
 
+### 如何自定义特征码
+https://zhuanlan.zhihu.com/p/419053529
+
+### 演示视频
+https://www.bilibili.com/video/BV11z4y1z7tQ/
+抖音：Linux开发者-Derry
+
 ### OpenWrt应用过滤交流群
 群号： 943396288
-点击链接加入群聊【OpenWrt交流群(OAF)】：https://jq.qq.com/?_wv=1027&k=TqQ6VvtV
+点击链接加入群聊【OpenWrt交流群(OAF)】：
+https://jq.qq.com/?_wv=1027&k=TqQ6VvtV
+
+
+App filtering is a parent management plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, etc.
+### How to compile application filtering firmware
+1. Prepare OpenWrt source code and compile successfully  
+    Recommended source code repository:  
+    https://github.com/coolsnowwolf/lede.git  
+    If you use the official source code, do not use the master branch, because the luci version is not compatible, version 18.06 is recommended.  
+2. Clone the application filtering source code to the OpenWrt source code package directory  
+git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
+3. make menuconfig to open the application filter plug-in macro  
+     Execute make menuconfig in the OpenWrt source code directory, enter the luci app menu and select luci-app-oaf to save  
+4. Compile and generate firmware  
+     make V=s  
+### Instructions for use
+1. Make the application filtering device the main route  
+2. Turn off software and hardware acceleration, advertising filtering, QOS, multi-WAN and other modules related to nf_conn mark  
+3. Turn on application filtering and select the app that needs to be filtered to take effect  
+
