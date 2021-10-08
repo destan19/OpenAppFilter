@@ -20,6 +20,10 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 ### 如何自定义特征码
 https://zhuanlan.zhihu.com/p/419053529
 
+### 固件和特征库下载地址
+https://destan19.github.io
+如果访问不了，可以切换4G网络或者运营商，部分网络屏蔽了github.io
+
 ### 演示视频
 https://www.bilibili.com/video/BV11z4y1z7tQ/   
 抖音：Linux开发者-Derry   
