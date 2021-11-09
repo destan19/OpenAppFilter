@@ -27,6 +27,10 @@ https://destan19.github.io
 ### 演示视频 
 https://www.bilibili.com/video/BV1ZL41137aT/
 
+### 6.0以上版本ipk安装
+1. 通过以下源码编译固件  
+https://github.com/destan19/openfros  
+2. 在release中下载ipk文件直接安装  
 
 ### OpenWrt应用过滤交流群
 群号： 943396288
