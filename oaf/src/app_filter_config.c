@@ -236,7 +236,6 @@ int af_set_mac_list(cJSON * data_obj)
 			return -1;
 		}
 		if (-1 == mac_to_hex(mac_obj->valuestring, mac_hex)){
-			AF_ERROR("mac format error: %s\n", mac_obj->valuestring);
 			continue;
 		}
 		af_mac_add(mac_hex);

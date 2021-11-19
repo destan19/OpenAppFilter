@@ -134,11 +134,14 @@ int __add_app_feature(int appid,
 		
 		if (begin != dict) {
 			strncpy(pos, begin, p - begin);
-			k_sscanf(pos, "%d:%x",&index, &value);
-			node->pos_info[node->pos_num].pos = index;
-			node->pos_info[node->pos_num].value = value;
-			node->pos_num++;
 		}
+		else{
+			strcpy(pos, dict);
+		}
+		k_sscanf(pos, "%d:%x",&index, &value);
+		node->pos_info[node->pos_num].pos = index;
+		node->pos_info[node->pos_num].value = value;
+		node->pos_num++;
 		feature_list_write_lock();
 		list_add(&(node->head), &af_feature_head);
 		feature_list_write_unlock();
@@ -659,7 +662,8 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 		AF_ERROR("node or flow is NULL\n");
 		return AF_FALSE;
 	}
-	
+	if (node->proto > 0 && flow->l4_protocol != node->proto)
+		return AF_FALSE;
 	if (flow->l4_len == 0)
 		return AF_FALSE;
 
