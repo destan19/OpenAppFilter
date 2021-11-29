@@ -20,8 +20,6 @@
 					}
 					var tr = tb.insertRow(-1);
 					tr.className = 'tr cbi-rowstyle-' + ((i % 2) + 1);
-					$('tr').find('td').attr('class', 'td');
-					//tr.insertCell().className = 'td';
 					tr.insertCell(-1).innerHTML = i + 1;
 					tr.insertCell(-1).innerHTML = hostname;
 					tr.insertCell(-1).innerHTML = "<a href='<%=url('admin/network/appfilter/')%>"+devlist[i].mac+"'>"+devlist[i].mac+"</a>";
@@ -41,6 +39,7 @@
 						tr.insertCell(-1).innerHTML = "<%:Online%>";
 					else
 						tr.insertCell(-1).innerHTML = "<%:Offline%>";
+					$('tr').find('td').attr('class', 'td');
 				}
 			}
 		}
