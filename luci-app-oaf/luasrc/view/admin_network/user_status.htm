@@ -1,3 +1,6 @@
+<%
+local dsp = require "luci.dispatcher"
+-%>
 <script type="text/javascript">//<![CDATA[
 	XHR.poll(5, '<%=url('admin/network/dev_app_status')%>', null,
 		function(x, st)
@@ -35,11 +38,16 @@
 						app_list_str="--"
 					}
 					tr.insertCell(-1).innerHTML = app_list_str;
-					if (devlist[i].online == 1)
+					if (devlist[i].online == 1){
 						tr.insertCell(-1).innerHTML = "<%:Online%>";
-					else
+					}else{
 						tr.insertCell(-1).innerHTML = "<%:Offline%>";
-					$('tr').find('td').attr('class', 'td');
+					}
+					var childs = tr.childNodes;
+					Array.prototype.forEach.call(childs,function(child){
+						child.className = 'td';
+					
+					});
 				}
 			}
 		}
@@ -63,4 +71,4 @@
 			<td class="td" colspan="8"><em><br /><%:Collecting data...%></em></td>
 		</tr>
 	</table>
-</fieldset>
+</div>
