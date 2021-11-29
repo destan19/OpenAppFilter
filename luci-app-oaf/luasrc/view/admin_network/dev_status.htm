@@ -341,7 +341,11 @@ table.imagetable td {
 
 					tr.insertCell(-1).innerHTML = total_time_str;
 					tr.insertCell(-1).innerHTML = action_status;
-					$('tr').find('td').attr('class', 'td');
+					var childs = tr.childNodes;
+					Array.prototype.forEach.call(childs,function(child){
+						child.className = 'td';
+					
+					});
 
 				}
 			}
