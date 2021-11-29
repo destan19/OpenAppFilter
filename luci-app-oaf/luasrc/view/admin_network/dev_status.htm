@@ -4,7 +4,27 @@ local dsp = require "luci.dispatcher"
 -%>
 
 #display{
-    display: flex;
+    padding: 10px;
+    display: -webkit-box;
+    -webkit-box-orient: horizontal;
+    -webkit-box-pack: center;
+    -webkit-box-align: center;
+    display: -moz-box;
+    -moz-box-orient: horizontal;
+    -moz-box-pack: center;
+    -moz-box-align: center;
+    display: -o-box;
+    -o-box-orient: horizontal;
+    -o-box-pack: center;
+    -o-box-align: center;
+    display: -ms-box;
+    -ms-box-orient: horizontal;
+    -ms-box-pack: center;
+    -ms-box-align: center;
+    display: box;
+    box-orient: horizontal;
+    box-pack: center;
+    box-align: center;
 }
 
 table.imagetable {
@@ -14,6 +34,7 @@ table.imagetable {
     border-width: 1px;
     border-color: #999999;
     border-collapse: collapse;
+	padding-top:10px;
 }
 <!--
 table.imagetable th {
@@ -34,7 +55,7 @@ table.imagetable td {
 
 
 
-<script type="text/javascript" src="<%=resource%>/echarts.min.js"></script>
+<script type="text/javascript" src="<%=resource%>/echarts.min.js?v=5.0"></script>
 
 <script type="text/javascript">//<![CDATA[
     window.onload =function(){
@@ -297,7 +318,7 @@ table.imagetable td {
 						hostname=st[i].hostname;
 					}
 					var tr = tb.insertRow(-1);
-					//tr.className = 'cbi-section-table-row cbi-rowstyle-' + ((i % 2) + 1);
+					tr.className = 'tr cbi-rowstyle-' + ((i % 2) + 1);
 					tr.insertCell(-1).innerHTML = st[i].appname;
 					tr.insertCell(-1).innerHTML = hostname;
 					tr.insertCell(-1).innerHTML = st[i].mac;
@@ -320,6 +341,11 @@ table.imagetable td {
 
 					tr.insertCell(-1).innerHTML = total_time_str;
 					tr.insertCell(-1).innerHTML = action_status;
+					var childs = tr.childNodes;
+					Array.prototype.forEach.call(childs,function(child){
+						child.className = 'td';
+					
+					});
 
 				}
 			}
@@ -329,23 +355,23 @@ table.imagetable td {
 //]]></script>
 
 
-<fieldset class="cbi-section">
+<div class="cbi-section cbi-tblsection">
     <div id="display">
-	<div id="main" style="width: 500px;height:300px;"></div>
-    <div id="main2" style="width: 400px;height:300px;"></div>
+	<div id="main" style="min-width: 600px;height:300px;"></div>
+    <div id="main2" style="min-width: 600px;height:300px;"></div>
     </div>
-	<table class="imagetable" id="user_status_table">
-		<tr>
-			<th ><%:App Name%></th>
-			<th ><%:Hostname%></th>
-			<th ><%:Mac%></th>
-			<th><%:Start Time%></th>
-			<th><%:Visit Time%></th>
-			<th><%:Filter Status%></th>
+	<table class="table cbi-section-table" id="user_status_table">
+		<tr class="tr table-titles">
+			<th class="th"><%:App Name%></th>
+			<th class="th"><%:Hostname%></th>
+			<th class="th"><%:Mac%></th>
+			<th class="th"><%:Start Time%></th>
+			<th class="th"><%:Visit Time%></th>
+			<th class="th"><%:Filter Status%></th>
 		</tr>
-		<tr>
-			<td colspan="8"><em><br /><%:Collecting data...%></em></td>
+		<tr class="tr table-titles">
+			<td class="td" colspan="8"><em><br /><%:Collecting data...%></em></td>
 		</tr>
 	</table>
 
-</fieldset>
+</div>
