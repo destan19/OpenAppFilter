@@ -4,29 +4,23 @@ local dsp = require "luci.dispatcher"
 -%>
 
 #display{
-    padding: 10px;
-    display: -webkit-box;
-    -webkit-box-orient: horizontal;
-    -webkit-box-pack: center;
-    -webkit-box-align: center;
-    display: -moz-box;
-    -moz-box-orient: horizontal;
-    -moz-box-pack: center;
-    -moz-box-align: center;
-    display: -o-box;
-    -o-box-orient: horizontal;
-    -o-box-pack: center;
-    -o-box-align: center;
-    display: -ms-box;
-    -ms-box-orient: horizontal;
-    -ms-box-pack: center;
-    -ms-box-align: center;
-    display: box;
-    box-orient: horizontal;
-    box-pack: center;
-    box-align: center;
+	display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 20px;
 }
-
+#main{
+	min-width: 600px;
+    height: 300px;
+    display: inline-block;
+    flex: 2 2 10%;
+}
+#main2{
+	min-width: 600px;
+    height: 300px;
+    display: inline-block;
+    flex: 2 2 10%;
+}
 table.imagetable {
     font-family: verdana,arial,sans-serif;
     font-size:11px;
@@ -357,8 +351,8 @@ table.imagetable td {
 
 <div class="cbi-section cbi-tblsection">
     <div id="display">
-	<div id="main" style="min-width: 600px;height:300px;"></div>
-    <div id="main2" style="min-width: 600px;height:300px;"></div>
+	<div id="main" class="main left"></div>
+    <div id="main2" class="main2 left"></div>
     </div>
 	<table class="table cbi-section-table" id="user_status_table">
 		<tr class="tr table-titles">
