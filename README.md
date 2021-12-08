@@ -19,13 +19,6 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 2. 关闭软硬加速、广告过滤、QOS、多WAN等涉及到nf_conn mark的模块  
 3. 开启应用过滤并选择需要过滤的app即可生效  
 
-### 为什么不持续开源？
-1. 技术领域太垂直，没有几个真正开发人员参与。  
-2. 用该源码的基本上是刷机人员，只是为了编译固件，并且编译可能还一大堆疑问。  
-3. 提供ipk安装方式和固件，这样更方便广大爱好者使用。  
-4. 该插件还有很多需要优化的地方，需要系统级别去有优化和开发，比如基于app的限速、多规则等，很难继续适配通用openwrt。  
-
-
 ### 如何自定义特征码
 https://zhuanlan.zhihu.com/p/419053529  
 
