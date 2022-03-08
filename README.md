@@ -22,16 +22,13 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 ### 如何自定义特征码
 https://zhuanlan.zhihu.com/p/419053529  
 
-### 固件和特征库下载地址
+### 特征库下载地址
+注意特征库选择开源版本，也可以自己按照特征库文件格式自定义  
 https://destan19.github.io    
 
 ### 演示视频 
 https://www.bilibili.com/video/BV1ZL41137aT/
 
-### 6.0以上版本ipk安装
-1. 通过以下源码编译固件  
-https://github.com/destan19/openfros  
-2. 在release中下载ipk文件直接安装  
 
 ### OpenWrt应用过滤交流群
 群号： 868508199
