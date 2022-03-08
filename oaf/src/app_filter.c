@@ -902,7 +902,7 @@ static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook		= app_filter_hook,
 		.pf			= PF_INET,
-		.hooknum	= NF_INET_FORWARD,
+		.hooknum	= NF_INET_PREROUTING,
 		.priority	= NF_IP_PRI_MANGLE + 1,
 	},
 };
@@ -912,7 +912,7 @@ static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 		.hook		= app_filter_hook,
 		.owner		= THIS_MODULE,
 		.pf			= PF_INET,
-		.hooknum	= NF_INET_FORWARD,
+		.hooknum	= NF_INET_PREROUTING,
 		.priority	= NF_IP_PRI_MANGLE + 1,
 	},
 };

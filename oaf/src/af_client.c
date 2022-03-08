@@ -194,7 +194,7 @@ void flush_expired_visit_info(af_client_info_t *node)
 		}
 		
 		if (cur_timep - node->visit_info[i].latest_time > timeout){
-			// 3?¡§o?¨¤??3y????
+			// 3?ï¿½ï¿½o?ï¿½ï¿½??3y????
 			memset(&node->visit_info[i], 0x0, sizeof(app_visit_info_t));
 			count++;
 		}
@@ -354,7 +354,7 @@ static struct nf_hook_ops af_client_ops[] = {
 	{
 		.hook		= af_client_hook,
 		.pf			= PF_INET,
-		.hooknum	= NF_INET_FORWARD,
+		.hooknum	= NF_INET_PREROUTING,
 		.priority	= NF_IP_PRI_FIRST + 1,
 	},
 };
@@ -364,7 +364,7 @@ static struct nf_hook_ops af_client_ops[] = {
 		.hook		= af_client_hook,
 		.owner		= THIS_MODULE,
 		.pf			= PF_INET,
-		.hooknum	= NF_INET_FORWARD,
+		.hooknum	= NF_INET_PREROUTING,
 		.priority	= NF_IP_PRI_FIRST + 1,
 	},
 };
