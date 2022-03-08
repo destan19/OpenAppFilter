@@ -21,7 +21,7 @@ cd ./openwrt
 3. clone应用过滤源码到OpenWrt源码package目录
 
 ```shell
-git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
+git clone https://github.com/o8x/OpenAppFilter.git package/OpenAppFilter  
 ```
 
 4. 生成 feeds 配置文件并加入 OpenAppFilter 依赖
@@ -30,7 +30,7 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 
 ```shell
 cp feeds.conf.default feeds.conf
-echo "src-git openappfilter https://github.com/destan19/OpenAppFilter" >> feeds.conf
+echo "src-git openappfilter https://github.com/o8x/OpenAppFilter" >> feeds.conf
 ```
 
 更新 feeds 依赖
@@ -43,7 +43,8 @@ echo "src-git openappfilter https://github.com/destan19/OpenAppFilter" >> feeds.
     1. 选择 Derry Apps 项，勾选 appfilter 和 kmod-oaf
 
 6. 编译生成固件  
-    make V=s   
+    make V=99
+    
 ### 使用说明
 1. 将应用过滤设备做主路由  
 2. 关闭软硬加速、广告过滤、QOS、多WAN等涉及到nf_conn mark的模块  
