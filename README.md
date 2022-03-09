@@ -4,16 +4,53 @@
 这是5.x源码，只对重大bug进行修复。
 
 ### 如何编译应用过滤固件
-1. 准备OpenWrt源码，并编译成功  
-   推荐源码仓库：  
-   https://github.com/coolsnowwolf/lede.git  
-   如果用官方源码，不要用master分支，因为luci版本不兼容，推荐18.06版本。  
-2. clone应用过滤源码到OpenWrt源码package目录  
-git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
-3. make menuconfig 开启应用过滤插件宏  
-    在OpenWrt源码目录执行make menuconfig，进入luci app菜单选择luci-app-oaf保存  
-4. 编译生成固件  
+1. 准备OpenWrt源码，并编译成功
+
+不要使用 master 分支，因为 luci 版本不兼容，推荐18.06版本。
+
+```shell
+git clone -b openwrt-18.06 https://github.com/openwrt/openwrt.git
+```
+
+2. 进入 OpenWrt 源码根目录
+
+```
+cd ./openwrt
+```
+
+3. clone应用过滤源码到OpenWrt源码package目录
+
+```shell
+git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
+```
+
+4. 生成 feeds 配置文件并加入 OpenAppFilter 依赖
+
+参考文档：[https://openwrt.org/docs/guide-developer/helloworld/chapter4](https://openwrt.org/docs/guide-developer/helloworld/chapter4)
+
+```shell
+cp feeds.conf.default feeds.conf
+echo "src-git openappfilter https://github.com/destan19/OpenAppFilter" >> feeds.conf
+```
+
+更新和安装 feeds
+```
+./scripts/feeds update
+./scripts/feeds install -a I
+```
+
+5. 在 openwrt 根目录执行 make menuconfig 并开启应用过滤插件宏
+    1. 选择 Derry Apps 项，勾选 appfilter 和 kmod-oaf
+
+6. 编译生成固件  
     make V=s   
+    
+**编译产物**
+
+```
+./bin/packages/x86_64/base/appfilter_x.x-x_x86_64.ipk
+```
+
 ### 使用说明
 1. 将应用过滤设备做主路由  
 2. 关闭软硬加速、广告过滤、QOS、多WAN等涉及到nf_conn mark的模块  
