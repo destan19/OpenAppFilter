@@ -29,7 +29,7 @@ if nixio.fs.access("/tmp/feature.cfg") then
 end
 
 
-local display_str="<strong>"..translate("Current Version")..":  </strong>"..version.."<br><strong>"..translate("App Feature Num")..":</strong>  "..rule_count
+local display_str="<strong>当前版本:  </strong>"..version.."<br><strong>特征码个数:</strong>  "..rule_count.."<br><strong>  下载地址:</strong><a href=\"https://destan19.github.io\">https://destan19.github.io</a>"
 s = m:section(TypedSection, "feature", translate("Update feature"), display_str )
 
 fu = s:option(FileUpload, "")
