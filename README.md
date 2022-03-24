@@ -1,7 +1,6 @@
 
 
 应用过滤是一款基于OpenWrt的家长管理插件，支持游戏、视频、聊天、下载等app过滤  
-这是5.x源码，只对重大bug进行修复。
 
 ### 如何编译应用过滤固件
 1. 准备OpenWrt源码，并编译成功  
@@ -23,7 +22,7 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 https://zhuanlan.zhihu.com/p/419053529  
 
 ### 特征库下载地址
-注意特征库选择开源版本，也可以自己按照特征库文件格式自定义  
+
 https://destan19.github.io    
 
 ### 演示视频 
