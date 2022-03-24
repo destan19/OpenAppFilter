@@ -2,6 +2,11 @@
 
 应用过滤是一款基于OpenWrt的家长管理插件，支持游戏、视频、聊天、下载等app过滤  
 
+![1](https://github.com/destan19/picture/blob/main/oaf1.jpg)
+
+![2](https://github.com/destan19/picture/blob/main/oaf2.jpg)
+
+![3](https://github.com/destan19/picture/blob/main/oaf3.jpg)
 
 ### 如何编译应用过滤固件
 1. 准备OpenWrt源码，并编译成功  
