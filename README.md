@@ -4,11 +4,11 @@
 
 ### 插件截图
 #### 1
-![](https://gitee.com/destan19/picture/blob/master/oaf/oaf1.jpg)
+![1](https://gitee.com/destan19/picture/blob/master/oaf/oaf1.jpg)
 #### 2
-![](https://github.com/destan19/images/blob/master/oaf/oaf2.png)
+![2](https://github.com/destan19/images/blob/master/oaf/oaf2.png)
 #### 3
-![](https://github.com/destan19/images/blob/master/oaf/oaf3.png)
+![3](https://github.com/destan19/images/blob/master/oaf/oaf3.png)
 
 ### 如何编译应用过滤固件
 1. 准备OpenWrt源码，并编译成功  
