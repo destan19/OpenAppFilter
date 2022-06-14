@@ -118,7 +118,7 @@ void cJSON_Delete(cJSON *c)
 /* Parse the input text to generate a number, and populate the result into item. */
 static const char *parse_number(cJSON *item,const char *num)
 {
-	int n=0,sign=1,scale=0;int subscale=0,signsubscale=1;
+	int n=0,sign=1;
 
 	if (*num=='-') sign=-1,num++;	/* Has sign? */
 	if (*num=='0') num++;			/* is zero */
