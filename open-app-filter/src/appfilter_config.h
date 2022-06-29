@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 #ifndef __APPFILTER_CONFIG_H__
 #define __APPFILTER_CONFIG_H__
-#define MAX_SUPPORT_APP_NUM 256
+#define MAX_SUPPORT_APP_NUM 1024
 #define MAX_CLASS_NAME_LEN 32
 #include "appfilter_user.h"
 extern int g_cur_class_num;
