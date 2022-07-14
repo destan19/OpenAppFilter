@@ -234,7 +234,9 @@ void load_feature_buf_from_file(char **config_buf)
 {
 	struct inode *inode = NULL;
 	struct file *fp = NULL;
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5, 7, 19)
 	 mm_segment_t fs;
+#endif
 	off_t size;
 	fp = filp_open(AF_FEATURE_CONFIG_FILE, O_RDONLY, 0);
 
