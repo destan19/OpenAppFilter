@@ -11,7 +11,8 @@
 2. clone应用过滤源码到OpenWrt源码package目录  
 git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
 3. make menuconfig 开启应用过滤插件宏  
-    在OpenWrt源码目录执行make menuconfig，进入luci app菜单选择luci-app-oaf保存  
+    在OpenWrt源码目录执行make menuconfig，
+    勾选luci-app-oaf、appfilter、kmod-oaf三个插件并保存，其中appfilter和kmod-oaf位于Derry Apps目录，为了后续支持插件安装，luci不再强制依赖kmod-oaf模块。
 4. 编译生成固件  
     make V=s   
 ### 使用说明
@@ -30,6 +31,11 @@ https://destan19.github.io/feature/
 
 ![](https://github.com/destan19/picture/blob/main/oaf3.jpg)
 
+![](https://github.com/destan19/picture/blob/main/oaf4.jpg)
+
+![](https://github.com/destan19/picture/blob/main/oaf5.jpg)
+
+![](https://github.com/destan19/picture/blob/main/oaf6.jpg)
 
 App filtering is a parent management plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, etc.
 ### How to compile application filtering firmware
@@ -40,7 +46,7 @@ App filtering is a parent management plug-in based on OpenWrt, which supports ap
 2. Clone the application filtering source code to the OpenWrt source code package directory  
 git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
 3. make menuconfig to open the application filter plug-in macro  
-     Execute make menuconfig in the OpenWrt source code directory, enter the luci app menu and select luci-app-oaf to save  
+     Execute make menuconfig in the OpenWrt source code directory, select luci-app-oaf,appfilter and kmod-oaf 
 4. Compile and generate firmware  
      make V=s  
 ### Instructions for use
