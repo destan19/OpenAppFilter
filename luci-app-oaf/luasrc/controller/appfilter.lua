@@ -8,10 +8,26 @@ function index()
 	end
 	
 	local page
-	page = entry({"admin", "network", "appfilter"}, arcombine(cbi("appfilter/appfilter"), cbi("appfilter/dev_status", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true})), _("App Filter"), 100)
+	entry({"admin", "services", "appfilter"}, 
+	alias("admin", "services", "appfilter", "user_list"),
+		_("应用过滤"), 20).dependent = true
 
-	page.leaf   = true
-	page.subindex = true
+	entry({"admin", "services", "appfilter", "user_list"}, 
+		arcombine(cbi("appfilter/user_list",{hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), 
+		cbi("appfilter/dev_status", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true})),
+		_("用户列表"), 21).leaf=true
+
+	entry({"admin", "services", "appfilter", "base_setting"}, 
+        cbi("appfilter/base_setting"), _("应用过滤规则"), 22).leaf=true
+
+	entry({"admin", "services", "appfilter", "user_setting"}, 
+		cbi("appfilter/user_setting"), _("生效用户"), 23).leaf=true
+
+	entry({"admin", "services", "appfilter", "time_setting"}, 
+		cbi("appfilter/time_setting"), _("生效时间"), 24).leaf=true
+
+	entry({"admin", "services", "appfilter", "feature"}, 
+		cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("特征库升级"), 25).leaf=true
 
 	page = entry({"admin", "network", "user_status"}, call("user_status"), nil)
 	page.leaf = true

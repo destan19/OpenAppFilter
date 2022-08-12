@@ -8,14 +8,12 @@ local dsp = require "luci.dispatcher"
 local uci = require "luci.model.uci"
 local lng = require "luci.i18n"
 local jsc = require "luci.jsonc"
-
+local http = luci.http
+local SYS = require "luci.sys"
 local m, s
-arg[1] = arg[1] or ""
-m = Map("appfilter", translate("Data Statistics") .. "(" .. arg[1] .. ")", translate(""))
 
-local v
-v = m:section(SimpleSection)
-v.template = "admin_network/dev_status"
-v.mac = arg[1]
-m.redirect = luci.dispatcher.build_url("admin", "services", "appfilter")
+m = Map("appfilter", translate(""), translate(""))
+
+m:section(SimpleSection).template = "admin_network/user_status"
+
 return m
