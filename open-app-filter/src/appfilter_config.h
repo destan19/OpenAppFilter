@@ -34,8 +34,11 @@ typedef struct af_time
 } af_time_t;
 typedef struct af_ctl_time
 {
+    int time_mode; // 0,1
     af_time_t start;
     af_time_t end;
+    af_time_t start2; // todo: time group list
+    af_time_t end2;
     int days[7];
 } af_ctl_time_t;
 

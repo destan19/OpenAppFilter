@@ -47,26 +47,37 @@ void check_appfilter_enable(void)
         enable = 0;
         goto EXIT;
     }
-    
+
     t = localtime(&tt);
     if (af_t->days[t->tm_wday] != 1)
     {
-        enable = 0;
-        goto EXIT;
+        if (af_t->time_mode == 0){
+            enable = 0;
+            goto EXIT;
+        }
     }
-        
-    if (af_t->start.hour <= af_t->end.hour)
+
+    int cur_mins = t->tm_hour * 60 + t->tm_min;
+    if (((af_t->start.hour * 60 + af_t->start.min < cur_mins) && (cur_mins < af_t->end.hour * 60 + af_t->end.min))
+        || ((af_t->start2.hour * 60 + af_t->start2.min < cur_mins) && (cur_mins < af_t->end2.hour * 60 + af_t->end2.min))
+    )
     {
-        int cur_mins = t->tm_hour * 60 + t->tm_min;
-        if ((af_t->start.hour * 60 + af_t->start.min > cur_mins) || (cur_mins > af_t->end.hour * 60 + af_t->end.min))
-        {
+        if (af_t->time_mode == 0){
+            enable = 1;
+        }
+        else{
             enable = 0;
         }
     }
-    else
-        enable = 0;
+    else{
+        if (af_t->time_mode == 0){
+            enable = 0;
+        }
+        else{
+            enable = 1;
+        }
+    }
 EXIT:
-    
     if (enable)
     {
         system("echo 1 >/proc/sys/oaf/enable ");
@@ -79,13 +90,16 @@ EXIT:
 
 void dev_list_timeout_handler(struct uloop_timeout *t)
 {
-    
     dump_dev_list();
     check_dev_visit_info_expire();
     flush_expire_visit_info();
     //dump_dev_visit_list();
     check_appfilter_enable();
     //todo: dev list expire
+    if (check_dev_expire()){
+        flush_expire_visit_info();
+        flush_dev_expire_node();
+    }
     uloop_timeout_set(t, 10000);
 }
 
@@ -108,7 +122,8 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Failed to connect to ubus\n");
         return 1;
-    }
+    }   
+
 
     appfilter_nl_fd.fd = appfilter_nl_init();
     uloop_fd_add(&appfilter_nl_fd, ULOOP_READ);

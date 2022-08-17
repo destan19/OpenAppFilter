@@ -102,12 +102,22 @@ af_client_info_t *find_af_client(unsigned char *mac)
 	{
 		if (0 == memcmp(node->mac, mac, 6))
 		{
-			node->update_jiffies = jiffies;
 			return node;
 		}
 	}
 	return NULL;
-}
+}	
+
+af_client_info_t *find_and_add_af_client(unsigned char *mac)
+{
+	af_client_info_t *nfc;
+	nfc = find_af_client(mac);
+	if (!nfc){
+		nfc = nf_client_add(mac);
+	}
+	return nfc;
+}	
+
 
 af_client_info_t *find_af_client_by_ip(unsigned int ip)
 {
@@ -128,7 +138,7 @@ af_client_info_t *find_af_client_by_ip(unsigned int ip)
 	return NULL;
 }
 
-static af_client_info_t *
+af_client_info_t *
 nf_client_add(unsigned char *mac)
 {
 	af_client_info_t *node;
@@ -153,6 +163,9 @@ nf_client_add(unsigned char *mac)
 	list_add(&(node->hlist), &af_client_list_table[index]);
 	return node;
 }
+
+
+
 
 void check_client_expire(void)
 {
@@ -242,8 +255,6 @@ int __af_visit_info_report(af_client_info_t *node)
 	for (i = 0; i < MAX_RECORD_APP_NUM; i++)
 	{
 		if (node->visit_info[i].app_id == 0)
-			continue;
-		if (node->visit_info[i].total_num < 3)
 			continue;
 		count++;
 		visit_obj = cJSON_CreateObject();
@@ -373,6 +384,7 @@ static u_int32_t af_client_hook(unsigned int hook,
 	if (nfc && nfc->ip != iph->saddr)
 	{
 		AF_DEBUG("update node " MAC_FMT " ip %pI4--->%pI4\n", MAC_ARRAY(nfc->mac), &nfc->ip, &iph->saddr);
+		nfc->update_jiffies = jiffies;
 		nfc->ip = iph->saddr;
 	}
 	AF_CLIENT_UNLOCK_W();

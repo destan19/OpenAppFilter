@@ -190,8 +190,10 @@ void clean_dev_online_status(void)
         dev_node_t *node = dev_hash_table[i];
         while (node)
         {
-            node->online = 0;
-            node->offline_time = get_timestamp();
+            if (node->online){
+                node->offline_time = get_timestamp();
+                node->online = 0;
+            }
             node = node->next;
         }
     }
@@ -201,7 +203,7 @@ void clean_dev_online_status(void)
 Id   Mac                  Ip                  
 1    10:bf:48:37:0c:94    192.168.66.244 
 */
-void check_dev_expire(void)
+void update_dev_online_status(void)
 {
     char line_buf[256] = {0};
     char mac_buf[32] = {0};
@@ -234,6 +236,88 @@ void check_dev_expire(void)
     }
     fclose(fp);
 }
+
+
+#define DEV_OFFLINE_TIME (SECONDS_PER_DAY * 3)
+
+int check_dev_expire(void)
+{
+    int i, j;
+    int count = 0;
+    int cur_time = get_timestamp();
+    int offline_time = 0;
+    int expire_count = 0;
+    int visit_count = 0;
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
+    {
+        dev_node_t *node = dev_hash_table[i];
+        while (node)
+        {
+            if (node->online)
+                goto NEXT;
+            visit_count = 0;
+            offline_time = cur_time - node->offline_time;
+            if (offline_time > DEV_OFFLINE_TIME)
+            {
+                node->expire = 1;
+                for (j = 0; j < MAX_VISIT_HASH_SIZE; j++)
+                {
+                    visit_info_t *p_info = node->visit_htable[j];
+                    while (p_info)
+                    {
+                        p_info->expire = 1;
+                        visit_count++;
+                        p_info = p_info->next;
+                    }
+                }
+                expire_count++;
+                printf("dev:%s expired, offline time = %ds, count=%d, visit_count=%d\n",
+                        node->mac, offline_time, expire_count, visit_count);
+            }
+        NEXT:
+            node = node->next;
+        }
+    }
+    return expire_count;
+}
+
+void flush_dev_expire_node(void)
+{
+    int i, j;
+    int count = 0;
+    dev_node_t *node = NULL;
+    dev_node_t *prev = NULL;
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
+    {
+        dev_node_t *node = dev_hash_table[i];
+        prev = NULL;
+        while (node)
+        {
+            if (node->expire)
+            {
+                if (NULL == prev)
+                {
+                    dev_hash_table[i] = node->next;
+                    free(node);
+                    node = dev_hash_table[i];
+                    prev = NULL;
+                }
+                else
+                {
+                    prev->next = node->next;
+                    free(node);
+                    node = prev->next;
+                }
+            }
+            else
+            {
+                prev = node;
+                node = node->next;
+            }
+        }
+    }
+}
+
 void dump_dev_list(void)
 {
     int i, j;
@@ -242,7 +326,7 @@ void dump_dev_list(void)
     char ip_buf[MAX_IP_LEN] = {0};
     clean_dev_online_status();
     update_dev_hostname();
-    check_dev_expire();
+    update_dev_online_status();
     FILE *fp = fopen(OAF_DEV_LIST_FILE, "w");
     if (!fp)
     {
@@ -359,9 +443,6 @@ void flush_expire_visit_info(void)
                 while (p_info)
                 {
                     if (p_info->expire){
-                        printf("del node %-20s %-20s %d\n",
-                                                  node->mac, node->ip, p_info->appid
-                                                  );
                         if (NULL == prev){
                             node->visit_htable[j] = p_info->next;
                             free(p_info);

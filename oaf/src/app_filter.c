@@ -42,7 +42,7 @@ DEFINE_RWLOCK(af_feature_lock);
 #define MAX_OAF_NETLINK_MSG_LEN 1024
 
 int __add_app_feature(int appid, char *name, int proto, int src_port,
-				int dst_port, char *host_url, char *request_url, char *dict)
+				port_info_t dport_info, char *host_url, char *request_url, char *dict)
 {
 	af_feature_node_t *node = NULL;
 	char *p = dict;
@@ -61,7 +61,7 @@ int __add_app_feature(int appid, char *name, int proto, int src_port,
 		node->app_id = appid;
 		strcpy(node->app_name, name);
 		node->proto = proto;
-		node->dport = dst_port;
+		node->dport_info = dport_info;
 		node->sport = src_port;
 		strcpy(node->host_url, host_url);
 		strcpy(node->request_url, request_url);
@@ -85,13 +85,10 @@ int __add_app_feature(int appid, char *name, int proto, int src_port,
 		}
 
 		if (begin != dict)
-		{
 			strncpy(pos, begin, p - begin);
-		}
 		else
-		{
 			strcpy(pos, dict);
-		}
+		
 		k_sscanf(pos, "%d:%x", &index, &value);
 		node->pos_info[node->pos_num].pos = index;
 		node->pos_info[node->pos_num].value = value;
@@ -102,13 +99,119 @@ int __add_app_feature(int appid, char *name, int proto, int src_port,
 	}
 	return 0;
 }
+int validate_range_value(char *range_str){
+	if (!range_str)
+		return 0;
+	char *p = range_str;
+	while(*p){
+		if (*p == ' ' || *p == '!' || *p == '-' ||
+		((*p >= '0') && (*p <= '9'))){
+			p++;
+			continue;
+		}
+		else{
+			printk("error, invalid char %x\n", *p);
+			return 0;
+		}
+	}
+	return 1;
+}
 
+int parse_range_value(char *range_str, range_value_t *range){
+	char pure_range[128] = {0};
+	if (!validate_range_value(range_str)){
+		printk("validate range str failed, value = %s\n", range_str);
+		return -1;
+	}
+	k_trim(range_str);
+	if (range_str[0] == '!'){
+		range->not = 1;
+		strcpy(pure_range, range_str + 1);
+	}
+	else{
+		range->not = 0;
+		strcpy(pure_range, range_str);
+	}
+	k_trim(pure_range);
+	int start, end;
+	if (strstr(pure_range, "-")){
+		if (2 != sscanf(pure_range, "%d-%d",&start, &end))
+			return -1;
+	}
+	else{
+		if (1 != sscanf(pure_range, "%d", &start))
+			return -1;
+		end = start;
+	}
+	range->start = start;
+	range->end = end;
+	return 0;
+}
+
+int parse_port_info(char *port_str, port_info_t *info){
+	char *p = port_str;
+	char *begin = port_str;
+	int param_num = 0;
+	char one_port_buf[128] = {0};
+	k_trim(port_str);
+	if (strlen(port_str) == 0)
+		return -1;
+
+	while(*p++) {
+		if (*p != '|')
+			continue;
+		memset(one_port_buf, 0x0, sizeof(one_port_buf));
+		strncpy(one_port_buf, begin, p - begin);
+		if (0 == parse_range_value(one_port_buf, &info->range_list[info->num])){
+			info->num++;
+		}		
+		param_num++;
+		begin = p + 1;
+	}
+	memset(one_port_buf, 0x0, sizeof(one_port_buf));
+	strncpy(one_port_buf, begin, p - begin);
+	if (0 == parse_range_value(one_port_buf, &info->range_list[info->num])){
+		info->num++;
+	}
+	return 0;
+}
+
+int af_match_port(port_info_t *info, int port){
+	int i;
+	int with_not = 0;
+	if (info->num == 0)
+		return 1;
+	for (i = 0; i < info->num; i++){
+		if (info->range_list[i].not){
+			with_not = 1;
+			break;
+		}
+	}
+	for (i = 0; i < info->num; i++){
+		if (with_not){
+			if (info->range_list[i].not && port >= info->range_list[i].start 
+				&& port <= info->range_list[i].end){
+				return 0;
+			}
+		}
+		else{
+			if (port >= info->range_list[i].start 
+				&& port <= info->range_list[i].end){
+				return 1;
+			}
+		}
+	}
+	if (with_not)
+		return 1;
+	else
+		return 0;
+}
 //[tcp;;443;baidu.com;;]
 int add_app_feature(int appid, char *name, char *feature)
 {
 	char proto_str[16] = {0};
 	char src_port_str[16] = {0};
-
+	port_info_t dport_info;
 	char dst_port_str[16] = {0};
 	char host_url[32] = {0};
 	char request_url[128] = {0};
@@ -126,6 +229,7 @@ int add_app_feature(int appid, char *name, char *feature)
 		return -1;
 	}
 	// tcp;8000;www.sina.com;0:get_name;00:0a-01:11
+	memset(&dport_info, 0x0, sizeof(dport_info));
 	while (*p++)
 	{
 		if (*p != ';')
@@ -172,8 +276,10 @@ int add_app_feature(int appid, char *name, char *feature)
 		return -1;
 	}
 	sscanf(src_port_str, "%d", &src_port);
-	sscanf(dst_port_str, "%d", &dst_port);
-	__add_app_feature(appid, name, proto, src_port, dst_port, host_url, request_url, dict);
+//	sscanf(dst_port_str, "%d", &dst_port);
+	parse_port_info(dst_port_str, &dport_info);
+
+	__add_app_feature(appid, name, proto, src_port, dport_info, host_url, request_url, dict);
 	return 0;
 }
 
@@ -333,7 +439,7 @@ static void af_clean_feature_list(void)
 	feature_list_write_unlock();
 }
 
-int parse_flow_base(struct sk_buff *skb, flow_info_t *flow)
+int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
 	struct tcphdr *tcph = NULL;
 	struct udphdr *udph = NULL;
@@ -341,17 +447,9 @@ int parse_flow_base(struct sk_buff *skb, flow_info_t *flow)
 	struct iphdr *iph = NULL;
 	if (!skb)
 		return -1;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
-	ct = (struct nf_conn *)skb->_nfct;
-#else
-	ct = (struct nf_conn *)skb->nfct;
-#endif
-	if (!ct)
-		return -1;
 	iph = ip_hdr(skb);
 	if (!iph)
 		return -1;
-	flow->ct = ct;
 	flow->src = iph->saddr;
 	flow->dst = iph->daddr;
 	flow->l4_protocol = iph->protocol;
@@ -379,7 +477,7 @@ int parse_flow_base(struct sk_buff *skb, flow_info_t *flow)
 	return -1;
 }
 
-int parse_https_proto(flow_info_t *flow)
+int dpi_https_proto(flow_info_t *flow)
 {
 	int i;
 	short url_len = 0;
@@ -397,6 +495,7 @@ int parse_https_proto(flow_info_t *flow)
 	}
 	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01))
 		return -1;
+
 
 	for (i = 0; i < data_len; i++)
 	{
@@ -425,7 +524,7 @@ int parse_https_proto(flow_info_t *flow)
 	return -1;
 }
 
-void parse_http_proto(flow_info_t *flow)
+void dpi_http_proto(flow_info_t *flow)
 {
 	int i = 0;
 	int start = 0;
@@ -658,9 +757,8 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	{
 		return AF_FALSE;
 	}
-
-	if (node->dport != 0 && flow->dport != node->dport)
-	{
+	
+	if (!af_match_port(&node->dport_info, flow->dport)){
 		return AF_FALSE;
 	}
 
@@ -702,7 +800,6 @@ int app_filter_match(flow_info_t *flow)
 				}
 				if (is_user_match_enable() && !find_af_mac(client->mac))
 				{
-					AF_DEBUG("not match mac:" MAC_FMT "\n", MAC_ARRAY(client->mac));
 					goto EXIT;
 				}
 				if (af_get_app_status(node->app_id))
@@ -724,7 +821,7 @@ EXIT:
 	return AF_FALSE;
 }
 
-#define APP_FILTER_DROP_BITS 0x80000000
+#define NF_DROP_BIT 0x80000000
 
 static int af_get_visit_index(af_client_info_t *node, int app_id)
 {
@@ -740,49 +837,177 @@ static int af_get_visit_index(af_client_info_t *node, int app_id)
 	return 0;
 }
 
-int __af_update_client_app_info(flow_info_t *flow, af_client_info_t *node)
+int af_update_client_app_info(af_client_info_t *node, int app_id, int drop)
 {
 	int index = -1;
 	if (!node)
 		return -1;
-	if (!flow)
-		return -1;
-	index = af_get_visit_index(node, flow->app_id);
 
+	index = af_get_visit_index(node, app_id);
 	if (index < 0 || index >= MAX_RECORD_APP_NUM)
-	{
-		AF_ERROR("invalid index:%d\n\n", index);
 		return 0;
-	}
-	// todo: up bytes
-	node->visit_info[index].total_down_bytes += flow->l4_len + 66;
 	node->visit_info[index].total_num++;
-	if (flow->drop)
+	if (drop)
 		node->visit_info[index].drop_num++;
-
-	node->visit_info[index].app_id = flow->app_id;
+	node->visit_info[index].app_id = app_id;
 	node->visit_info[index].latest_time = af_get_timestamp_sec();
-	node->visit_info[index].latest_action = flow->drop;
+	node->visit_info[index].latest_action = drop;
 	return 0;
 }
 
-void af_update_client_app_info(flow_info_t *flow)
-{
-	af_client_info_t *node = NULL;
-	if (!flow)
-		return;
-	if (flow->app_id <= 0)
-		return;
-	AF_CLIENT_LOCK_W();
-	node = find_af_client_by_ip(flow->src);
-	if (node)
-	{
-		__af_update_client_app_info(flow, node);
-	}
-	AF_CLIENT_UNLOCK_W();
+int af_send_msg_to_user(char *pbuf, uint16_t len);
+int af_match_bcast_packet(flow_info_t *f){
+	if (!f)
+		return 0;
+	if (0 == f->src || 0 == f->dst 
+	|| 0xffffffff == f->dst || 0 == f->dst)
+		return 1;
+	return 0;
 }
 
-int af_send_msg_to_user(char *pbuf, uint16_t len);
+int af_match_local_packet(flow_info_t *f){
+	if (!f)
+		return 0;
+	if (0x0100007f == f->src || 0x0100007f == f->dst){
+		return 1;
+	}
+	return 0;
+}
+
+int dpi_main(struct sk_buff *skb, flow_info_t *flow){
+	dpi_http_proto(flow);
+	dpi_https_proto(flow);
+	if (TEST_MODE())
+		dump_flow_info(flow);
+	return 0;
+}
+
+void af_get_smac(struct sk_buff *skb, u_int8_t *smac){
+	struct ethhdr *ethhdr = NULL;
+	ethhdr = eth_hdr(skb);
+	if (ethhdr)
+		memcpy(smac, ethhdr->h_source, ETH_ALEN);
+	else
+		memcpy(smac, &skb->cb[40], ETH_ALEN);
+}
+
+u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev){
+	flow_info_t flow;
+	u_int8_t smac[ETH_ALEN];
+	af_client_info_t *client = NULL;
+
+	if (!skb || !dev)
+		return NF_ACCEPT;
+
+	if (skb->len > MAX_BYPASS_DPI_PKT_LEN)
+		return NF_ACCEPT;	
+
+	memset((char *)&flow, 0x0, sizeof(flow_info_t));
+	if (parse_flow_proto(skb, &flow) < 0)
+		return NF_ACCEPT;
+	if (af_match_bcast_packet(&flow) || af_match_local_packet(&flow))
+		return NF_ACCEPT;
+
+	af_get_smac(skb, smac);
+
+	AF_CLIENT_LOCK_W();
+	client = find_and_add_af_client(smac);
+	if (!client){
+		AF_CLIENT_UNLOCK_W();
+		return NF_ACCEPT;
+	}
+	client->update_jiffies = jiffies;
+	AF_CLIENT_UNLOCK_W();
+
+	if (0 != dpi_main(skb, &flow))
+		return NF_ACCEPT;
+
+	client->ip = flow.src;
+	app_filter_match(&flow);
+	if (flow.app_id != 0){
+		af_update_client_app_info(client, flow.app_id, flow.drop);
+	}
+	if (flow.drop)
+	{
+		return NF_DROP;
+	}
+	return NF_ACCEPT;
+}
+
+u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev){
+	unsigned long long total_packets = 0;
+	flow_info_t flow;
+	enum ip_conntrack_info ctinfo;
+	struct nf_conn *ct = NULL;
+	struct nf_conn_acct *acct;
+	af_client_info_t *client = NULL;
+	int app_id = 0;
+	int drop = 0;
+
+	memset((char *)&flow, 0x0, sizeof(flow_info_t));
+	if (parse_flow_proto(skb, &flow) < 0)
+		return NF_ACCEPT;
+
+	ct = nf_ct_get(skb, &ctinfo);
+	if (ct == NULL || !nf_ct_is_confirmed(ct))
+		return NF_ACCEPT;
+
+	AF_CLIENT_LOCK_R();
+	client = find_af_client_by_ip(flow.src);
+	if (!client){
+		AF_CLIENT_UNLOCK_R();
+		return NF_ACCEPT;
+	}
+	client->update_jiffies = jiffies;
+	AF_CLIENT_UNLOCK_R();
+
+	if (ct->mark != 0)
+	{
+		app_id = ct->mark & (~NF_DROP_BIT);
+		if (app_id > 1000 && app_id < 9999){
+			if (NF_DROP_BIT == (ct->mark & NF_DROP_BIT))
+				drop = 1;
+			AF_CLIENT_LOCK_W();
+			af_update_client_app_info(client, app_id, drop);
+			AF_CLIENT_UNLOCK_W();
+
+			if (drop){
+				return NF_DROP;
+			}
+		}
+	}
+	acct = nf_conn_acct_find(ct);
+	if(!acct)
+		return NF_ACCEPT;
+	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) 
+		+ (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
+
+	if(total_packets > MAX_DPI_PKT_NUM)
+		return NF_ACCEPT;
+
+	if (0 != dpi_main(skb, &flow))
+		return NF_ACCEPT;
+
+	app_filter_match(&flow);
+
+	if (flow.app_id != 0)
+	{
+		ct->mark = flow.app_id;
+		AF_CLIENT_LOCK_W();
+		af_update_client_app_info(client, flow.app_id, flow.drop);
+		AF_CLIENT_UNLOCK_W();
+		AF_LMT_INFO("match %s %pI4(%d)--> %pI4(%d) len = %d, %d\n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
+					&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id);
+	}
+	if (flow.drop)
+	{
+		ct->mark |= NF_DROP_BIT;
+		AF_LMT_INFO("##Drop app %s flow, appid is %d\n", flow.app_name, flow.app_id);
+		return NF_DROP;
+	}
+	return NF_ACCEPT;
+}
+
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 static u_int32_t app_filter_hook(void *priv,
@@ -797,73 +1022,33 @@ static u_int32_t app_filter_hook(unsigned int hook,
 								 int (*okfn)(struct sk_buff *))
 {
 #endif
-	unsigned long long total_packets = 0;
-	flow_info_t flow;
-	enum ip_conntrack_info ctinfo;
-	struct nf_conn *ct = NULL;
-	struct nf_conn_acct *acct;
 	if (!g_oaf_enable)
 		return NF_ACCEPT;
-
-	ct = nf_ct_get(skb, &ctinfo);
-	if (ct == NULL)
+	if (AF_MODE_BYPASS == af_work_mode)
 		return NF_ACCEPT;
-
-#if defined(CONFIG_NF_CONNTRACK_MARK)
-	if (ct->mark != 0)
-	{
-		if (APP_FILTER_DROP_BITS == (ct->mark & APP_FILTER_DROP_BITS))
-			return NF_DROP;
-	}
-#endif
-// 3.12.74-->3.13-rc1
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
-	acct = nf_conn_acct_find(ct);
-	if(!acct)
-		return NF_ACCEPT;
-	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) 
-		+ (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
-#else
-	struct nf_conn_counter *counter;
-	counter = nf_conn_acct_find(ct);
-	if (!counter)
-		return NF_ACCEPT;	
-	total_packets = (unsigned long long)atomic64_read(&counter[IP_CT_DIR_ORIGINAL].packets) 
-		+ (unsigned long long)atomic64_read(&counter[IP_CT_DIR_REPLY].packets);
-#endif
-	if(total_packets > MAX_PARSE_PKT_NUM){
-		return NF_ACCEPT;
-	}
-
-	memset((char *)&flow, 0x0, sizeof(flow_info_t));
-	if (parse_flow_base(skb, &flow) < 0)
-		return NF_ACCEPT;
-
-	parse_http_proto(&flow);
-	parse_https_proto(&flow);
-	if (TEST_MODE())
-		dump_flow_info(&flow);
-	app_filter_match(&flow);
-
-	if (flow.app_id != 0)
-	{
-		if (flow.app_id > 1000 && flow.app_id <= 8999)
-		{
-			af_update_client_app_info(&flow);
-			AF_LMT_INFO("match %s %pI4(%d)--> %pI4(%d) len = %d, %d\n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
-						&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id);
-		}
-	}
-	if (flow.drop)
-	{
-#if defined(CONFIG_NF_CONNTRACK_MARK)
-		ct->mark |= APP_FILTER_DROP_BITS;
-#endif
-		AF_LMT_INFO("##Drop app %s flow, appid is %d\n", flow.app_name, flow.app_id);
-		return NF_DROP;
-	}
-	return NF_ACCEPT;
+	return app_filter_hook_gateway_handle(skb, skb->dev);
 }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+static u_int32_t app_filter_by_pass_hook(void *priv,
+								 struct sk_buff *skb,
+								 const struct nf_hook_state *state)
+{
+#else
+static u_int32_t app_filter_by_pass_hook(unsigned int hook,
+								 struct sk_buff *skb,
+								 const struct net_device *in,
+								 const struct net_device *out,
+								 int (*okfn)(struct sk_buff *))
+{
+#endif
+	if (!g_oaf_enable)
+		return NF_ACCEPT;
+	if (AF_MODE_GATEWAY == af_work_mode)
+		return NF_ACCEPT;
+	return app_filter_hook_bypass_handle(skb, skb->dev);
+}
+
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 static struct nf_hook_ops app_filter_ops[] __read_mostly = {
@@ -871,6 +1056,13 @@ static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 		.hook = app_filter_hook,
 		.pf = PF_INET,
 		.hooknum = NF_INET_FORWARD,
+		.priority = NF_IP_PRI_MANGLE + 1,
+
+	},
+	{
+		.hook = app_filter_by_pass_hook,
+		.pf = PF_INET,
+		.hooknum = NF_INET_PRE_ROUTING,
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
 };
@@ -943,14 +1135,12 @@ int af_send_msg_to_user(char *pbuf, uint16_t len)
 	nl_skb = nlmsg_new(len + sizeof(struct af_msg_hdr), GFP_ATOMIC);
 	if (!nl_skb)
 	{
-		printk("netlink alloc failure\n");
 		return -1;
 	}
 
 	nlh = nlmsg_put(nl_skb, 0, 0, OAF_NETLINK_ID, len + sizeof(struct af_msg_hdr), 0);
 	if (nlh == NULL)
 	{
-		printk("error, nlh is NULL\n");
 		nlmsg_free(nl_skb);
 		return -1;
 	}
@@ -989,15 +1179,9 @@ static void oaf_msg_rcv(struct sk_buff *skb)
 		umsg = NLMSG_DATA(nlh);
 		af_hdr = (struct af_msg_hdr *)umsg;
 		if (af_hdr->magic != 0xa0b0c0d0)
-		{
-			printk("magic error %x\n", af_hdr->magic);
 			return;
-		}
 		if (af_hdr->len <= 0 || af_hdr->len >= MAX_OAF_NETLINK_MSG_LEN)
-		{
-			printk("data len error\n");
 			return;
-		}
 		udata = umsg + sizeof(struct af_msg_hdr);
 
 		if (udata)

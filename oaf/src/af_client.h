@@ -60,11 +60,14 @@ int af_client_init(void);
 
 void af_client_exit(void);
 af_client_info_t *find_af_client_by_ip(unsigned int ip);
+af_client_info_t *find_af_client(unsigned char *mac);
 
 void check_client_expire(void);
 
 void af_visit_info_report(void);
 
 void af_client_list_reset_report_num(void);
+af_client_info_t *nf_client_add(unsigned char *mac);
+af_client_info_t *find_and_add_af_client(unsigned char *mac);
 
 #endif

@@ -78,10 +78,18 @@ reload_rule(){
     load_mac_list
 }
 
+reload_base_config(){       
+    local old_work_mode
+    config_load appfilter              
+    config_get work_mode "global" "work_mode"
+    echo "work mode=$work_mode"  
+    echo "$work_mode" >/proc/sys/oaf/work_mode
+}
 
 case $1 in
 "reload")
 	echo "reload appfilter rule..."
+    reload_base_config
 	reload_rule
 ;;
 esac

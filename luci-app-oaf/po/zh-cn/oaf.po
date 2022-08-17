@@ -124,11 +124,18 @@ msgstr "更新特征库失败，格式错误!"
 msgid "Select feature file:"
 msgstr "选择本地特征库文件:"
 
-msgid "Start Time"
-msgstr "开始时间"
+msgid "Start Time1"
+msgstr "开始时间1"
 
-msgid "End Time"
-msgstr "结束时间"
+msgid "End Time1"
+msgstr "结束时间1"
+
+
+msgid "Start Time2"
+msgstr "开始时间2"
+
+msgid "End Time2"
+msgstr "结束时间2"
 
 msgid "App Name"
 msgstr "App名称"

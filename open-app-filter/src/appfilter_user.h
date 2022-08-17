@@ -35,6 +35,7 @@ THE SOFTWARE.
 #define MAX_APP_TYPE 16
 #define MAX_APP_ID_NUM 128
 #define MAX_SUPPORT_DEV_NUM 64
+#define SECONDS_PER_DAY (24 * 3600)
 
 //extern dev_node_t *dev_hash_table[MAX_DEV_NODE_HASH_SIZE];
 
@@ -78,6 +79,7 @@ typedef struct dev_node
     char ip[MAX_IP_LEN];
     char hostname[MAX_HOSTNAME_SIZE];
     int online;
+    int expire;
     int offline_time;
     int online_time;
     visit_info_t *visit_htable[MAX_VISIT_HASH_SIZE];
@@ -110,5 +112,7 @@ void dev_foreach(void *arg, iter_func iter);
 void add_visit_info_node(visit_info_t **head, visit_info_t *node);
 void check_dev_visit_info_expire(void);
 void flush_expire_visit_info();
-
+int check_dev_expire(void);
+void flush_dev_expire_node(void);
+void flush_expire_visit_info(void);
 #endif

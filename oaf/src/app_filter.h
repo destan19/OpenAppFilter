@@ -4,7 +4,7 @@
 #define AF_VERSION "5.0"
 #define AF_FEATURE_CONFIG_FILE "/tmp/feature.cfg"
 
-#define MAX_PARSE_PKT_NUM 64
+#define MAX_DPI_PKT_NUM 64
 #define MIN_HTTP_DATA_LEN 16
 #define MAX_APP_NAME_LEN 64
 #define MAX_FEATURE_NUM_PER_APP 16 
@@ -17,6 +17,7 @@
 #define MAX_FEATURE_LINE_LEN 256
 #define MIN_FEATURE_LINE_LEN 16
 #define MAX_URL_MATCH_LEN 64
+#define MAX_BYPASS_DPI_PKT_LEN 600
 
 //#define CONFIG_KERNEL_FUNC_TEST 1
 
@@ -58,6 +59,11 @@ enum AF_FEATURE_PARAM_INDEX{
 enum E_MSG_TYPE{
 	AF_MSG_INIT,
 	AF_MSG_MAX
+};
+enum AF_WORK_MODE {
+	AF_MODE_GATEWAY,
+	AF_MODE_BYPASS,
+	AF_MODE_BRIDGE,
 };
 
 typedef struct af_msg{
@@ -116,6 +122,22 @@ typedef struct af_pos_info{
 	unsigned char value;
 }af_pos_info_t;
 
+#define MAX_PORT_RANGE_NUM 5
+
+typedef struct range_value
+{
+	int not ;
+	int start;
+	int end;
+} range_value_t;
+
+typedef struct port_info
+{
+	u_int8_t mode; // 0: match, 1: not match
+	int num;
+	range_value_t range_list[MAX_PORT_RANGE_NUM];
+} port_info_t;
+
 typedef struct af_feature_node{
 	struct list_head  		head;
 	u_int32_t app_id;
@@ -124,6 +146,7 @@ typedef struct af_feature_node{
 	u_int32_t proto;
 	u_int32_t sport;
 	u_int32_t dport;
+	port_info_t dport_info;
 	char host_url[MAX_HOST_URL_LEN];
 	char request_url[MAX_REQUEST_URL_LEN];
 	int pos_num;

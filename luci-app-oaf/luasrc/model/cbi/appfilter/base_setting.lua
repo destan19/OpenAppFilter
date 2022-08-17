@@ -13,11 +13,16 @@ local SYS = require "luci.sys"
 local m, s
 
 m = Map("appfilter", translate("App Filter"), translate(
-    "目前不支持旁路模式，请先关闭所有加速(acc)、广告过滤、多拨等可能冲突的模块"))
+    "请先关闭所有加速(acc)、广告过滤、多拨等可能冲突的模块"))
 
 s = m:section(TypedSection, "global", translate("Basic Settings"))
 s:option(Flag, "enable", translate("Enable App Filter"), translate(""))
 s.anonymous = true
+
+o=s:option(ListValue, "work_mode", translate("工作模式"),translate("请正确选择模式，一般经过了WAN口转发则为主路由，建议切换模式后重启设备")) 
+o.default=0
+o:value(0,"主路由模式")
+o:value(1,"旁路由模式")
 
 local rule_count = 0
 local version = ""

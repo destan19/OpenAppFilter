@@ -19,6 +19,27 @@ u_int32_t af_get_timestamp_sec(void)
 #endif
 
 }
+char *k_trim(char *s)
+{
+	char *start, *last, *bk;
+	int len;
+
+	start = s;
+	while (isspace(*start))
+		start++;
+
+	bk = last = s + strlen(s) - 1;
+	while (last > start && isspace(*last))
+		last--;
+
+	if ((s != start) || (bk != last))
+	{
+		len = last - start + 1;
+		strncpy(s, start, len);
+		s[len] = '\0';
+	}
+	return s;
+}
 
 int check_local_network_ip(unsigned int ip)
 {

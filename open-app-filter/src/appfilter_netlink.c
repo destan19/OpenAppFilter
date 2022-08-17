@@ -44,6 +44,8 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
     struct sockaddr_nl nladdr;
     struct iovec iov = {buf, sizeof(buf)};
     struct nlmsghdr *h;
+    int type;
+    int id;
     char *mac = NULL;
         printf("%s %d\n", __func__, __LINE__);
 
@@ -90,6 +92,7 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         printf("parse json failed:%s", kdata);
         return;
     }
+    printf("recv msg = %s\n", kdata);
 
     struct json_object *mac_obj = json_object_object_get(root, "mac");
 
@@ -137,10 +140,10 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         int appid = json_object_get_int(appid_obj);
         int action = json_object_get_int(action_obj);
 
-        int type = appid / 1000;
-        int id = appid % 1000;
-    printf("%s %d\n", __func__, __LINE__);
-
+        type = appid / 1000;
+        id = appid % 1000;
+        if (id <= 0 || type <= 0)
+            continue;
         node->stat[type - 1][id - 1].total_time += REPORT_INTERVAL_SECS;
 
         //	node->stat[type - 1][id - 1].total_down_bytes += json_object_get_int(down_obj);
@@ -148,6 +151,7 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
 
         int hash = hash_appid(appid);
         visit_info_t *head = node->visit_htable[hash];
+
         if (head && (cur_time.tv_sec - head->latest_time) < 300)
         {
             head->latest_time = cur_time.tv_sec;
@@ -163,7 +167,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
             visit_node->first_time = cur_time.tv_sec - MIN_VISIT_TIME;
             visit_node->next = NULL;
             add_visit_info_node(&node->visit_htable[hash], visit_node);
-                printf("%s %d\n", __func__, __LINE__);
 
             //printf("add  visit info curtime=%d\n", cur_time.tv_sec);
         }
