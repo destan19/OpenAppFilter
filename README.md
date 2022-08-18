@@ -16,13 +16,11 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 4. 编译生成固件  
     make V=s   
 ### 使用说明
-1. 将应用过滤设备做主路由 
-2. 关闭软硬加速、广告过滤、QOS、多WAN等涉及到nf_conn mark的模块,高通的AX系列产品需要将ecm允许慢速转发的包个数调整到最大值，直接stop ecm会导致吞吐非常低。
-3. 开启应用过滤并选择需要过滤的app即可生效  
-
+  使用前需要关闭软硬加速、广告过滤、QOS、多WAN等涉及到nf_conn mark的模块,高通的AX系列产品需要将ecm允许慢速转发的包个数调整到最大值，直接stop ecm会导致吞吐非常低。  
+  最新版本已经支持旁路由模式
+ 
 ### 特征库下载地址
 https://destan19.github.io/feature/
-
 
 ### 插件截图
 ![](https://github.com/destan19/picture/blob/main/oaf1.jpg)
