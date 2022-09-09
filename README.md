@@ -1,13 +1,13 @@
 
 
-应用过滤是一款基于OpenWrt的家长管理插件，支持游戏、视频、聊天、下载等app过滤  
+应用过滤是一款基于OpenWrt的家长管理插件，支持游戏、视频、聊天、下载等app过滤，比如抖音、斗鱼、王者荣耀等
 
 
 ### 如何编译应用过滤固件
 1. 准备OpenWrt源码，并编译成功  
    推荐源码仓库：  
    https://github.com/coolsnowwolf/lede.git  
-   如果用官方源码，不要用master分支，因为luci版本不兼容，推荐18.06版本。  
+   如果用官方源码，luci不要使用2.0版本，目前还没有适配新架构的luci
 2. clone应用过滤源码到OpenWrt源码package目录  
 git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
 3. make menuconfig 开启应用过滤插件宏  
@@ -40,7 +40,7 @@ App filtering is a parent management plug-in based on OpenWrt, which supports ap
 1. Prepare OpenWrt source code and compile successfully  
     Recommended source code repository:  
     https://github.com/coolsnowwolf/lede.git  
-    If you use the official source code, do not use the master branch, because the luci version is not compatible, version 18.06 is recommended.  
+    If you use the official source code, please switch luci to 1.0, the current code does not support luci2.0
 2. Clone the application filtering source code to the OpenWrt source code package directory  
 git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
 3. make menuconfig to open the application filter plug-in macro  
