@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 LUCI_TITLE:=Open App Filter Module
 LUCI_PKGARCH:=all
-LUCI_DEPENDS:=+appfilter
+LUCI_DEPENDS:=+appfilter +kmod-oaf
 PKG_NAME:=luci-app-oaf
 PKG_VERSION:=5.0
 PKG_RELEASE:=1
