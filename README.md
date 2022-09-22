@@ -7,17 +7,29 @@
 1. 准备OpenWrt源码，并编译成功  
    推荐源码仓库：  
    https://github.com/coolsnowwolf/lede.git  
-   如果用官方源码，luci不要使用2.0版本，目前还没有适配新架构的luci
 2. clone应用过滤源码到OpenWrt源码package目录  
 git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter  
-3. make menuconfig 开启应用过滤插件宏  
-    在OpenWrt源码目录执行make menuconfig，
-    勾选luci-app-oaf、appfilter、kmod-oaf三个插件并保存，其中appfilter和kmod-oaf位于Derry Apps目录，为了后续支持插件安装，luci不再强制依赖kmod-oaf模块。
+3. 开启oaf插件配置  
+执行命令make menuconfig，进入编译配置界面，勾选luci-app-oaf后保存，  
+luci-app-oaf依赖appfilter、kmod-oaf两个模块，选择luci-app-oaf后会自动选择依赖。  
 4. 编译生成固件  
     make V=s   
-### 使用说明
-  使用前需要关闭软硬加速、广告过滤、QOS、多WAN等涉及到nf_conn mark的模块,高通的AX系列产品需要将ecm允许慢速转发的包个数调整到最大值，直接stop ecm会导致吞吐非常低。  
-  最新版本已经支持旁路由模式
+5. 支持模式
+- 主路由模式
+- 旁路由模式（AP桥模式也可以使用该模式，旁路由模式仅用来过滤，如果需要完整审计功能，请部署为主路由）
+
+### 使用前必读
+  1. 关闭网络加速  
+  进入网络-->网络加速(ACC)菜单，将所有的勾取消并保存生效，如果是高通AX系列产品，还需要手动通过命令调整ecm慢速转发包个数，  
+  调整为比较大的值，比如1000000，该值表示某条连接多少个报文进入应用过滤模块。  
+  命令:  
+  ```
+  echo "1000000" > /sys/kernel/debug/ecm/ecm_classifier_default/accel_delay_pkts  
+  ```
+  注意重启后会失效，可以加入到启动脚本。  
+  
+  2. 关闭可能冲突的模块  
+  广告过滤、QOS、多WAN等涉及到连接跟踪标记(mark)的模块可能和应用过滤冲突，测试时最好先不开启其他任何模块。  
  
 ### 特征库下载地址
 https://destan19.github.io/feature/
