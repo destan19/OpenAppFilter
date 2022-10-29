@@ -58,13 +58,7 @@ http.setfilehandler(function(meta, chunk, eof)
         local line = fd2:read("*l");
         fd2:close()
         local ret = string.match(line, "#version")
-        local lang = m.uci:get_all("luci.main.lang")
-        local feature_file = ""
-        if "" == lang or "auto" == lang then
-            feature_file = "/etc/appfilter/feature.cfg"
-        else
-            feature_file = "/etc/appfilter/feature_" .. lang .. ".cfg"
-        end
+        local feature_file = "/etc/appfilter/feature.cfg"
         if ret ~= nil then
             local cmd = "cp /tmp/upload/" .. meta.file .. " " .. feature_file;
             os.execute(cmd);
