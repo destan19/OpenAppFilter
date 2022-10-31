@@ -299,6 +299,18 @@ int config_get_appfilter_enable(void)
     return enable;
 }
 
+int config_get_lan_ip(char *lan_ip, int len)
+{
+    int ret = 0;
+    struct uci_context *ctx = uci_alloc_context();
+    if (!ctx)
+        return -1;
+    ret = uci_get_value(ctx, "network.lan.ipaddr", lan_ip, len);
+    uci_free_context(ctx);
+    return ret;
+}
+
+
 int appfilter_config_alloc(void)
 {
     char *err;

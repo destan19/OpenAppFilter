@@ -56,5 +56,6 @@ int appfilter_config_alloc(void);
 int appfilter_config_free(void);
 af_ctl_time_t *load_appfilter_ctl_time_config(void);
 int config_get_appfilter_enable(void);
+int config_get_lan_ip(char *lan_ip, int len);
 
 #endif

@@ -30,6 +30,8 @@ THE SOFTWARE.
 #include "appfilter_ubus.h"
 #include "appfilter_config.h"
 #include <time.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 void check_appfilter_enable(void)
 {
     int enable = 1;
@@ -88,14 +90,27 @@ EXIT:
    		free(af_t);
 }
 
+void update_lan_ip(void){
+    char ip_str[32] = {0};
+    struct in_addr addr;
+    char cmd_buf[128] = {0};
+    u_int32_t lan_ip = 0;
+
+    config_get_lan_ip(ip_str, sizeof(ip_str));
+    inet_aton(ip_str, &addr);
+    lan_ip =addr.s_addr;
+    sprintf(cmd_buf, "echo %d >/proc/sys/oaf/lan_ip", lan_ip);
+    system(cmd_buf);
+}
+
 void dev_list_timeout_handler(struct uloop_timeout *t)
 {
     dump_dev_list();
     check_dev_visit_info_expire();
     flush_expire_visit_info();
     //dump_dev_visit_list();
+    update_lan_ip();
     check_appfilter_enable();
-    //todo: dev list expire
     if (check_dev_expire()){
         flush_expire_visit_info();
         flush_dev_expire_node();
