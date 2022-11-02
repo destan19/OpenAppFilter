@@ -896,9 +896,6 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	if (!skb || !dev)
 		return NF_ACCEPT;
 
-	if (skb->len > MAX_BYPASS_DPI_PKT_LEN)
-		return NF_ACCEPT;	
-
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
