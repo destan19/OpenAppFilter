@@ -19,13 +19,12 @@ stop_service(){
 
 start_service(){
 	local update
-	#lang=`uci get luci.main.lang`
 	rm $FEATURE_FILE
 	update=`uci get appfilter.feature.update`
 	if [ x"1" == x"$update" ];then
 		ln -s /etc/appfilter/feature.cfg $FEATURE_FILE
 	else
-		uci get luci.languages.zh_cn  >/dev/null
+		uci get luci.languages.zh_cn >/dev/null 2>&1
 		if [ $? -eq 0 ];then
 			test -f $FEATURE_FILE && rm $FEATURE_FILE
 			ln -s /etc/appfilter/feature_cn.cfg $FEATURE_FILE

@@ -27,6 +27,5 @@ do
     test -z "$cur_class" && continue
     appid=`echo "$line" |awk '{print $1}'`
     appname=`echo "$line" | awk '{print $2}' | awk -F: '{print $1}'`
-    echo "appid = $appid, appname=$appname"
     echo "$appid $appname" >> $cur_class_file
 done  < $f_file

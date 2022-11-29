@@ -1204,10 +1204,8 @@ int netlink_oaf_init(void)
 
 static int __init app_filter_init(void)
 {
-	printk("appfilter version:" AF_VERSION "\n");
 	if (0 != load_feature_config())
 	{
-		printk("load feature failed\n");
 		return -1;
 	}
 

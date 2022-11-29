@@ -6,10 +6,7 @@ PKG_VERSION:=5.0.2
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
-
-
 include $(INCLUDE_DIR)/package.mk
-#include $(INCLUDE_DIR)/kernel.mk
 
 define Package/appfilter
   SECTION:=Derry Apps
@@ -42,7 +39,6 @@ endef
 
 
 define Package/appfilter/install
-	echo "install"
 	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/etc/appfilter
 	$(INSTALL_DIR) $(1)/etc/config
