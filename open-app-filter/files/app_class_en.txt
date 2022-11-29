@@ -1,8 +1,0 @@
-1 chat
-2 game
-3 video
-4 shopping
-5 music
-6 recruitment
-7 download
-8 website

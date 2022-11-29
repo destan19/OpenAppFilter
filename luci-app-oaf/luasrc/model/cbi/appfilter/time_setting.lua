@@ -14,14 +14,14 @@ local m, s
 
 m = Map("appfilter", translate(""), translate(""))
 
-s = m:section(TypedSection, "time", translate("Time Setting"),translate("时间2为选填，开始和结束时间需要同时设置，结束时间要大于开始时间"))
+s = m:section(TypedSection, "time", translate("Time Setting"),translate("The second time is optional, the end time must be greater than the start time"))
 s.anonymous = true
 
 
-o=s:option(ListValue, "time_mode", translate("时间匹配模式："),translate("")) 
+o=s:option(ListValue, "time_mode", translate("Time Mode"),translate("")) 
 o.default=0
-o:value(0,"时间范围内规则生效")
-o:value(1,"时间范围外规则生效")
+o:value(0,translate("Blacklist mode"))
+o:value(1,translate("Whitelist mode"))
 
 days = s:option(MultiValue, "days", "", translate(""))
 days.widget = "checkbox"
@@ -34,7 +34,7 @@ days:value("4", translate("Thur"));
 days:value("5", translate("Fri"));
 days:value("6", translate("Sat"));
 
-hv = s:option(Value, "start_time", translate("Start Time1"),translate("格式xx:xx，下同"))
+hv = s:option(Value, "start_time", translate("Start Time1"),translate("xx:xx"))
 hv.optional = false
 hv = s:option(Value, "end_time", translate("End Time1"))
 hv.optional = false

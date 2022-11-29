@@ -13,36 +13,59 @@ local SYS = require "luci.sys"
 local m, s
 
 m = Map("appfilter", translate("App Filter"), translate(
-    "请先关闭所有加速(acc)、广告过滤、多拨等可能冲突的模块"))
+    "Please close the modules that may conflict, such as acceleration, ad filtering, and multi-dial"))
 
 s = m:section(TypedSection, "global", translate("Basic Settings"))
 s:option(Flag, "enable", translate("Enable App Filter"), translate(""))
 s.anonymous = true
 
-o=s:option(ListValue, "work_mode", translate("工作模式"),translate("请正确选择模式，一般经过了WAN口转发则为主路由，建议切换模式后重启设备")) 
+o=s:option(ListValue, "work_mode", translate("Work Mode"),translate("")) 
 o.default=0
-o:value(0,"主路由模式")
-o:value(1,"旁路由模式")
+o:value(0, translate("Gateway Mode"))
+o:value(1,translate("Bypass Mode"))
 
 local rule_count = 0
 local version = ""
 
-s = m:section(TypedSection, "appfilter", translate("App Filter Rules"))
+s = m:section(TypedSection, "appfilter", translate("App Filter Rules"), 
+translate("If there is no app you want, you can add the app by updating the app feature file"))
 s.anonymous = true
 s.addremove = false
-
+function get_class_i18n_name(class_name)
+    local fd = io.open("/tmp/app_class.txt", "r")
+	if not fd then return end
+    while true do
+        local ln = fd:read("*l")
+        if not ln then
+            break
+        end
+        local id, name1, name2 = ln:match("^(%d+) (%S+) (%S+)")
+        if  class_name == name1 then
+            fd:close()
+            return name2
+        end
+    end
+	fd:close()
+    return nil
+end
 local class_fd = io.popen("find /tmp/appfilter/ -type f -name '*.class'")
 if class_fd then
     while true do
         local apps
         local class
+        local i18n_name
         local path = class_fd:read("*l")
         if not path then
             break
         end
 
         class = path:match("([^/]+)%.class$")
-        s:tab(class, translate(class))
+        i18n_name=get_class_i18n_name(class)
+        if nil ~= i18n_name then
+            s:tab(class, i18n_name)
+        else
+            s:tab(class, class)
+        end
         apps = s:taboption(class, MultiValue, class .. "apps", translate(""))
         apps.rmempty = true
         apps.widget = "checkbox"

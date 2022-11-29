@@ -195,7 +195,8 @@ void init_app_class_name_table(void)
     }
     while (fgets(line_buf, sizeof(line_buf), fp))
     {
-        sscanf(line_buf, "%d %s", &class_id, class_name);
+        sscanf(line_buf, "%d %*s %s", &class_id, class_name);
+        printf("line buf = %s, class_name = %s\n", line_buf, class_name);
         strcpy(CLASS_NAME_TABLE[class_id - 1], class_name);
         g_cur_class_num++;
     }

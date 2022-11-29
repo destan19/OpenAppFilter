@@ -47,7 +47,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
     int type;
     int id;
     char *mac = NULL;
-        printf("%s %d\n", __func__, __LINE__);
 
     struct msghdr msg = {
         .msg_name = &nladdr,
@@ -92,7 +91,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         printf("parse json failed:%s", kdata);
         return;
     }
-    printf("recv msg = %s\n", kdata);
 
     struct json_object *mac_obj = json_object_object_get(root, "mac");
 
@@ -158,8 +156,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         }
         else
         {
-                printf("%s %d\n", __func__, __LINE__);
-
             visit_info_t *visit_node = (visit_info_t *)calloc(1, sizeof(visit_info_t));
             visit_node->action = action;
             visit_node->appid = appid;
@@ -167,8 +163,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
             visit_node->first_time = cur_time.tv_sec - MIN_VISIT_TIME;
             visit_node->next = NULL;
             add_visit_info_node(&node->visit_htable[hash], visit_node);
-
-            //printf("add  visit info curtime=%d\n", cur_time.tv_sec);
         }
     }
 
@@ -183,8 +177,6 @@ int send_msg_to_kernel(int fd, void *msg, int len)
     daddr.nl_family = AF_NETLINK;
     daddr.nl_pid = 0; // to kernel
     daddr.nl_groups = 0;
-    printf("%s %d\n", __func__, __LINE__);
-
     int ret = 0;
     struct nlmsghdr *nlh = NULL;
     nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_NL_MSG_LEN));
@@ -201,8 +193,6 @@ int send_msg_to_kernel(int fd, void *msg, int len)
     char *p_data = msg_buf + sizeof(struct af_msg_hdr);
     memcpy(p_data, msg, len);
 
-    //   memset(nlh, 0, sizeof(struct nlmsghdr));
-
     memcpy(NLMSG_DATA(nlh), msg_buf, len + sizeof(struct af_msg_hdr));
 
     ret = sendto(fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr *)&daddr, sizeof(struct sockaddr_nl));
@@ -211,7 +201,6 @@ int send_msg_to_kernel(int fd, void *msg, int len)
         perror("sendto error\n");
         return -1;
     }
-        printf("%s %d\n", __func__, __LINE__);
 
     return 0;
 }

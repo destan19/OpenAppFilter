@@ -18,23 +18,19 @@ stop_service(){
 }
 
 start_service(){
-	lang=`uci get luci.main.lang`
-	test -f $FEATURE_FILE && rm $FEATURE_FILE
-	test -f $CLASS_FILE && rm $CLASS_FILE
-	if [ x"" == x"$lang" -o x"auto" == x"$lang" ];then
+	local update
+	#lang=`uci get luci.main.lang`
+	rm $FEATURE_FILE
+	update=`uci get appfilter.feature.update`
+	if [ x"1" == x"$update" ];then
 		ln -s /etc/appfilter/feature.cfg $FEATURE_FILE
-		ln -s /etc/appfilter/app_class.txt $CLASS_FILE
 	else
-		if [ -f "/etc/appfilter/feature_$lang.cfg" ];then
-			ln -s /etc/appfilter/feature_$lang.cfg $FEATURE_FILE
+		uci get luci.languages.zh_cn  >/dev/null
+		if [ $? -eq 0 ];then
+			test -f $FEATURE_FILE && rm $FEATURE_FILE
+			ln -s /etc/appfilter/feature_cn.cfg $FEATURE_FILE
 		else
-			ln -s /etc/appfilter/feature.cfg $FEATURE_FILE
-		fi
-
-		if [ -f "/etc/appfilter/app_class_$lang.txt" ];then
-			ln -s /etc/appfilter/app_class_$lang.txt $CLASS_FILE
-		else
-			ln -s /etc/appfilter/app_class.txt $CLASS_FILE
+			ln -s /etc/appfilter/feature_en.cfg $FEATURE_FILE
 		fi
 	fi
 	gen_class.sh /tmp/feature.cfg
