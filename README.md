@@ -20,7 +20,7 @@ The openwrt install tutorial can be found through the [forum](https://forum.open
 git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter    
 3. Open the compile configuration   
 ```
-     echo luci-app-oaf >>.config  
+     echo "CONFIG_PACKAGE_luci-app-oaf=y" >>.config  
      make defconfig  
 ```
 4. Begin compile  
