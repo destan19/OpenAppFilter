@@ -1,14 +1,18 @@
 ## OAF(Open App Filter)  
-OAF is a parent management plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, etc.  
-
+OAF is a parental control plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, such as Tiktok, Youtube, Telegram,etc.,and support self-defined app rules, you can lean more and download firmware by visiting [www.openappfilter.com](http://www.openappfilter.com) .
+### Preparation
+- Prepare a router that supports openwrt  
+There are already many routers that support the openwrt system, you can choose a simple one for installation,[See which devices support](https://openwrt.org).  
+- Install the openwrt system on your router  
+The openwrt install tutorial can be found through the [forum](https://forum.openwrt.org).  
 ### How to compile OAF  
 1. Prepare OpenWrt source or SDK and compile successfully   
-- general steps  
+#### general steps  
 ```
    git clone https://github.com/openwrt/openwrt
    cd openwrt
-   ./script update -a
-   ./script install -a
+   ./scripts/feeds update -a
+   ./scripts/feeds install -a
    make defconfig
    make V=s
 ```   
@@ -45,4 +49,6 @@ Unzip thie OAF package and then install ipks in order
 - luci-i18n-oaf-zh-cn(Chinese Language Pack, optional)  
 
 ### Notice
-If there is no version you need, you can wait for a while to check, more models will be released later, or learn to compile it yourself.  
+If there is no version you need, you need to compile and generate it yourself, and I will release more architecture ipks later.
+
+
