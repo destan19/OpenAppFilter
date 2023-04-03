@@ -49,6 +49,6 @@ Unzip thie OAF package and then install ipks in order
 - luci-i18n-oaf-zh-cn(Chinese Language Pack, optional)  
 
 ### Notice
-If there is no version you need, you need to compile and generate it yourself, and I will release more architecture ipks later.
+If there is no version you need, you need to compile and generate it yourself, and I will release more architecture ipks later. 
 
 
