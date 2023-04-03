@@ -473,6 +473,8 @@ int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 	}
 	return -1;
 }
+#define MAX_HOST_LEN 32
+#define MIN_HOST_LEN 4
 
 int dpi_https_proto(flow_info_t *flow)
 {
@@ -500,12 +502,14 @@ int dpi_https_proto(flow_info_t *flow)
 		{
 			return -1;
 		}
+		
 
 		if (p[i] == 0x0 && p[i + 1] == 0x0 && p[i + 2] == 0x0 && p[i + 3] != 0x0)
 		{
 			// 2 bytes
 			memcpy(&url_len, p + i + HTTPS_LEN_OFFSET, 2);
-			if (ntohs(url_len) <= 0 || ntohs(url_len) > data_len)
+
+			if (ntohs(url_len) <= MIN_HOST_LEN || ntohs(url_len) > data_len || ntohs(url_len) > MAX_HOST_LEN)
 			{
 				continue;
 			}
@@ -887,7 +891,29 @@ void af_get_smac(struct sk_buff *skb, u_int8_t *smac){
 	else
 		memcpy(smac, &skb->cb[40], ETH_ALEN);
 }
+int is_ipv4_broadcast(uint32_t ip) {
 
+    return (ip & 0x00FFFFFF) == 0x00FFFFFF;
+}
+
+int is_ipv4_multicast(uint32_t ip) {
+    return (ip & 0xF0000000) == 0xE0000000;
+}
+int af_check_bcast_ip(flow_info_t *f)
+{
+		
+	if (0 == f->src || 0 == f->dst)
+		return 1;
+	if (is_ipv4_broadcast(ntohl(f->src)) || is_ipv4_broadcast(ntohl(f->dst))){
+		return 1;
+	}
+	if (is_ipv4_multicast(ntohl(f->src)) || is_ipv4_multicast(ntohl(f->dst))){
+		return 1;
+	}
+
+	return 0;
+}
+#define MAC_FMT "%02X:%02X:%02X:%02X:%02X:%02X"
 u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev){
 	flow_info_t flow;
 	u_int8_t smac[ETH_ALEN];
@@ -896,16 +922,24 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	if (!skb || !dev)
 		return NF_ACCEPT;
 
+	if (0 == af_lan_ip || 0 == af_lan_mask)
+		return NF_ACCEPT;
+	if (dev->name && strstr(dev->name, "docker"))
+		return NF_ACCEPT;
+
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
-	if (af_match_bcast_packet(&flow) || af_match_local_packet(&flow))
-		return NF_ACCEPT;
-
+	
 	if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
 		return NF_ACCEPT;
 	}
+	if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
+		return NF_ACCEPT;
 
+	if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
+		return NF_ACCEPT;
+	}
 	af_get_smac(skb, smac);
 
 	AF_CLIENT_LOCK_W();

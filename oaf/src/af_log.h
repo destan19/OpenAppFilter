@@ -3,7 +3,8 @@
 extern int af_log_lvl;
 extern int af_test_mode;
 extern int af_work_mode;
-extern int af_lan_ip;
+extern unsigned int af_lan_ip;
+extern unsigned int af_lan_mask;
 #define LOG(level, fmt, ...) do { \
     if ((level) <= af_log_lvl) { \
         printk(fmt, ##__VA_ARGS__); \

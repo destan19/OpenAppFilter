@@ -32,6 +32,9 @@ THE SOFTWARE.
 #include <time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "appfilter.h"
+
+
 void check_appfilter_enable(void)
 {
     int enable = 1;
@@ -92,14 +95,33 @@ EXIT:
 
 void update_lan_ip(void){
     char ip_str[32] = {0};
+	char mask_str[32] = {0};
     struct in_addr addr;
+	struct in_addr mask_addr;
     char cmd_buf[128] = {0};
     u_int32_t lan_ip = 0;
+	u_int32_t lan_mask = 0;
+	
+    exec_with_result_line(CMD_GET_LAN_IP, ip_str, sizeof(ip_str));
+    if (strlen(ip_str) < MIN_INET_ADDR_LEN){
+        sprintf(cmd_buf, "echo 0 >/proc/sys/oaf/lan_ip");
+    }
+    else{
+        inet_aton(ip_str, &addr);
+        lan_ip = addr.s_addr;
+        sprintf(cmd_buf, "echo %u >/proc/sys/oaf/lan_ip", lan_ip);
+    }
+	system(cmd_buf);
+    exec_with_result_line(CMD_GET_LAN_MASK, mask_str, sizeof(mask_str));
 
-    config_get_lan_ip(ip_str, sizeof(ip_str));
-    inet_aton(ip_str, &addr);
-    lan_ip =addr.s_addr;
-    sprintf(cmd_buf, "echo %d >/proc/sys/oaf/lan_ip", lan_ip);
+    if (strlen(mask_str) < MIN_INET_ADDR_LEN){
+        sprintf(cmd_buf, "echo 0 >/proc/sys/oaf/lan_mask");
+    }
+    else{
+        inet_aton(mask_str, &mask_addr);
+        lan_mask = mask_addr.s_addr;
+        sprintf(cmd_buf, "echo %u >/proc/sys/oaf/lan_mask", lan_mask);
+    }
     system(cmd_buf);
 }
 
