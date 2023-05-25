@@ -913,7 +913,6 @@ int af_check_bcast_ip(flow_info_t *f)
 
 	return 0;
 }
-#define MAC_FMT "%02X:%02X:%02X:%02X:%02X:%02X"
 u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev){
 	flow_info_t flow;
 	u_int8_t smac[ETH_ALEN];
@@ -924,7 +923,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 
 	if (0 == af_lan_ip || 0 == af_lan_mask)
 		return NF_ACCEPT;
-	if (dev->name && strstr(dev->name, "docker"))
+	if (strstr(dev->name, "docker"))
 		return NF_ACCEPT;
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
@@ -1151,19 +1150,20 @@ void fini_oaf_timer(void)
 
 static struct sock *oaf_sock = NULL;
 
+#define OAF_EXTRA_MSG_BUF_LEN 128
 int af_send_msg_to_user(char *pbuf, uint16_t len)
 {
 	struct sk_buff *nl_skb;
 	struct nlmsghdr *nlh;
-	//todo: kmalloc
-	char msg_buf[MAX_OAF_NL_MSG_LEN] = {0};
+	int buf_len = OAF_EXTRA_MSG_BUF_LEN + len;
+	char *msg_buf = kmalloc(buf_len, GFP_KERNEL);
 	struct af_msg_hdr *hdr = NULL;
 	char *p_data = NULL;
 	int ret;
 	if (len >= MAX_OAF_NL_MSG_LEN)
 		return -1;
 
-	memset(msg_buf, 0x0, sizeof(msg_buf));
+	memset(msg_buf, 0x0, sizeof(buf_len));
 	nl_skb = nlmsg_new(len + sizeof(struct af_msg_hdr), GFP_ATOMIC);
 	if (!nl_skb)
 	{
@@ -1184,6 +1184,7 @@ int af_send_msg_to_user(char *pbuf, uint16_t len)
 	memcpy(p_data, pbuf, len);
 	memcpy(nlmsg_data(nlh), msg_buf, len + sizeof(struct af_msg_hdr));
 	ret = netlink_unicast(oaf_sock, nl_skb, 999, MSG_DONTWAIT);
+	kfree(msg_buf);
 	return ret;
 }
 
