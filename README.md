@@ -1,5 +1,9 @@
+
 ## OAF(Open App Filter)  
 OAF is a parental control plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, such as Tiktok, Youtube, Telegram,etc.,and support self-defined app rules, you can lean more and download firmware by visiting [www.openappfilter.com](http://www.openappfilter.com) .
+### OpenWrt开发教程  
+www.ttcoder.cn  
+
 ### Preparation
 - Prepare a router that supports openwrt  
 There are already many routers that support the openwrt system, you can choose a simple one for installation,[See which devices support](https://openwrt.org).  
