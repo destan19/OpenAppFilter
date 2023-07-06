@@ -1156,25 +1156,31 @@ int af_send_msg_to_user(char *pbuf, uint16_t len)
 	struct sk_buff *nl_skb;
 	struct nlmsghdr *nlh;
 	int buf_len = OAF_EXTRA_MSG_BUF_LEN + len;
-	char *msg_buf = kmalloc(buf_len, GFP_KERNEL);
+	char *msg_buf = NULL;
 	struct af_msg_hdr *hdr = NULL;
 	char *p_data = NULL;
 	int ret;
 	if (len >= MAX_OAF_NL_MSG_LEN)
 		return -1;
 
-	memset(msg_buf, 0x0, sizeof(buf_len));
+	msg_buf = kmalloc(buf_len, GFP_KERNEL);
+	if (!msg_buf)
+		return -1;
+
+	memset(msg_buf, 0x0, buf_len);
 	nl_skb = nlmsg_new(len + sizeof(struct af_msg_hdr), GFP_ATOMIC);
 	if (!nl_skb)
 	{
-		return -1;
+		ret = -1;
+		goto fail;
 	}
 
 	nlh = nlmsg_put(nl_skb, 0, 0, OAF_NETLINK_ID, len + sizeof(struct af_msg_hdr), 0);
 	if (nlh == NULL)
 	{
 		nlmsg_free(nl_skb);
-		return -1;
+		ret = -1;
+		goto fail;
 	}
 
 	hdr = (struct af_msg_hdr *)msg_buf;
@@ -1184,6 +1190,8 @@ int af_send_msg_to_user(char *pbuf, uint16_t len)
 	memcpy(p_data, pbuf, len);
 	memcpy(nlmsg_data(nlh), msg_buf, len + sizeof(struct af_msg_hdr));
 	ret = netlink_unicast(oaf_sock, nl_skb, 999, MSG_DONTWAIT);
+
+fail:
 	kfree(msg_buf);
 	return ret;
 }

@@ -189,12 +189,6 @@ msgstr "网关模式"
 msgid "Bypass Mode"
 msgstr "旁路模式"
 
-msgid "Bypass Mode"
-msgstr "旁路模式"
-
-msgid "Current version"
-msgstr "当前版本"
-
 msgid "Current version"
 msgstr "当前版本"
 
