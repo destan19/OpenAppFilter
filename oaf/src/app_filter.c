@@ -12,6 +12,7 @@
 #include <net/netfilter/nf_conntrack_acct.h>
 #include <linux/skbuff.h>
 #include <net/ip.h>
+#include <uapi/linux/ipv6.h>
 #include <linux/types.h>
 #include <net/sock.h>
 #include <linux/etherdevice.h>
@@ -438,33 +439,51 @@ static void af_clean_feature_list(void)
 
 int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
+	unsigned char *ipp;
+	int ipp_len;
 	struct tcphdr *tcph = NULL;
 	struct udphdr *udph = NULL;
 	struct nf_conn *ct = NULL;
 	struct iphdr *iph = NULL;
+	struct ipv6hdr *ip6h = NULL;
 	if (!skb)
 		return -1;
-	iph = ip_hdr(skb);
-	if (!iph)
+	switch (skb->protocol) {
+	case htons(ETH_P_IP):
+		iph = ip_hdr(skb);
+		flow->src = iph->saddr;
+		flow->dst = iph->daddr;
+		flow->l4_protocol = iph->protocol;
+		ipp = skb->data + iph->ihl * 4;
+		ipp_len = skb->data + ntohs(iph->tot_len) - ipp;
+		break;
+	case htons(ETH_P_IPV6):
+		ip6h = ipv6_hdr(skb);
+		flow->src6 = ip6h->saddr.s6_addr;
+		flow->dst6 = ip6h->daddr.s6_addr;
+		flow->l4_protocol = ip6h->nexthdr;
+		ipp = skb->data + sizeof(struct ipv6hdr);
+		ipp_len = ip6h->payload_len;
+		break;
+	default:
 		return -1;
-	flow->src = iph->saddr;
-	flow->dst = iph->daddr;
-	flow->l4_protocol = iph->protocol;
-	switch (iph->protocol)
+	}
+
+	switch (flow->l4_protocol)
 	{
 	case IPPROTO_TCP:
-		tcph = (struct tcphdr *)(iph + 1);
-		flow->l4_data = skb->data + iph->ihl * 4 + tcph->doff * 4;
-		flow->l4_len = ntohs(iph->tot_len) - iph->ihl * 4 - tcph->doff * 4;
-		flow->dport = htons(tcph->dest);
-		flow->sport = htons(tcph->source);
+		tcph = (struct tcphdr *)ipp;
+		flow->l4_len = ipp_len - tcph->doff * 4;
+		flow->l4_data = ipp + tcph->doff * 4;
+		flow->dport = ntohs(tcph->dest);
+		flow->sport = ntohs(tcph->source);
 		return 0;
 	case IPPROTO_UDP:
-		udph = (struct udphdr *)(iph + 1);
-		flow->l4_data = skb->data + iph->ihl * 4 + 8;
+		udph = (struct udphdr *)ipp;
 		flow->l4_len = ntohs(udph->len) - 8;
-		flow->dport = htons(udph->dest);
-		flow->sport = htons(udph->source);
+		flow->l4_data = ipp + 8;
+		flow->dport = ntohs(udph->dest);
+		flow->sport = ntohs(udph->source);
 		return 0;
 	case IPPROTO_ICMP:
 		break;
