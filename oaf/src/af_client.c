@@ -299,7 +299,7 @@ void af_visit_info_report(void)
 }
 static inline int get_packet_dir(struct net_device *in)
 {
-	if (0 == strncmp(in->name, "br", 2))
+	if (0 == strncmp(in->name, "br-lan", 6))
 	{
 		return PKT_DIR_UP;
 	}
@@ -327,6 +327,7 @@ static u_int32_t af_client_hook(unsigned int hook,
 	af_client_info_t *nfc = NULL;
 	int pkt_dir = 0;
 	struct iphdr *iph = NULL;
+	unsigned int ip = 0;
 
 // 4.10-->4.11 nfct-->_nfct
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
@@ -366,26 +367,25 @@ static u_int32_t af_client_hook(unsigned int hook,
 		memcpy(smac, &skb->cb[40], ETH_ALEN);
 	}
 
-	iph = ip_hdr(skb);
-	if (!iph)
-	{
+	if (skb->protocol == htons(ETH_P_IP)) {
+		iph = ip_hdr(skb);
+		ip = iph->saddr;
+	} else if (AF_MODE_GATEWAY != af_work_mode)
 		return NF_ACCEPT;
-	}
 
 	AF_CLIENT_LOCK_W();
 	nfc = find_af_client(smac);
 	if (!nfc)
 	{
 		if (skb->dev)
-			AF_DEBUG("from dev:%s [%s] %pI4--->%pI4", skb->dev->name, (iph->protocol == IPPROTO_TCP ? "TCP" : "UDP"),
-					 &iph->saddr, &iph->daddr);
+			AF_DEBUG("from dev:%s %pI4", skb->dev->name, &ip);
 		nfc = nf_client_add(smac);
 	}
-	if (nfc && nfc->ip != iph->saddr)
+	if (nfc && ip != 0 && nfc->ip != ip)
 	{
-		AF_DEBUG("update node " MAC_FMT " ip %pI4--->%pI4\n", MAC_ARRAY(nfc->mac), &nfc->ip, &iph->saddr);
+		AF_DEBUG("update node " MAC_FMT " ip %pI4--->%pI4\n", MAC_ARRAY(nfc->mac), &nfc->ip, &ip);
 		nfc->update_jiffies = jiffies;
-		nfc->ip = iph->saddr;
+		nfc->ip = ip;
 	}
 	AF_CLIENT_UNLOCK_W();
 
@@ -396,7 +396,7 @@ static u_int32_t af_client_hook(unsigned int hook,
 static struct nf_hook_ops af_client_ops[] = {
 	{
 		.hook = af_client_hook,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_FIRST + 1,
 	},
@@ -406,7 +406,7 @@ static struct nf_hook_ops af_client_ops[] = {
 	{
 		.hook = af_client_hook,
 		.owner = THIS_MODULE,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_FIRST + 1,
 	},
