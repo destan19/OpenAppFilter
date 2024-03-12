@@ -800,10 +800,9 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	return ret;
 }
 
-int app_filter_match(flow_info_t *flow)
+int app_filter_match(flow_info_t *flow, af_client_info_t *client)
 {
 	af_feature_node_t *n, *node;
-	af_client_info_t *client = NULL;
 	feature_list_read_lock();
 	if (!list_empty(&af_feature_head))
 	{
@@ -813,7 +812,8 @@ int app_filter_match(flow_info_t *flow)
 			{
 				flow->app_id = node->app_id;
 				strncpy(flow->app_name, node->app_name, sizeof(flow->app_name) - 1);
-				client = find_af_client_by_ip(flow->src);
+				if (flow->src)
+					client = find_af_client_by_ip(flow->src);
 				if (!client)
 				{
 					goto EXIT;
@@ -948,14 +948,22 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
-	
-	if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
-		return NF_ACCEPT;
-	}
-	if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
-		return NF_ACCEPT;
+	if (flow.src || flow.dst) {
+		if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
+			return NF_ACCEPT;
+		}
+		if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
+			return NF_ACCEPT;
 
-	if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
+		if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
+			return NF_ACCEPT;
+		}
+	} else if (flow.src6 && flow.dst6) {
+		if (flow.src6[0] == 0xff || flow.dst6[0] == 0xff) {
+			return NF_ACCEPT;
+		}
+		return NF_DROP;
+	} else {
 		return NF_ACCEPT;
 	}
 	af_get_smac(skb, smac);
@@ -967,13 +975,14 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		return NF_ACCEPT;
 	}
 	client->update_jiffies = jiffies;
+	if (flow.src)
+		client->ip = flow.src;
 	AF_CLIENT_UNLOCK_W();
 
 	if (0 != dpi_main(skb, &flow))
 		return NF_ACCEPT;
 
-	client->ip = flow.src;
-	app_filter_match(&flow);
+	app_filter_match(&flow, client);
 	if (flow.app_id != 0){
 		af_update_client_app_info(client, flow.app_id, flow.drop);
 	}
@@ -987,12 +996,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev){
 	unsigned long long total_packets = 0;
 	flow_info_t flow;
+	u_int8_t smac[ETH_ALEN];
 	enum ip_conntrack_info ctinfo;
 	struct nf_conn *ct = NULL;
 	struct nf_conn_acct *acct;
 	af_client_info_t *client = NULL;
 	int app_id = 0;
 	int drop = 0;
+
+	if (strncmp(dev->name, "br-lan", 6))
+		return NF_ACCEPT;
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
@@ -1002,8 +1015,11 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (ct == NULL || !nf_ct_is_confirmed(ct))
 		return NF_ACCEPT;
 
+	if (!flow.src)
+		af_get_smac(skb, smac);
+
 	AF_CLIENT_LOCK_R();
-	client = find_af_client_by_ip(flow.src);
+	client = flow.src?find_af_client_by_ip(flow.src):find_af_client(smac);
 	if (!client){
 		AF_CLIENT_UNLOCK_R();
 		return NF_ACCEPT;
@@ -1038,7 +1054,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (0 != dpi_main(skb, &flow))
 		return NF_ACCEPT;
 
-	app_filter_match(&flow);
+	app_filter_match(&flow, client);
 
 	if (flow.app_id != 0)
 	{
