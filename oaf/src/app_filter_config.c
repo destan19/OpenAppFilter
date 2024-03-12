@@ -158,21 +158,24 @@ int hash_mac(unsigned char *mac)
 		return mac[5] & (MAX_AF_MAC_HASH_SIZE - 1);
 }
 
-af_mac_info_t *find_af_mac(unsigned char *mac)
+int find_af_mac(unsigned char *mac)
 {
 	af_mac_info_t *node;
 	unsigned int index;
 
 	index = hash_mac(mac);
+	AF_MAC_LOCK_R();
 	list_for_each_entry(node, &af_mac_list_table[index], hlist)
 	{
 		if (0 == memcmp(node->mac, mac, 6))
 		{
 			AF_DEBUG("match mac:" MAC_FMT "\n", MAC_ARRAY(node->mac));
-			return node;
+			AF_MAC_UNLOCK_R();
+			return 1;
 		}
 	}
-	return NULL;
+	AF_MAC_UNLOCK_R();
+	return 0;
 }
 
 static af_mac_info_t *
@@ -194,8 +197,10 @@ af_mac_add(unsigned char *mac)
 	index = hash_mac(mac);
 
 	AF_LMT_INFO("new client mac=" MAC_FMT "\n", MAC_ARRAY(node->mac));
+	AF_MAC_LOCK_W();
 	total_mac++;
 	list_add(&(node->hlist), &af_mac_list_table[index]);
+	AF_MAC_UNLOCK_W();
 	return node;
 }
 

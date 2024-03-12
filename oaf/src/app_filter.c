@@ -800,7 +800,7 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	return ret;
 }
 
-int app_filter_match(flow_info_t *flow, af_client_info_t *client)
+int app_filter_match(flow_info_t *flow, unsigned char *mac)
 {
 	af_feature_node_t *n, *node;
 	feature_list_read_lock();
@@ -812,13 +812,8 @@ int app_filter_match(flow_info_t *flow, af_client_info_t *client)
 			{
 				flow->app_id = node->app_id;
 				strncpy(flow->app_name, node->app_name, sizeof(flow->app_name) - 1);
-				if (flow->src)
-					client = find_af_client_by_ip(flow->src);
-				if (!client)
-				{
-					goto EXIT;
-				}
-				if (is_user_match_enable() && !find_af_mac(client->mac))
+
+				if (is_user_match_enable() && !find_af_mac(mac))
 				{
 					goto EXIT;
 				}
@@ -857,21 +852,29 @@ static int af_get_visit_index(af_client_info_t *node, int app_id)
 	return 0;
 }
 
-int af_update_client_app_info(af_client_info_t *node, int app_id, int drop)
+int af_update_client_app_info(unsigned char *mac, int app_id, int drop)
 {
+	af_client_info_t *node;
 	int index = -1;
-	if (!node)
+	AF_CLIENT_LOCK_W();
+	node = find_af_client(mac);
+	if (!node) {
+		AF_CLIENT_UNLOCK_W();
 		return -1;
+	}
 
 	index = af_get_visit_index(node, app_id);
-	if (index < 0 || index >= MAX_RECORD_APP_NUM)
+	if (index < 0 || index >= MAX_RECORD_APP_NUM) {
+		AF_CLIENT_UNLOCK_W();
 		return 0;
+	}
 	node->visit_info[index].total_num++;
 	if (drop)
 		node->visit_info[index].drop_num++;
 	node->visit_info[index].app_id = app_id;
 	node->visit_info[index].latest_time = af_get_timestamp_sec();
 	node->visit_info[index].latest_action = drop;
+	AF_CLIENT_UNLOCK_W();
 	return 0;
 }
 
@@ -982,9 +985,9 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	if (0 != dpi_main(skb, &flow))
 		return NF_ACCEPT;
 
-	app_filter_match(&flow, client);
+	app_filter_match(&flow, smac);
 	if (flow.app_id != 0){
-		af_update_client_app_info(client, flow.app_id, flow.drop);
+		af_update_client_app_info(smac, flow.app_id, flow.drop);
 	}
 	if (flow.drop)
 	{
@@ -1025,6 +1028,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		return NF_ACCEPT;
 	}
 	client->update_jiffies = jiffies;
+	memcpy(smac, client->mac, ETH_ALEN);
 	AF_CLIENT_UNLOCK_R();
 
 	if (ct->mark != 0)
@@ -1033,9 +1037,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		if (app_id > 1000 && app_id < 9999){
 			if (NF_DROP_BIT == (ct->mark & NF_DROP_BIT))
 				drop = 1;
-			AF_CLIENT_LOCK_W();
-			af_update_client_app_info(client, app_id, drop);
-			AF_CLIENT_UNLOCK_W();
+			af_update_client_app_info(smac, app_id, drop);
 
 			if (drop){
 				return NF_DROP;
@@ -1054,14 +1056,12 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (0 != dpi_main(skb, &flow))
 		return NF_ACCEPT;
 
-	app_filter_match(&flow, client);
+	app_filter_match(&flow, smac);
 
 	if (flow.app_id != 0)
 	{
 		ct->mark = flow.app_id;
-		AF_CLIENT_LOCK_W();
-		af_update_client_app_info(client, flow.app_id, flow.drop);
-		AF_CLIENT_UNLOCK_W();
+		af_update_client_app_info(smac, flow.app_id, flow.drop);
 		AF_LMT_INFO("match %s %pI4(%d)--> %pI4(%d) len = %d, %d\n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
 					&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id);
 	}
