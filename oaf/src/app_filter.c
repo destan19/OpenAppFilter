@@ -463,7 +463,7 @@ int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 		flow->dst6 = ip6h->daddr.s6_addr;
 		flow->l4_protocol = ip6h->nexthdr;
 		ipp = ((unsigned char *)ip6h) + sizeof(struct ipv6hdr);
-		ipp_len = ip6h->payload_len;
+		ipp_len = ntohs(ip6h->payload_len);
 		break;
 	default:
 		return -1;
