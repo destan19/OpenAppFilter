@@ -454,15 +454,15 @@ int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 		flow->src = iph->saddr;
 		flow->dst = iph->daddr;
 		flow->l4_protocol = iph->protocol;
-		ipp = skb->data + iph->ihl * 4;
-		ipp_len = skb->data + ntohs(iph->tot_len) - ipp;
+		ipp = ((unsigned char *)iph) + iph->ihl * 4;
+		ipp_len = ((unsigned char *)iph) + ntohs(iph->tot_len) - ipp;
 		break;
 	case htons(ETH_P_IPV6):
 		ip6h = ipv6_hdr(skb);
 		flow->src6 = ip6h->saddr.s6_addr;
 		flow->dst6 = ip6h->daddr.s6_addr;
 		flow->l4_protocol = ip6h->nexthdr;
-		ipp = skb->data + sizeof(struct ipv6hdr);
+		ipp = ((unsigned char *)ip6h) + sizeof(struct ipv6hdr);
 		ipp_len = ip6h->payload_len;
 		break;
 	default:
