@@ -392,7 +392,7 @@ static u_int32_t af_client_hook(unsigned int hook,
 	return NF_ACCEPT;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
 static struct nf_hook_ops af_client_ops[] = {
 	{
 		.hook = af_client_hook,
@@ -405,8 +405,19 @@ static struct nf_hook_ops af_client_ops[] = {
 static struct nf_hook_ops af_client_ops[] = {
 	{
 		.hook = af_client_hook,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 		.owner = THIS_MODULE,
-		.pf = NFPROTO_INET,
+#endif
+		.pf = NFPROTO_IPV4,
+		.hooknum = NF_INET_FORWARD,
+		.priority = NF_IP_PRI_FIRST + 1,
+	},
+	{
+		.hook = af_client_hook,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
+		.owner = THIS_MODULE,
+#endif
+		.pf = NFPROTO_IPV6,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_FIRST + 1,
 	},
@@ -415,12 +426,16 @@ static struct nf_hook_ops af_client_ops[] = {
 
 int af_client_init(void)
 {
+	int err;
 	nf_client_list_init();
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
-	nf_register_net_hooks(&init_net, af_client_ops, ARRAY_SIZE(af_client_ops));
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+	err = nf_register_net_hooks(&init_net, af_client_ops, ARRAY_SIZE(af_client_ops));
 #else
-	nf_register_hooks(af_client_ops, ARRAY_SIZE(af_client_ops));
+	err = nf_register_hooks(af_client_ops, ARRAY_SIZE(af_client_ops));
 #endif
+	if (err) {
+		AF_ERROR("oaf register client hooks failed!\n");
+	}
 	AF_INFO("init app afclient ........ok\n");
 
 	return 0;
@@ -428,7 +443,7 @@ int af_client_init(void)
 
 void af_client_exit(void)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	nf_unregister_net_hooks(&init_net, af_client_ops, ARRAY_SIZE(af_client_ops));
 #else
 	nf_unregister_hooks(af_client_ops, ARRAY_SIZE(af_client_ops));

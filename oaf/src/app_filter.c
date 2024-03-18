@@ -1115,8 +1115,7 @@ static u_int32_t app_filter_by_pass_hook(unsigned int hook,
 	return app_filter_hook_bypass_handle(skb, skb->dev);
 }
 
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
 static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook = app_filter_hook,
@@ -1132,12 +1131,47 @@ static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
 };
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+static struct nf_hook_ops app_filter_ops[] __read_mostly = {
+	{
+		.hook = app_filter_hook,
+		.pf = NFPROTO_IPV4,
+		.hooknum = NF_INET_FORWARD,
+		.priority = NF_IP_PRI_MANGLE + 1,
+	},
+	{
+		.hook = app_filter_by_pass_hook,
+		.pf = NFPROTO_IPV4,
+		.hooknum = NF_INET_PRE_ROUTING,
+		.priority = NF_IP_PRI_MANGLE + 1,
+	},
+	{
+		.hook = app_filter_hook,
+		.pf = NFPROTO_IPV6,
+		.hooknum = NF_INET_FORWARD,
+		.priority = NF_IP_PRI_MANGLE + 1,
+
+	},
+	{
+		.hook = app_filter_by_pass_hook,
+		.pf = NFPROTO_IPV6,
+		.hooknum = NF_INET_PRE_ROUTING,
+		.priority = NF_IP_PRI_MANGLE + 1,
+	},
+};
 #else
 static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook = app_filter_hook,
 		.owner = THIS_MODULE,
-		.pf = NFPROTO_INET,
+		.pf = NFPROTO_IPV4,
+		.hooknum = NF_INET_FORWARD,
+		.priority = NF_IP_PRI_MANGLE + 1,
+	},
+	{
+		.hook = app_filter_hook,
+		.owner = THIS_MODULE,
+		.pf = NFPROTO_IPV6,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
@@ -1282,6 +1316,7 @@ int netlink_oaf_init(void)
 
 static int __init app_filter_init(void)
 {
+	int err;
 	if (0 != load_feature_config())
 	{
 		return -1;
@@ -1294,11 +1329,14 @@ static int __init app_filter_init(void)
 	af_init_app_status();
 	init_af_client_procfs();
 	af_client_init();
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
-	nf_register_net_hooks(&init_net, app_filter_ops, ARRAY_SIZE(app_filter_ops));
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+	err = nf_register_net_hooks(&init_net, app_filter_ops, ARRAY_SIZE(app_filter_ops));
 #else
-	nf_register_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));
+	err = nf_register_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));
 #endif
+	if (err) {
+		AF_ERROR("oaf register filter hooks failed!\n");
+	}
 	init_oaf_timer();
 	AF_INFO("init app filter ........ok\n");
 	return 0;
@@ -1308,7 +1346,7 @@ static void app_filter_fini(void)
 {
 	AF_INFO("app filter module exit\n");
 	fini_oaf_timer();
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	nf_unregister_net_hooks(&init_net, app_filter_ops, ARRAY_SIZE(app_filter_ops));
 #else
 	nf_unregister_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));
