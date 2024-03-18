@@ -12,6 +12,7 @@
 #include <net/netfilter/nf_conntrack_acct.h>
 #include <linux/skbuff.h>
 #include <net/ip.h>
+#include <uapi/linux/ipv6.h>
 #include <linux/types.h>
 #include <net/sock.h>
 #include <linux/etherdevice.h>
@@ -438,33 +439,51 @@ static void af_clean_feature_list(void)
 
 int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
+	unsigned char *ipp;
+	int ipp_len;
 	struct tcphdr *tcph = NULL;
 	struct udphdr *udph = NULL;
 	struct nf_conn *ct = NULL;
 	struct iphdr *iph = NULL;
+	struct ipv6hdr *ip6h = NULL;
 	if (!skb)
 		return -1;
-	iph = ip_hdr(skb);
-	if (!iph)
+	switch (skb->protocol) {
+	case htons(ETH_P_IP):
+		iph = ip_hdr(skb);
+		flow->src = iph->saddr;
+		flow->dst = iph->daddr;
+		flow->l4_protocol = iph->protocol;
+		ipp = ((unsigned char *)iph) + iph->ihl * 4;
+		ipp_len = ((unsigned char *)iph) + ntohs(iph->tot_len) - ipp;
+		break;
+	case htons(ETH_P_IPV6):
+		ip6h = ipv6_hdr(skb);
+		flow->src6 = ip6h->saddr.s6_addr;
+		flow->dst6 = ip6h->daddr.s6_addr;
+		flow->l4_protocol = ip6h->nexthdr;
+		ipp = ((unsigned char *)ip6h) + sizeof(struct ipv6hdr);
+		ipp_len = ntohs(ip6h->payload_len);
+		break;
+	default:
 		return -1;
-	flow->src = iph->saddr;
-	flow->dst = iph->daddr;
-	flow->l4_protocol = iph->protocol;
-	switch (iph->protocol)
+	}
+
+	switch (flow->l4_protocol)
 	{
 	case IPPROTO_TCP:
-		tcph = (struct tcphdr *)(iph + 1);
-		flow->l4_data = skb->data + iph->ihl * 4 + tcph->doff * 4;
-		flow->l4_len = ntohs(iph->tot_len) - iph->ihl * 4 - tcph->doff * 4;
-		flow->dport = htons(tcph->dest);
-		flow->sport = htons(tcph->source);
+		tcph = (struct tcphdr *)ipp;
+		flow->l4_len = ipp_len - tcph->doff * 4;
+		flow->l4_data = ipp + tcph->doff * 4;
+		flow->dport = ntohs(tcph->dest);
+		flow->sport = ntohs(tcph->source);
 		return 0;
 	case IPPROTO_UDP:
-		udph = (struct udphdr *)(iph + 1);
-		flow->l4_data = skb->data + iph->ihl * 4 + 8;
+		udph = (struct udphdr *)ipp;
 		flow->l4_len = ntohs(udph->len) - 8;
-		flow->dport = htons(udph->dest);
-		flow->sport = htons(udph->source);
+		flow->l4_data = ipp + 8;
+		flow->dport = ntohs(udph->dest);
+		flow->sport = ntohs(udph->source);
 		return 0;
 	case IPPROTO_ICMP:
 		break;
@@ -781,10 +800,9 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	return ret;
 }
 
-int app_filter_match(flow_info_t *flow)
+int app_filter_match(flow_info_t *flow, af_client_info_t *client)
 {
 	af_feature_node_t *n, *node;
-	af_client_info_t *client = NULL;
 	feature_list_read_lock();
 	if (!list_empty(&af_feature_head))
 	{
@@ -794,7 +812,8 @@ int app_filter_match(flow_info_t *flow)
 			{
 				flow->app_id = node->app_id;
 				strncpy(flow->app_name, node->app_name, sizeof(flow->app_name) - 1);
-				client = find_af_client_by_ip(flow->src);
+				if (flow->src)
+					client = find_af_client_by_ip(flow->src);
 				if (!client)
 				{
 					goto EXIT;
@@ -929,14 +948,22 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
-	
-	if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
-		return NF_ACCEPT;
-	}
-	if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
-		return NF_ACCEPT;
+	if (flow.src || flow.dst) {
+		if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
+			return NF_ACCEPT;
+		}
+		if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
+			return NF_ACCEPT;
 
-	if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
+		if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
+			return NF_ACCEPT;
+		}
+	} else if (flow.src6 && flow.dst6) {
+		if (flow.src6[0] == 0xff || flow.dst6[0] == 0xff) {
+			return NF_ACCEPT;
+		}
+		return NF_DROP;
+	} else {
 		return NF_ACCEPT;
 	}
 	af_get_smac(skb, smac);
@@ -948,13 +975,14 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		return NF_ACCEPT;
 	}
 	client->update_jiffies = jiffies;
+	if (flow.src)
+		client->ip = flow.src;
 	AF_CLIENT_UNLOCK_W();
 
 	if (0 != dpi_main(skb, &flow))
 		return NF_ACCEPT;
 
-	client->ip = flow.src;
-	app_filter_match(&flow);
+	app_filter_match(&flow, client);
 	if (flow.app_id != 0){
 		af_update_client_app_info(client, flow.app_id, flow.drop);
 	}
@@ -968,12 +996,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev){
 	unsigned long long total_packets = 0;
 	flow_info_t flow;
+	u_int8_t smac[ETH_ALEN];
 	enum ip_conntrack_info ctinfo;
 	struct nf_conn *ct = NULL;
 	struct nf_conn_acct *acct;
 	af_client_info_t *client = NULL;
 	int app_id = 0;
 	int drop = 0;
+
+	if (strncmp(dev->name, "br-lan", 6))
+		return NF_ACCEPT;
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
@@ -983,8 +1015,11 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (ct == NULL || !nf_ct_is_confirmed(ct))
 		return NF_ACCEPT;
 
+	if (!flow.src)
+		af_get_smac(skb, smac);
+
 	AF_CLIENT_LOCK_R();
-	client = find_af_client_by_ip(flow.src);
+	client = flow.src?find_af_client_by_ip(flow.src):find_af_client(smac);
 	if (!client){
 		AF_CLIENT_UNLOCK_R();
 		return NF_ACCEPT;
@@ -1019,7 +1054,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (0 != dpi_main(skb, &flow))
 		return NF_ACCEPT;
 
-	app_filter_match(&flow);
+	app_filter_match(&flow, client);
 
 	if (flow.app_id != 0)
 	{
@@ -1080,19 +1115,46 @@ static u_int32_t app_filter_by_pass_hook(unsigned int hook,
 	return app_filter_hook_bypass_handle(skb, skb->dev);
 }
 
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
 static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook = app_filter_hook,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_MANGLE + 1,
 
 	},
 	{
 		.hook = app_filter_by_pass_hook,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
+		.hooknum = NF_INET_PRE_ROUTING,
+		.priority = NF_IP_PRI_MANGLE + 1,
+	},
+};
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+static struct nf_hook_ops app_filter_ops[] __read_mostly = {
+	{
+		.hook = app_filter_hook,
+		.pf = NFPROTO_IPV4,
+		.hooknum = NF_INET_FORWARD,
+		.priority = NF_IP_PRI_MANGLE + 1,
+	},
+	{
+		.hook = app_filter_by_pass_hook,
+		.pf = NFPROTO_IPV4,
+		.hooknum = NF_INET_PRE_ROUTING,
+		.priority = NF_IP_PRI_MANGLE + 1,
+	},
+	{
+		.hook = app_filter_hook,
+		.pf = NFPROTO_IPV6,
+		.hooknum = NF_INET_FORWARD,
+		.priority = NF_IP_PRI_MANGLE + 1,
+
+	},
+	{
+		.hook = app_filter_by_pass_hook,
+		.pf = NFPROTO_IPV6,
 		.hooknum = NF_INET_PRE_ROUTING,
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
@@ -1102,7 +1164,14 @@ static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook = app_filter_hook,
 		.owner = THIS_MODULE,
-		.pf = PF_INET,
+		.pf = NFPROTO_IPV4,
+		.hooknum = NF_INET_FORWARD,
+		.priority = NF_IP_PRI_MANGLE + 1,
+	},
+	{
+		.hook = app_filter_hook,
+		.owner = THIS_MODULE,
+		.pf = NFPROTO_IPV6,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
@@ -1247,6 +1316,7 @@ int netlink_oaf_init(void)
 
 static int __init app_filter_init(void)
 {
+	int err;
 	if (0 != load_feature_config())
 	{
 		return -1;
@@ -1259,11 +1329,14 @@ static int __init app_filter_init(void)
 	af_init_app_status();
 	init_af_client_procfs();
 	af_client_init();
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
-	nf_register_net_hooks(&init_net, app_filter_ops, ARRAY_SIZE(app_filter_ops));
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+	err = nf_register_net_hooks(&init_net, app_filter_ops, ARRAY_SIZE(app_filter_ops));
 #else
-	nf_register_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));
+	err = nf_register_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));
 #endif
+	if (err) {
+		AF_ERROR("oaf register filter hooks failed!\n");
+	}
 	init_oaf_timer();
 	AF_INFO("init app filter ........ok\n");
 	return 0;
@@ -1273,7 +1346,7 @@ static void app_filter_fini(void)
 {
 	AF_INFO("app filter module exit\n");
 	fini_oaf_timer();
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	nf_unregister_net_hooks(&init_net, app_filter_ops, ARRAY_SIZE(app_filter_ops));
 #else
 	nf_unregister_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));

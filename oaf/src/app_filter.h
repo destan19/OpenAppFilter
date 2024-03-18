@@ -101,6 +101,8 @@ typedef struct flow_info{
 	struct nf_conn *ct;
 	u_int32_t src; 
 	u_int32_t dst;
+	u_int8_t *src6;
+	u_int8_t *dst6;
 	int l4_protocol;
 	u_int16_t sport;
 	u_int16_t dport;
