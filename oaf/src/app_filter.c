@@ -437,6 +437,40 @@ static void af_clean_feature_list(void)
 	feature_list_write_unlock();
 }
 
+// free by caller
+static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned int len)
+{
+	struct skb_seq_state state;
+	unsigned char *msg_buf = NULL;
+	unsigned int consumed = 0;
+	if (from <= 0 || from > 1500)
+		return NULL;
+
+	if (len <= 0 || from+len > 1500)
+		return NULL;
+
+	msg_buf = kmalloc(len, GFP_KERNEL);
+	if (!msg_buf)
+		return NULL;
+
+	skb_prepare_seq_read(skb, from, from+len, &state);
+	while (1) {
+		unsigned int avail;
+		const u8 *ptr;
+		avail = skb_seq_read(consumed, &ptr, &state);
+		if (avail == 0) {
+			break;
+		}
+		memcpy(msg_buf + consumed, ptr, avail);
+		consumed += avail;
+		if (consumed >= len) {
+			skb_abort_seq_read(&state);
+			break;
+		}
+	}
+	return msg_buf;
+}
+
 int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
 	unsigned char *ipp;
@@ -936,6 +970,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	flow_info_t flow;
 	u_int8_t smac[ETH_ALEN];
 	af_client_info_t *client = NULL;
+	u_int32_t ret = NF_ACCEPT;
 
 	if (!skb || !dev)
 		return NF_ACCEPT;
@@ -979,8 +1014,14 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		client->ip = flow.src;
 	AF_CLIENT_UNLOCK_W();
 
+	if (skb_is_nonlinear(skb)) {
+		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+		if (!flow.l4_data)
+			return NF_ACCEPT;
+	}
+
 	if (0 != dpi_main(skb, &flow))
-		return NF_ACCEPT;
+		goto accept;
 
 	app_filter_match(&flow, client);
 	if (flow.app_id != 0){
@@ -988,9 +1029,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	}
 	if (flow.drop)
 	{
-		return NF_DROP;
+		ret = NF_DROP;
 	}
-	return NF_ACCEPT;
+
+accept:
+	if (skb_is_nonlinear(skb)) {
+		if (flow.l4_data) {
+			kfree(flow.l4_data);
+		}
+	}
+	return ret;
 }
 
 u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev){
@@ -1001,6 +1049,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	struct nf_conn *ct = NULL;
 	struct nf_conn_acct *acct;
 	af_client_info_t *client = NULL;
+	u_int32_t ret = NF_ACCEPT;
 	int app_id = 0;
 	int drop = 0;
 
@@ -1051,8 +1100,13 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if(total_packets > MAX_DPI_PKT_NUM)
 		return NF_ACCEPT;
 
+	if (skb_is_nonlinear(skb)) {
+		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+		if (!flow.l4_data)
+			return NF_ACCEPT;
+	}
 	if (0 != dpi_main(skb, &flow))
-		return NF_ACCEPT;
+		goto accept;
 
 	app_filter_match(&flow, client);
 
@@ -1069,9 +1123,16 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	{
 		ct->mark |= NF_DROP_BIT;
 		AF_LMT_INFO("##Drop app %s flow, appid is %d\n", flow.app_name, flow.app_id);
-		return NF_DROP;
+		ret = NF_DROP;
 	}
-	return NF_ACCEPT;
+
+accept:
+	if (skb_is_nonlinear(skb)) {
+		if (flow.l4_data) {
+			kfree(flow.l4_data);
+		}
+	}
+	return ret;
 }
 
 
