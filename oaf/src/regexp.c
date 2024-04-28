@@ -87,7 +87,7 @@ static RE* compile(char *regexp)
 				}else
 				{
 					tmp->type = CHAR;
-					tmp->ch = *(regexp + 1);
+					tmp->ch = *regexp;
 				}
 				break;
 			case '.':
