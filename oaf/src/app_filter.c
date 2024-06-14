@@ -41,9 +41,12 @@ DEFINE_RWLOCK(af_feature_lock);
 #define SET_APPID(mark, appid) (mark = appid)
 #define GET_APPID(mark) (mark)
 #define MAX_OAF_NETLINK_MSG_LEN 1024
+#define MAX_AF_SUPPORT_DATA_LEN 3000
+#define MAX_HOST_LEN 64
+#define MIN_HOST_LEN 4
 
 int __add_app_feature(int appid, char *name, int proto, int src_port,
-				port_info_t dport_info, char *host_url, char *request_url, char *dict)
+					  port_info_t dport_info, char *host_url, char *request_url, char *dict)
 {
 	af_feature_node_t *node = NULL;
 	char *p = dict;
@@ -89,7 +92,7 @@ int __add_app_feature(int appid, char *name, int proto, int src_port,
 			strncpy(pos, begin, p - begin);
 		else
 			strcpy(pos, dict);
-		
+
 		k_sscanf(pos, "%d:%x", &index, &value);
 		node->pos_info[node->pos_num].pos = index;
 		node->pos_info[node->pos_num].value = value;
@@ -100,17 +103,21 @@ int __add_app_feature(int appid, char *name, int proto, int src_port,
 	}
 	return 0;
 }
-int validate_range_value(char *range_str){
+int validate_range_value(char *range_str)
+{
 	if (!range_str)
 		return 0;
 	char *p = range_str;
-	while(*p){
+	while (*p)
+	{
 		if (*p == ' ' || *p == '!' || *p == '-' ||
-		((*p >= '0') && (*p <= '9'))){
+			((*p >= '0') && (*p <= '9')))
+		{
 			p++;
 			continue;
 		}
-		else{
+		else
+		{
 			printk("error, invalid char %x\n", *p);
 			return 0;
 		}
@@ -118,28 +125,34 @@ int validate_range_value(char *range_str){
 	return 1;
 }
 
-int parse_range_value(char *range_str, range_value_t *range){
+int parse_range_value(char *range_str, range_value_t *range)
+{
 	char pure_range[128] = {0};
-	if (!validate_range_value(range_str)){
+	if (!validate_range_value(range_str))
+	{
 		printk("validate range str failed, value = %s\n", range_str);
 		return -1;
 	}
 	k_trim(range_str);
-	if (range_str[0] == '!'){
+	if (range_str[0] == '!')
+	{
 		range->not = 1;
 		strcpy(pure_range, range_str + 1);
 	}
-	else{
+	else
+	{
 		range->not = 0;
 		strcpy(pure_range, range_str);
 	}
 	k_trim(pure_range);
 	int start, end;
-	if (strstr(pure_range, "-")){
-		if (2 != sscanf(pure_range, "%d-%d",&start, &end))
+	if (strstr(pure_range, "-"))
+	{
+		if (2 != sscanf(pure_range, "%d-%d", &start, &end))
 			return -1;
 	}
-	else{
+	else
+	{
 		if (1 != sscanf(pure_range, "%d", &start))
 			return -1;
 		end = start;
@@ -149,7 +162,8 @@ int parse_range_value(char *range_str, range_value_t *range){
 	return 0;
 }
 
-int parse_port_info(char *port_str, port_info_t *info){
+int parse_port_info(char *port_str, port_info_t *info)
+{
 	char *p = port_str;
 	char *begin = port_str;
 	int param_num = 0;
@@ -158,46 +172,55 @@ int parse_port_info(char *port_str, port_info_t *info){
 	if (strlen(port_str) == 0)
 		return -1;
 
-	while(*p++) {
+	while (*p++)
+	{
 		if (*p != '|')
 			continue;
 		memset(one_port_buf, 0x0, sizeof(one_port_buf));
 		strncpy(one_port_buf, begin, p - begin);
-		if (0 == parse_range_value(one_port_buf, &info->range_list[info->num])){
+		if (0 == parse_range_value(one_port_buf, &info->range_list[info->num]))
+		{
 			info->num++;
-		}		
+		}
 		param_num++;
 		begin = p + 1;
 	}
 	memset(one_port_buf, 0x0, sizeof(one_port_buf));
 	strncpy(one_port_buf, begin, p - begin);
-	if (0 == parse_range_value(one_port_buf, &info->range_list[info->num])){
+	if (0 == parse_range_value(one_port_buf, &info->range_list[info->num]))
+	{
 		info->num++;
 	}
 	return 0;
 }
 
-int af_match_port(port_info_t *info, int port){
+int af_match_port(port_info_t *info, int port)
+{
 	int i;
 	int with_not = 0;
 	if (info->num == 0)
 		return 1;
-	for (i = 0; i < info->num; i++){
-		if (info->range_list[i].not){
+	for (i = 0; i < info->num; i++)
+	{
+		if (info->range_list[i].not )
+		{
 			with_not = 1;
 			break;
 		}
 	}
-	for (i = 0; i < info->num; i++){
-		if (with_not){
-			if (info->range_list[i].not && port >= info->range_list[i].start 
-				&& port <= info->range_list[i].end){
+	for (i = 0; i < info->num; i++)
+	{
+		if (with_not)
+		{
+			if (info->range_list[i].not &&port >= info->range_list[i].start && port <= info->range_list[i].end)
+			{
 				return 0;
 			}
 		}
-		else{
-			if (port >= info->range_list[i].start 
-				&& port <= info->range_list[i].end){
+		else
+		{
+			if (port >= info->range_list[i].start && port <= info->range_list[i].end)
+			{
 				return 1;
 			}
 		}
@@ -276,7 +299,7 @@ int add_app_feature(int appid, char *name, char *feature)
 		return -1;
 	}
 	sscanf(src_port_str, "%d", &src_port);
-//	sscanf(dst_port_str, "%d", &dst_port);
+	//	sscanf(dst_port_str, "%d", &dst_port);
 	parse_port_info(dst_port_str, &dport_info);
 
 	__add_app_feature(appid, name, proto, src_port, dport_info, host_url, request_url, dict);
@@ -341,7 +364,7 @@ void load_feature_buf_from_file(char **config_buf)
 	struct inode *inode = NULL;
 	struct file *fp = NULL;
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(5, 7, 19)
-	 mm_segment_t fs;
+	mm_segment_t fs;
 #endif
 	off_t size;
 	fp = filp_open(AF_FEATURE_CONFIG_FILE, O_RDONLY, 0);
@@ -443,27 +466,32 @@ static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned 
 	struct skb_seq_state state;
 	unsigned char *msg_buf = NULL;
 	unsigned int consumed = 0;
+#if 0
 	if (from <= 0 || from > 1500)
 		return NULL;
 
 	if (len <= 0 || from+len > 1500)
 		return NULL;
+#endif
 
 	msg_buf = kmalloc(len, GFP_KERNEL);
 	if (!msg_buf)
 		return NULL;
 
-	skb_prepare_seq_read(skb, from, from+len, &state);
-	while (1) {
+	skb_prepare_seq_read(skb, from, from + len, &state);
+	while (1)
+	{
 		unsigned int avail;
 		const u8 *ptr;
 		avail = skb_seq_read(consumed, &ptr, &state);
-		if (avail == 0) {
+		if (avail == 0)
+		{
 			break;
 		}
 		memcpy(msg_buf + consumed, ptr, avail);
 		consumed += avail;
-		if (consumed >= len) {
+		if (consumed >= len)
+		{
 			skb_abort_seq_read(&state);
 			break;
 		}
@@ -482,7 +510,8 @@ int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 	struct ipv6hdr *ip6h = NULL;
 	if (!skb)
 		return -1;
-	switch (skb->protocol) {
+	switch (skb->protocol)
+	{
 	case htons(ETH_P_IP):
 		iph = ip_hdr(skb);
 		flow->src = iph->saddr;
@@ -526,8 +555,22 @@ int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 	}
 	return -1;
 }
-#define MAX_HOST_LEN 32
-#define MIN_HOST_LEN 4
+
+int check_domain(char *h, int len)
+{
+	int i;
+	for (i = 0; i < len; i++)
+	{
+		if ((h[i] >= 'a' && h[i] <= 'z') || (h[i] >= 'A' && h[i] <= 'Z') ||
+			(h[i] >= '0' && h[i] <= '9') || h[i] == '.' || h[i] == '-')
+		{
+			continue;
+		}
+		else
+			return 0;
+	}
+	return 1;
+}
 
 int dpi_https_proto(flow_info_t *flow)
 {
@@ -548,14 +591,12 @@ int dpi_https_proto(flow_info_t *flow)
 	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01))
 		return -1;
 
-
 	for (i = 0; i < data_len; i++)
 	{
 		if (i + HTTPS_URL_OFFSET >= data_len)
 		{
 			return -1;
 		}
-		
 
 		if (p[i] == 0x0 && p[i + 1] == 0x0 && p[i + 2] == 0x0 && p[i + 3] != 0x0)
 		{
@@ -566,8 +607,12 @@ int dpi_https_proto(flow_info_t *flow)
 			{
 				continue;
 			}
+
 			if (i + HTTPS_URL_OFFSET + ntohs(url_len) < data_len)
 			{
+				// may invalid
+				if (!check_domain( p + i + HTTPS_URL_OFFSET, ntohs(url_len)))
+					continue;
 				flow->https.match = AF_TRUE;
 				flow->https.url_pos = p + i + HTTPS_URL_OFFSET;
 				flow->https.url_len = ntohs(url_len);
@@ -811,8 +856,9 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	{
 		return AF_FALSE;
 	}
-	
-	if (!af_match_port(&node->dport_info, flow->dport)){
+
+	if (!af_match_port(&node->dport_info, flow->dport))
+	{
 		return AF_FALSE;
 	}
 
@@ -910,25 +956,28 @@ int af_update_client_app_info(af_client_info_t *node, int app_id, int drop)
 }
 
 int af_send_msg_to_user(char *pbuf, uint16_t len);
-int af_match_bcast_packet(flow_info_t *f){
+int af_match_bcast_packet(flow_info_t *f)
+{
 	if (!f)
 		return 0;
-	if (0 == f->src || 0 == f->dst 
-	|| 0xffffffff == f->dst || 0 == f->dst)
+	if (0 == f->src || 0 == f->dst || 0xffffffff == f->dst || 0 == f->dst)
 		return 1;
 	return 0;
 }
 
-int af_match_local_packet(flow_info_t *f){
+int af_match_local_packet(flow_info_t *f)
+{
 	if (!f)
 		return 0;
-	if (0x0100007f == f->src || 0x0100007f == f->dst){
+	if (0x0100007f == f->src || 0x0100007f == f->dst)
+	{
 		return 1;
 	}
 	return 0;
 }
 
-int dpi_main(struct sk_buff *skb, flow_info_t *flow){
+int dpi_main(struct sk_buff *skb, flow_info_t *flow)
+{
 	dpi_http_proto(flow);
 	dpi_https_proto(flow);
 	if (TEST_MODE())
@@ -936,7 +985,8 @@ int dpi_main(struct sk_buff *skb, flow_info_t *flow){
 	return 0;
 }
 
-void af_get_smac(struct sk_buff *skb, u_int8_t *smac){
+void af_get_smac(struct sk_buff *skb, u_int8_t *smac)
+{
 	struct ethhdr *ethhdr = NULL;
 	ethhdr = eth_hdr(skb);
 	if (ethhdr)
@@ -944,33 +994,38 @@ void af_get_smac(struct sk_buff *skb, u_int8_t *smac){
 	else
 		memcpy(smac, &skb->cb[40], ETH_ALEN);
 }
-int is_ipv4_broadcast(uint32_t ip) {
-
-    return (ip & 0x00FFFFFF) == 0x00FFFFFF;
+int is_ipv4_broadcast(uint32_t ip)
+{
+	return (ip & 0x00FFFFFF) == 0x00FFFFFF;
 }
 
-int is_ipv4_multicast(uint32_t ip) {
-    return (ip & 0xF0000000) == 0xE0000000;
+int is_ipv4_multicast(uint32_t ip)
+{
+	return (ip & 0xF0000000) == 0xE0000000;
 }
 int af_check_bcast_ip(flow_info_t *f)
 {
-		
+
 	if (0 == f->src || 0 == f->dst)
 		return 1;
-	if (is_ipv4_broadcast(ntohl(f->src)) || is_ipv4_broadcast(ntohl(f->dst))){
+	if (is_ipv4_broadcast(ntohl(f->src)) || is_ipv4_broadcast(ntohl(f->dst)))
+	{
 		return 1;
 	}
-	if (is_ipv4_multicast(ntohl(f->src)) || is_ipv4_multicast(ntohl(f->dst))){
+	if (is_ipv4_multicast(ntohl(f->src)) || is_ipv4_multicast(ntohl(f->dst)))
+	{
 		return 1;
 	}
 
 	return 0;
 }
-u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev){
+u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
+{
 	flow_info_t flow;
 	u_int8_t smac[ETH_ALEN];
 	af_client_info_t *client = NULL;
 	u_int32_t ret = NF_ACCEPT;
+	u_int8_t malloc_data = 0;
 
 	if (!skb || !dev)
 		return NF_ACCEPT;
@@ -983,29 +1038,38 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
-	if (flow.src || flow.dst) {
-		if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
+	if (flow.src || flow.dst)
+	{
+		if (af_lan_ip == flow.src || af_lan_ip == flow.dst)
+		{
 			return NF_ACCEPT;
 		}
 		if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
 			return NF_ACCEPT;
 
-		if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
+		if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask))
+		{
 			return NF_ACCEPT;
 		}
-	} else if (flow.src6 && flow.dst6) {
-		if (flow.src6[0] == 0xff || flow.dst6[0] == 0xff) {
+	}
+	else if (flow.src6 && flow.dst6)
+	{
+		if (flow.src6[0] == 0xff || flow.dst6[0] == 0xff)
+		{
 			return NF_ACCEPT;
 		}
 		return NF_DROP;
-	} else {
+	}
+	else
+	{
 		return NF_ACCEPT;
 	}
 	af_get_smac(skb, smac);
 
 	AF_CLIENT_LOCK_W();
 	client = find_and_add_af_client(smac);
-	if (!client){
+	if (!client)
+	{
 		AF_CLIENT_UNLOCK_W();
 		return NF_ACCEPT;
 	}
@@ -1013,18 +1077,20 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	if (flow.src)
 		client->ip = flow.src;
 	AF_CLIENT_UNLOCK_W();
-
-	if (skb_is_nonlinear(skb)) {
+	if (skb_is_nonlinear(skb) && flow.l4_len < MAX_AF_SUPPORT_DATA_LEN)
+	{
 		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
 		if (!flow.l4_data)
 			return NF_ACCEPT;
+		malloc_data = 1;
 	}
 
 	if (0 != dpi_main(skb, &flow))
 		goto accept;
 
 	app_filter_match(&flow, client);
-	if (flow.app_id != 0){
+	if (flow.app_id != 0)
+	{
 		af_update_client_app_info(client, flow.app_id, flow.drop);
 	}
 	if (flow.drop)
@@ -1033,15 +1099,18 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	}
 
 accept:
-	if (skb_is_nonlinear(skb)) {
-		if (flow.l4_data) {
+	if (malloc_data)
+	{
+		if (flow.l4_data)
+		{
 			kfree(flow.l4_data);
 		}
 	}
 	return ret;
 }
 
-u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev){
+u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
+{
 	unsigned long long total_packets = 0;
 	flow_info_t flow;
 	u_int8_t smac[ETH_ALEN];
@@ -1050,8 +1119,9 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	struct nf_conn_acct *acct;
 	af_client_info_t *client = NULL;
 	u_int32_t ret = NF_ACCEPT;
-	int app_id = 0;
-	int drop = 0;
+	u_int32_t app_id = 0;
+	u_int8_t drop = 0;
+	u_int8_t malloc_data = 0;
 
 	if (strncmp(dev->name, "br-lan", 6))
 		return NF_ACCEPT;
@@ -1068,8 +1138,9 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		af_get_smac(skb, smac);
 
 	AF_CLIENT_LOCK_R();
-	client = flow.src?find_af_client_by_ip(flow.src):find_af_client(smac);
-	if (!client){
+	client = flow.src ? find_af_client_by_ip(flow.src) : find_af_client(smac);
+	if (!client)
+	{
 		AF_CLIENT_UNLOCK_R();
 		return NF_ACCEPT;
 	}
@@ -1079,31 +1150,34 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (ct->mark != 0)
 	{
 		app_id = ct->mark & (~NF_DROP_BIT);
-		if (app_id > 1000 && app_id < 9999){
+		if (app_id > 1000 && app_id < 9999)
+		{
 			if (NF_DROP_BIT == (ct->mark & NF_DROP_BIT))
 				drop = 1;
 			AF_CLIENT_LOCK_W();
 			af_update_client_app_info(client, app_id, drop);
 			AF_CLIENT_UNLOCK_W();
 
-			if (drop){
+			if (drop)
+			{
 				return NF_DROP;
 			}
 		}
 	}
 	acct = nf_conn_acct_find(ct);
-	if(!acct)
+	if (!acct)
 		return NF_ACCEPT;
-	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) 
-		+ (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
+	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) + (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
 
-	if(total_packets > MAX_DPI_PKT_NUM)
+	if (total_packets > MAX_DPI_PKT_NUM)
 		return NF_ACCEPT;
 
-	if (skb_is_nonlinear(skb)) {
+	if (skb_is_nonlinear(skb) && flow.l4_len < MAX_AF_SUPPORT_DATA_LEN)
+	{
 		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
 		if (!flow.l4_data)
 			return NF_ACCEPT;
+		malloc_data = 1;
 	}
 	if (0 != dpi_main(skb, &flow))
 		goto accept;
@@ -1127,14 +1201,15 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	}
 
 accept:
-	if (skb_is_nonlinear(skb)) {
-		if (flow.l4_data) {
+	if (malloc_data)
+	{
+		if (flow.l4_data)
+		{
 			kfree(flow.l4_data);
 		}
 	}
 	return ret;
 }
-
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 static u_int32_t app_filter_hook(void *priv,
@@ -1158,15 +1233,15 @@ static u_int32_t app_filter_hook(unsigned int hook,
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 static u_int32_t app_filter_by_pass_hook(void *priv,
-								 struct sk_buff *skb,
-								 const struct nf_hook_state *state)
+										 struct sk_buff *skb,
+										 const struct nf_hook_state *state)
 {
 #else
 static u_int32_t app_filter_by_pass_hook(unsigned int hook,
-								 struct sk_buff *skb,
-								 const struct net_device *in,
-								 const struct net_device *out,
-								 int (*okfn)(struct sk_buff *))
+										 struct sk_buff *skb,
+										 const struct net_device *in,
+										 const struct net_device *out,
+										 int (*okfn)(struct sk_buff *))
 {
 #endif
 	if (!g_oaf_enable)
@@ -1238,7 +1313,6 @@ static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	},
 };
 #endif
-
 
 struct timer_list oaf_timer;
 int report_flag = 0;
@@ -1395,7 +1469,8 @@ static int __init app_filter_init(void)
 #else
 	err = nf_register_hooks(app_filter_ops, ARRAY_SIZE(app_filter_ops));
 #endif
-	if (err) {
+	if (err)
+	{
 		AF_ERROR("oaf register filter hooks failed!\n");
 	}
 	init_oaf_timer();
