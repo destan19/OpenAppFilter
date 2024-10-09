@@ -59,8 +59,9 @@ static struct ctl_table oaf_table[] = {
 		.mode = 0666,
 		.proc_handler = proc_douintvec,
 	},
-	{
-	}
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
+	{}
+#endif
 };
 
 static struct ctl_table oaf_root_table[] = {
