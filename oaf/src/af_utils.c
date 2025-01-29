@@ -19,6 +19,24 @@ u_int32_t af_get_timestamp_sec(void)
 #endif
 
 }
+
+int k_atoi(const char *str) {
+    int result = 0;
+
+    // Skip whitespace
+    while (*str == ' ' || *str == '\t') {
+        str++;
+    }
+
+    // Convert characters to integer
+    while (*str >= '0' && *str <= '9') {
+        result = result * 10 + (*str - '0');
+        str++;
+    }
+
+    return result;
+}
+
 char *k_trim(char *s)
 {
 	char *start, *last, *bk;
@@ -64,6 +82,41 @@ void dump_str(char *name, unsigned char *p, int len)
 	strncpy(buf, p, len);
 	printk("[%s]\n", buf);
 }
+int isprint_char(unsigned char c)
+{
+    if (c >= 0x20 && c <= 0x7e)
+        return 1;
+    else
+        return 0;
+}
+
+void print_hex_ascii(const unsigned char *data, size_t size) {
+    size_t i, j;
+
+    for (i = 0; i < size; i += 16) {
+        printk(KERN_CONT"%08lx  ", (unsigned long)i);
+        for (j = 0; j < 16; ++j) {
+            if (i + j < size) {
+                printk(KERN_CONT"%02x ", data[i + j]);
+            } else {
+                printk(KERN_CONT"   "); 
+            }   
+        }   
+
+        printk(KERN_CONT" ");
+
+        for (j = 0; j < 16; ++j) {
+            if (i + j < size) {
+                unsigned char c = data[i + j]; 
+                printk(KERN_CONT"%c", isprint_char(c) ? c : '.'); 
+            }   
+        }   
+
+        printk(KERN_CONT"\n");
+    }   
+    printk(KERN_CONT"---------------------------------------\n");
+}
+
 
 void dump_hex(char *name, unsigned char *p, int len)
 {
@@ -75,10 +128,10 @@ void dump_hex(char *name, unsigned char *p, int len)
 	printk("%s: ",name);
 	for (i = 0; i < len; i++) {
 		if (i % 16 == 0)
-			printk("\n");
-		printk("%02X ",*(p + i));
+			printk(KERN_CONT "\n");
+		printk(KERN_CONT "%02X ",*(p + i));
 	}
-	printk("\n");
+	printk(KERN_CONT "\n");
 }
 
 #ifndef va_arg

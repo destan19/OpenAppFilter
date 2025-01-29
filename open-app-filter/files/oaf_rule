@@ -21,27 +21,21 @@ clean_rule()
 }
 
 load_rule()
-{
+{          
     json_init
     json_add_int "op" 1
     json_add_object "data"
-    json_add_array "apps"
-    for file in `ls /tmp/appfilter/*.class`
-    do
-        class_name=`echo "$file" | awk -F/ '{print $4}'| awk -F. '{print $1}'`
-        config_get appid_list "appfilter" "${class_name}apps"
-
-        if ! test -z "$appid_list";then
-            for appid in $appid_list:
-            do
-                json_add_int "" $appid
-            done
-        fi
-    done
-
+    json_add_array "apps" 
+    config_get appid_list rule app_list
+    if ! test -z "$appid_list";then    
+        for appid in $appid_list:  
+        do                         
+            json_add_int "" $appid
+        done                      
+    fi                            
     json_str=`json_dump`
     config_apply "$json_str"
-    json_cleanup
+    json_cleanup               
 }
 
 load_mac_list()

@@ -11,6 +11,8 @@ void dump_str(char *name, unsigned char *p, int len);
 void dump_hex(char *name, unsigned char *p, int len);
 
 int k_sscanf(const char *buf, const char *fmt, ...);
+int k_atoi(const char *str);
+void print_hex_ascii(const unsigned char *data, size_t size);
 
 #endif
 

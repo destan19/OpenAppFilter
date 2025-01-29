@@ -127,16 +127,31 @@ void update_lan_ip(void){
 
 void dev_list_timeout_handler(struct uloop_timeout *t)
 {
+    static int count = 0;
+    count++;
+
+
+
+    printf("%s %d count2 = %d\n", __func__, __LINE__, count);
+
+
     dump_dev_list();
+        printf("%s %d count = %d\n", __func__, __LINE__, count);
+
     check_dev_visit_info_expire();
+        printf("%s %d count = %d\n", __func__, __LINE__, count);
+
     flush_expire_visit_info();
     //dump_dev_visit_list();
     update_lan_ip();
     check_appfilter_enable();
+        printf("%s %d count = %d\n", __func__, __LINE__, count);
+
     if (check_dev_expire()){
         flush_expire_visit_info();
         flush_dev_expire_node();
     }
+        printf("%s %d count = %d\n", __func__, __LINE__, count);
     uloop_timeout_set(t, 10000);
 }
 
@@ -151,8 +166,9 @@ int main(int argc, char **argv)
 {
     int ret = 0;
     uloop_init();
-    printf("init appfilter\n");
+    printf("init appfilter2\n");
     init_dev_node_htable();
+
     init_app_name_table();
     init_app_class_name_table();
     if (appfilter_ubus_init() < 0)

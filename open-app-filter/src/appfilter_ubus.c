@@ -35,11 +35,16 @@ THE SOFTWARE.
 #include <libubox/blobmsg.h>
 #include "appfilter_user.h"
 #include "appfilter_config.h"
+#include <uci.h>
 
 struct ubus_context *ubus_ctx = NULL;
 static struct blob_buf b;
 
 extern char *format_time(int timetamp);
+
+void reload_oaf_rule(){
+    system("/usr/bin/oaf_rule reload");
+}
 
 void get_hostname_by_mac(char *mac, char *hostname)
 {
@@ -481,6 +486,249 @@ handle_app_class_visit_time(struct ubus_context *ctx, struct ubus_object *obj,
     return 0;
 }
 
+
+static int parse_feature_cfg(struct json_object *class_list) {
+    FILE *file = fopen("/tmp/feature.cfg", "r");
+    if (!file) {
+        perror("Failed to open /tmp/feature.cfg");
+        return -1;
+    }
+
+    char line[256];
+    char app_buf[128];
+    struct json_object *current_class = NULL;
+    struct json_object *app_list = NULL;
+
+    while (fgets(line, sizeof(line), file)) {
+        // Remove newline character
+        line[strcspn(line, "\n")] = 0;
+
+        if (strncmp(line, "#class", 6) == 0) {
+            // New class definition
+            if (current_class) {
+                // Add the previous class to the class list
+                json_object_object_add(current_class, "app_list", app_list);
+                json_object_array_add(class_list, current_class);
+            }
+
+            // Parse class name
+            char *name = strtok(line + 7, " ");
+            char *class_name = NULL;
+            while (name != NULL) {
+                class_name = name;  // Keep updating class_name until the last token
+                name = strtok(NULL, " ");
+            }
+            current_class = json_object_new_object();
+            json_object_object_add(current_class, "name", json_object_new_string(class_name));
+            app_list = json_object_new_array();
+        } else if (current_class) {
+            // Parse app definition
+            char *p_end = strstr(line, ":");
+            if (!p_end) {
+                continue;
+            }
+            strncpy(app_buf, line, p_end - line);
+            app_buf[p_end - line] = '\0';
+            char *appid_str = strtok(app_buf, " ");
+            char *name = strtok(NULL, " ");
+            if (appid_str && name) {
+                char combined[256];
+                char icon_path[512];
+                snprintf(icon_path, sizeof(icon_path), "/www/luci-static/resources/app_icons/%s.png", appid_str);
+                int with_icon = access(icon_path, F_OK) == 0 ? 1 : 0; // 检查文件是否存在
+                snprintf(combined, sizeof(combined), "%s,%s,%d", appid_str, name, with_icon);
+                json_object_array_add(app_list, json_object_new_string(combined));
+            }
+        }
+    }
+
+    // Add the last class to the class list
+    if (current_class) {
+        json_object_object_add(current_class, "app_list", app_list);
+        json_object_array_add(class_list, current_class);
+    }
+
+    fclose(file);
+    return 0;
+}
+
+static int handle_get_class_list(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    struct json_object *response = json_object_new_object();
+    struct json_object *class_list = json_object_new_array();
+
+    if (parse_feature_cfg(class_list) != 0) {
+        json_object_put(response);
+        return UBUS_STATUS_UNKNOWN_ERROR;
+    }
+
+    json_object_object_add(response, "class_list", class_list);
+
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+
+    return 0;
+}
+
+static int handle_get_app_filter(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    struct json_object *response = json_object_new_object();
+    struct json_object *app_list = json_object_new_array();
+    int i;
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+    char app_filter_str[1024] = {0};
+    app_filter_str[0] = '\0';
+    af_uci_get_list_value(uci_ctx, "appfilter.rule.app_list", app_filter_str, sizeof(app_filter_str), " ");
+    printf("app_filter_str: %s\n", app_filter_str);
+    char *app_id_str = strtok(app_filter_str, " ");
+    while (app_id_str) {
+        json_object_array_add(app_list, json_object_new_int(atoi(app_id_str)));
+        app_id_str = strtok(NULL, " ");
+    }
+    json_object_object_add(response, "app_list", app_list);
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+static int handle_set_app_filter(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    printf("handle_set_app_filter\n");
+    struct json_object *response = json_object_new_object();
+    int i;
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (!msg_obj_str) {
+        printf("format json failed\n");
+        return 0;
+    }
+    printf("msg_obj_str: %s\n", msg_obj_str);
+    struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+    struct json_object *app_list = json_object_object_get(req_obj, "app_list");
+    if (!app_list) {
+        printf("app_list is NULL\n");
+        return 0;
+    }
+    printf("app_list: %s\n", json_object_get_string(app_list));
+
+    // 新增代码：将 app_list_str 存储到 UCI 配置中
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+
+   af_uci_delete(uci_ctx, "appfilter.rule.app_list");
+
+   int len = json_object_array_length(app_list);
+    for (i = 0; i < json_object_array_length(app_list); i++) {
+        struct json_object *app_id_obj = json_object_array_get_idx(app_list, i);
+        af_uci_add_int_list(uci_ctx, "appfilter.rule.app_list", json_object_get_int(app_id_obj));
+    }
+    af_uci_commit(uci_ctx, "appfilter");
+    reload_oaf_rule();
+
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+
+
+
+static int handle_get_app_filter_base(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    struct json_object *response = json_object_new_object();
+    struct json_object *data_obj = json_object_new_object();
+    int i;
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+    int enable = 0;
+    int work_mode = 0;
+    enable = uci_get_int_value(uci_ctx, "appfilter.global.enable");
+    work_mode = uci_get_int_value(uci_ctx, "appfilter.global.work_mode");
+
+    json_object_object_add(data_obj, "enable", json_object_new_int(enable));
+    json_object_object_add(data_obj, "work_mode", json_object_new_int(work_mode));
+
+
+    json_object_object_add(response, "data", data_obj);
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+static int handle_set_app_filter_base(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    printf("handle_set_app_filter_base\n");
+    struct json_object *response = json_object_new_object();
+    int i;
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (!msg_obj_str) {
+        printf("format json failed\n");
+        return 0;
+    }
+    printf("msg_obj_str: %s\n", msg_obj_str);
+    struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+    struct json_object *enable_obj = json_object_object_get(req_obj, "enable");
+    struct json_object *work_mode_obj = json_object_object_get(req_obj, "work_mode");
+    if (!enable_obj || !work_mode_obj) {
+        printf("enable_obj or work_mode_obj is NULL\n");
+        return 0;
+    }
+    printf("enable_obj: %d\n", json_object_get_int(enable_obj));
+    printf("work_mode_obj: %d\n", json_object_get_int(work_mode_obj));
+
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+
+    af_uci_set_int_value(uci_ctx, "appfilter.global.enable", json_object_get_int(enable_obj));
+    af_uci_set_int_value(uci_ctx, "appfilter.global.work_mode", json_object_get_int(work_mode_obj));
+    af_uci_commit(uci_ctx, "appfilter");
+    reload_oaf_rule();
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
 static const struct blobmsg_policy empty_policy[1] = {
     //[DEV_NAME] = { .name = "name", .type = BLOBMSG_TYPE_STRING },
 };
@@ -490,6 +738,12 @@ static struct ubus_method appfilter_object_methods[] = {
     UBUS_METHOD("dev_visit_time", appfilter_handle_visit_time, empty_policy),
     UBUS_METHOD("app_class_visit_time", handle_app_class_visit_time, empty_policy),
     UBUS_METHOD("dev_list", appfilter_handle_dev_list, empty_policy),
+    UBUS_METHOD("class_list", handle_get_class_list, empty_policy),
+    UBUS_METHOD("set_app_filter", handle_set_app_filter, empty_policy),
+    UBUS_METHOD("get_app_filter", handle_get_app_filter, empty_policy),
+
+    UBUS_METHOD("set_app_filter_base", handle_set_app_filter_base, empty_policy),
+    UBUS_METHOD("get_app_filter_base", handle_get_app_filter_base, empty_policy),
 };
 
 static struct ubus_object_type main_object_type =

@@ -1,4 +1,3 @@
-
 module("luci.controller.appfilter", package.seeall)
 local utl = require "luci.util"
 
@@ -8,43 +7,31 @@ function index()
 	end
 	
 	local page
-	entry({"admin", "services", "appfilter"}, 
-	alias("admin", "services", "appfilter", "user_list"),
-		_("App Filter"), 20).dependent = true
+	entry({"admin", "services", "appfilter"}, alias("admin", "services", "appfilter", "user_list"),_("App Filter"), 10).dependent = true
+
 
 	entry({"admin", "services", "appfilter", "user_list"}, 
 		arcombine(cbi("appfilter/user_list",{hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), 
 		cbi("appfilter/dev_status", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true})),
-		_("User List"), 21).leaf=true
+		_("User List"), 20).leaf=true
 
-	entry({"admin", "services", "appfilter", "base_setting"}, 
-        cbi("appfilter/base_setting"), _("Basic Settings"), 22).leaf=true
+	entry({"admin", "services", "appfilter", "base_setting"}, cbi("appfilter/base_setting"), _("Basic Settings"), 22).leaf=true
+	entry({"admin", "services", "appfilter", "user_setting"}, cbi("appfilter/user_setting"), _("Effective User"), 23).leaf=true
+	entry({"admin", "services", "appfilter", "time_setting"}, cbi("appfilter/time_setting"), _("Effective Time"), 24).leaf=true
+	entry({"admin", "services", "appfilter", "app_filter"}, cbi("appfilter/app_filter", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Filter Rule"), 21).leaf=true
+	entry({"admin", "services", "appfilter", "feature"}, cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Feature"), 25).leaf=true
 
-	entry({"admin", "services", "appfilter", "user_setting"}, 
-		cbi("appfilter/user_setting"), _("Effective User"), 23).leaf=true
-
-	entry({"admin", "services", "appfilter", "time_setting"}, 
-		cbi("appfilter/time_setting"), _("Effective Time"), 24).leaf=true
-
-	entry({"admin", "services", "appfilter", "feature"}, 
-		cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Feature"), 25).leaf=true
-
-	page = entry({"admin", "network", "user_status"}, call("user_status"), nil)
-	page.leaf = true
-
-	page = entry({"admin", "network", "dev_app_status"}, call("dev_app_status"), nil)
-	page.leaf = true
-
-	page = entry({"admin", "network", "dev_visit_list"}, call("get_dev_visit_list"), nil)
-	page.leaf = true
-
-	page = entry({"admin", "network", "feature_upgrade"}, call("handle_feature_upgrade"), nil)
-	page.leaf = true
-
-	page = entry({"admin", "network", "dev_visit_time"}, call("get_dev_visit_time"), nil)
-	page.leaf = true
-	page = entry({"admin", "network", "app_class_visit_time"}, call("get_app_class_visit_time"), nil)
-	page.leaf = true
+	entry({"admin", "network", "user_status"}, call("user_status"), nil).leaf = true
+	entry({"admin", "network", "dev_app_status"}, call("dev_app_status"), nil).leaf = true
+	entry({"admin", "network", "dev_visit_list"}, call("get_dev_visit_list"), nil).leaf = true
+	entry({"admin", "network", "feature_upgrade"}, call("handle_feature_upgrade"), nil).leaf = true
+	entry({"admin", "network", "dev_visit_time"}, call("get_dev_visit_time"), nil).leaf = true
+	entry({"admin", "network", "app_class_visit_time"}, call("get_app_class_visit_time"), nil).leaf = true
+	entry({"admin", "network", "class_list"}, call("get_class_list"), nil).leaf = true
+	entry({"admin", "network", "set_app_filter"}, call("set_app_filter"), nil).leaf = true
+	entry({"admin", "network", "get_app_filter"}, call("get_app_filter"), nil).leaf = true
+	entry({"admin", "network", "get_app_filter_base"}, call("get_app_filter_base"), nil).leaf = true
+	entry({"admin", "network", "set_app_filter_base"}, call("set_app_filter_base"), nil).leaf = true
 end
 
 function get_hostname_by_mac(dst_mac)
@@ -148,6 +135,52 @@ function dev_app_status()
 	luci.http.write_json(visit_obj);
 end
 
+function get_class_list()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local class_obj=utl.ubus("appfilter", "class_list", {});
+	llog("get class list");
+	luci.http.write_json(class_obj);
+end
+
+function get_app_filter()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local class_obj=utl.ubus("appfilter", "get_app_filter", {});
+	llog("get appfilter");
+	luci.http.write_json(class_obj);
+end
+
+function set_app_filter()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj.app_list = luci.http.formvalue("app_list")
+	llog("set app filter "..req_obj.app_list);
+	req_obj.app_list = json.parse(req_obj.app_list)  -- 将字符串转换为JSON格式
+	local class_obj=utl.ubus("appfilter", "set_app_filter", req_obj);
+	luci.http.write_json(class_obj);
+end
+
+
+function get_app_filter_base()
+	local json = require "luci.jsonc"
+	llog("11get appfilter base");
+	luci.http.prepare_content("application/json")
+	local class_obj=utl.ubus("appfilter", "get_app_filter_base", {});
+	llog("22get appfilter base");
+	luci.http.write_json(class_obj);
+end
+
+function set_app_filter_base()
+	local json = require "luci.jsonc"
+	llog("set appfilter base");
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj = json.parse(luci.http.formvalue("data"))
+	local resp_obj=utl.ubus("appfilter", "set_app_filter_base", req_obj);
+	luci.http.write_json(resp_obj);
+end
 
 function get_dev_visit_time(mac)
 	local json = require "luci.jsonc"
@@ -205,4 +238,14 @@ function get_dev_visit_list(mac)
 	end
 	table.sort(history, cmp_func)
 	luci.http.write_json(history);
+end
+
+function llog(message)
+    local log_file = "/tmp/log/oaf_luci.log"  -- 日志文件路径
+    local fd = io.open(log_file, "a")  -- 以追加模式打开文件
+    if fd then
+        local timestamp = os.date("%Y-%m-%d %H:%M:%S")  -- 获取当前时间戳
+        fd:write(string.format("[%s] %s\n", timestamp, message))  -- 写入时间戳和日志信息
+        fd:close()  -- 关闭文件
+    end
 end

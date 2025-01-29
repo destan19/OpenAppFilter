@@ -73,11 +73,13 @@ void init_dev_node_htable()
     {
         dev_hash_table[i] = NULL;
     }
+    printf("init dev node htable ok...\n");
 }
 
 dev_node_t *add_dev_node(char *mac)
 {
     unsigned int hash = 0;
+    printf("add dev node\n");
     if (g_cur_user_num >= MAX_SUPPORT_USER_NUM)
     {
         printf("error, user num reach max %d\n", g_cur_user_num);
@@ -191,6 +193,7 @@ void clean_dev_online_status(void)
         dev_node_t *node = dev_hash_table[i];
         while (node)
         {
+
             if (node->online)
             {
                 node->offline_time = get_timestamp();
@@ -199,6 +202,7 @@ void clean_dev_online_status(void)
             node = node->next;
         }
     }
+
 }
 
 /*
@@ -379,15 +383,18 @@ void dump_dev_list(void)
     int count = 0;
     char hostname_buf[MAX_HOSTNAME_SIZE] = {0};
     char ip_buf[MAX_IP_LEN] = {0};
+
     clean_dev_online_status();
+
     update_dev_hostname();
+
     update_dev_online_status();
+
     FILE *fp = fopen(OAF_DEV_LIST_FILE, "w");
     if (!fp)
     {
         return;
     }
-
     fprintf(fp, "%-4s %-20s %-20s %-32s %-8s\n", "Id", "Mac Addr", "Ip Addr", "Hostname", "Online");
     for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
     {
@@ -415,6 +422,7 @@ void dump_dev_list(void)
             node = node->next;
         }
     }
+    printf("%s %d \n", __func__, __LINE__);
     for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
     {
         dev_node_t *node = dev_hash_table[i];
@@ -440,6 +448,7 @@ void dump_dev_list(void)
             node = node->next;
         }
     }
+    printf("%s %d \n", __func__, __LINE__);
 EXIT:
     fclose(fp);
 }

@@ -110,6 +110,221 @@ done:
     return ret;
 }
 
+
+int af_uci_delete(struct uci_context *ctx, char *key)
+{
+    struct uci_element *e;
+    struct uci_ptr ptr;
+    int ret = UCI_OK;
+    int dummy;
+    char *parameters ;
+    char param_tmp[128] = {0};    
+    strcpy(param_tmp, key);
+    if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
+        ret = 1;
+        return ret;
+    }
+    ret = uci_delete(ctx, &ptr);
+    if (ret == UCI_OK)
+       ret = uci_save(ctx, ptr.p);
+
+	if (ptr.p)
+		uci_unload(ctx, ptr.p);
+    return ret;
+}
+
+
+
+int af_uci_add_list(struct uci_context *ctx, char *key, char *value)
+{
+    struct uci_element *e;
+    struct uci_ptr ptr;
+    int ret = UCI_OK;
+    int dummy;
+    char *parameters;
+    if (strlen(value) + strlen(key) >= MAX_PARAM_LIST_LEN  - 1) {
+        printf("value too long\n");
+        return -1;
+    }
+    char param_tmp[MAX_PARAM_LIST_LEN] = {0};    
+    sprintf(param_tmp, "%s=%s", key, value);
+    if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
+        ret = 1;
+        return ret;
+    }
+    ret = uci_add_list(ctx, &ptr);
+    if (ret == UCI_OK)
+       ret = uci_save(ctx, ptr.p);
+
+	if (ptr.p)
+		uci_unload(ctx, ptr.p);
+    return ret;
+}
+
+
+int af_uci_get_list_value(struct uci_context *ctx, char *key, char *output, int out_len, char *delimt)
+{
+    struct uci_element *e;
+    struct uci_ptr ptr;
+    int ret = -1;
+    int dummy;
+    char *parameters ;
+    char param_tmp[128] = {0};
+    strcpy(param_tmp, key);
+    if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
+        return ret;
+    }
+    
+    if (!(ptr.flags & UCI_LOOKUP_COMPLETE)) {
+        ctx->err = UCI_ERR_NOTFOUND;
+        goto done;
+    }
+    int sep = 0;
+    e = ptr.last;
+	int len = 0;
+    switch(e->type) {
+        case UCI_TYPE_SECTION:
+            ret = -1;
+			goto done;
+        case UCI_TYPE_OPTION:
+			if (UCI_TYPE_LIST == ptr.o->type){
+				memset(output, 0x0, out_len);
+				uci_foreach_element(&ptr.o->v.list, e) {
+					len = strlen(output);
+					if (sep){
+						strncat(output + len, delimt, out_len);
+					}
+					len = strlen(output);
+					sprintf(output + len, "%s", e->name);
+					sep = 1;
+				}
+				ret = 0;
+			}
+			goto done;
+        default:
+            break;
+    }
+done:	
+	if (ptr.p)
+		uci_unload(ctx, ptr.p);
+    return ret;
+}
+
+
+int af_uci_add_int_list(struct uci_context *ctx, char *key, int value)
+{
+    struct uci_element *e;
+    struct uci_ptr ptr;
+    int ret = UCI_OK;
+    int dummy;
+    char *parameters ;
+    char param_tmp[128] = {0};    
+    sprintf(param_tmp, "%s=%d", key, value);
+    if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
+        ret = 1;
+        return ret;
+    }
+    ret = uci_add_list(ctx, &ptr);
+    if (ret == UCI_OK)
+       ret = uci_save(ctx, ptr.p);
+
+	if (ptr.p)
+		uci_unload(ctx, ptr.p);
+    return ret;
+}
+
+int af_uci_del_list(struct uci_context *ctx, char *key, char *value)
+{
+    struct uci_element *e;
+    struct uci_ptr ptr;
+    int ret = UCI_OK;
+    int dummy;
+    char *parameters ;
+    char param_tmp[128] = {0};    
+    sprintf(param_tmp, "%s=%s", key, value);
+    if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
+        ret = 1;
+        return ret;
+    }
+    ret = uci_del_list(ctx, &ptr);
+    if (ret == UCI_OK)
+       ret = uci_save(ctx, ptr.p);
+
+	if (ptr.p)
+		uci_unload(ctx, ptr.p);
+    return ret;
+}
+
+
+int af_uci_set_value(struct uci_context *ctx, char *key, char *value)
+{
+    struct uci_element *e;
+    struct uci_ptr ptr;
+    int ret = UCI_OK;
+    int dummy;
+    char *parameters ;
+    char param_tmp[2048] = {0};    
+    sprintf(param_tmp, "%s=%s", key, value);
+    if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
+        ret = 1;
+        return ret;
+    }
+    
+    e = ptr.last;
+    ret = uci_set(ctx, &ptr);
+    if (ret == UCI_OK)
+       ret = uci_save(ctx, ptr.p);
+
+	if (ptr.p)
+		uci_unload(ctx, ptr.p);
+    return ret;
+}
+
+int af_uci_set_int_value(struct uci_context *ctx, char *key, int value)
+{
+    struct uci_element *e;
+    struct uci_ptr ptr;
+    int ret = UCI_OK;
+    int dummy;
+    char *parameters ;
+    char param_tmp[128] = {0};    
+    sprintf(param_tmp, "%s=%d", key, value);
+    if (uci_lookup_ptr(ctx, &ptr, param_tmp, true) != UCI_OK) {
+        ret = 1;
+        return ret;
+    }
+    e = ptr.last;
+    ret = uci_set(ctx, &ptr);
+    if (ret == UCI_OK)
+       ret = uci_save(ctx, ptr.p);
+
+    if (ptr.p)
+        uci_unload(ctx, ptr.p);
+    return ret;
+}
+
+int af_uci_commit(struct uci_context *ctx, const char * package) {
+    struct uci_ptr ptr;
+    int ret = UCI_OK;
+    if (!package){
+        return -1;
+    }
+    if (uci_lookup_ptr(ctx, &ptr, package, true) != UCI_OK) {
+        return -1;
+    }   
+
+    if (uci_commit(ctx, &ptr.p, false) != UCI_OK) {
+    	ret = -1;
+        goto done;
+    }
+done:
+	if (ptr.p)
+		uci_unload(ctx, ptr.p);
+
+    return UCI_OK;
+}
+
+
 //
 static struct uci_package *
 config_init_package(const char *config)

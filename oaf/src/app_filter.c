@@ -1,4 +1,3 @@
-
 /*
 	author: derry
 	date:2019/1/10
@@ -45,8 +44,21 @@ DEFINE_RWLOCK(af_feature_lock);
 #define MAX_HOST_LEN 64
 #define MIN_HOST_LEN 4
 
-int __add_app_feature(int appid, char *name, int proto, int src_port,
-					  port_info_t dport_info, char *host_url, char *request_url, char *dict)
+
+int dump_feature_list()
+{
+	af_feature_node_t *n, *node;
+
+	list_for_each_entry_safe(node, n, &af_feature_head, head)
+	{
+		printk("%s %d feature = %s, node = %p\n", __func__, __LINE__, node->feature, node);
+
+	}
+	return 0;
+}
+
+int __add_app_feature(char *feature, int appid, char *name, int proto, int src_port,
+					  port_info_t dport_info, char *host_url, char *request_url, char *dict, char *search_str, int ignore)
 {
 	af_feature_node_t *node = NULL;
 	char *p = dict;
@@ -69,6 +81,9 @@ int __add_app_feature(int appid, char *name, int proto, int src_port,
 		node->sport = src_port;
 		strcpy(node->host_url, host_url);
 		strcpy(node->request_url, request_url);
+		strcpy(node->search_str, search_str);
+		node->ignore = ignore;
+		strcpy(node->feature, feature);
 		// 00:0a-01:11
 		p = dict;
 		begin = dict;
@@ -97,6 +112,7 @@ int __add_app_feature(int appid, char *name, int proto, int src_port,
 		node->pos_info[node->pos_num].pos = index;
 		node->pos_info[node->pos_num].value = value;
 		node->pos_num++;
+		printk("%s %d feature = %s, node = %p pos_num = %d\n", __func__, __LINE__, node->feature, node, node->pos_num);
 		feature_list_write_lock();
 		list_add(&(node->head), &af_feature_head);
 		feature_list_write_unlock();
@@ -246,12 +262,16 @@ int add_app_feature(int appid, char *name, char *feature)
 	int param_num = 0;
 	int dst_port = 0;
 	int src_port = 0;
+	char tmp_buf[128] = {0};
+	int ignore = 0;
+	char search_str[128] = {0};
 
 	if (!name || !feature)
 	{
 		AF_ERROR("error, name or feature is null\n");
 		return -1;
 	}
+	printk("feature = %s\n", feature);
 	// tcp;8000;www.sina.com;0:get_name;00:0a-01:11
 	memset(&dport_info, 0x0, sizeof(dport_info));
 	while (*p++)
@@ -279,15 +299,33 @@ int add_app_feature(int appid, char *name, char *feature)
 		case AF_REQUEST_URL_PARAM_INDEX:
 			strncpy(request_url, begin, p - begin);
 			break;
+		case AF_DICT_PARAM_INDEX:
+			strncpy(dict, begin, p - begin);
+			break;
+		case AF_STR_PARAM_INDEX:
+			strncpy(search_str, begin, p - begin);
+			printk("search_str = %s\n", search_str);
+			break;
+		case AF_IGNORE_PARAM_INDEX:
+			strncpy(tmp_buf, begin, p - begin);
+			ignore = k_atoi(tmp_buf);
+			break;
 		}
+		printk("featuren = %s, param_num = %d\n", feature, param_num);
 		param_num++;
 		begin = p + 1;
 	}
-	if (AF_DICT_PARAM_INDEX != param_num && strlen(feature) > MIN_FEATURE_STR_LEN)
-	{
-		return -1;
+
+	printk("param_num = %d, ignore = %d, dict = %s\n", param_num, ignore, dict);
+	// old version
+	if (param_num == AF_DICT_PARAM_INDEX){
+		strncpy(dict, begin, p - begin);
 	}
-	strncpy(dict, begin, p - begin);
+	// new version
+	if (param_num == AF_IGNORE_PARAM_INDEX){
+		strncpy(tmp_buf, begin, p - begin);
+		ignore = k_atoi(tmp_buf);
+	}
 
 	if (0 == strcmp(proto_str, "tcp"))
 		proto = IPPROTO_TCP;
@@ -295,14 +333,14 @@ int add_app_feature(int appid, char *name, char *feature)
 		proto = IPPROTO_UDP;
 	else
 	{
-		AF_DEBUG("proto %s is not support\n", proto_str);
+		printk("proto %s is not support\n", proto_str);
 		return -1;
 	}
 	sscanf(src_port_str, "%d", &src_port);
 	//	sscanf(dst_port_str, "%d", &dst_port);
 	parse_port_info(dst_port_str, &dport_info);
 
-	__add_app_feature(appid, name, proto, src_port, dport_info, host_url, request_url, dict);
+	__add_app_feature(feature, appid, name, proto, src_port, dport_info, host_url, request_url, dict, search_str, ignore);
 	return 0;
 }
 
@@ -319,6 +357,8 @@ void af_init_feature(char *feature_str)
 
 	if (strstr(feature_str, "#"))
 		return;
+
+	printk("feature_str = %s\n", feature_str);
 
 	k_sscanf(feature_str, "%d%[^:]", &app_id, app_name);
 	while (*p++)
@@ -645,8 +685,7 @@ void dpi_http_proto(flow_info_t *flow)
 	{
 		return;
 	}
-	if (flow->sport != 80 && flow->dport != 80)
-		return;
+
 	for (i = 0; i < data_len; i++)
 	{
 		if (data[i] == 0x0d && data[i + 1] == 0x0a)
@@ -758,6 +797,20 @@ static void dump_flow_info(flow_info_t *flow)
 		}
 	}
 }
+
+
+char *k_memstr(char *data, char *str, int size)
+{
+	char *p;
+	char len = strlen(str);
+	for (p = data; p <= (data - len + size); p++)
+	{
+		if (memcmp(p, str, len) == 0)
+			return p; 
+	}
+	return NULL;
+}
+
 int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
 {
 	int i;
@@ -784,10 +837,25 @@ int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
 			}
 			if (flow->l4_data[pos] != node->pos_info[i].value)
 			{
+				AF_DEBUG("not match pos[%d] = %x, flow[%d] = %x\n", pos, node->pos_info[i].value, pos, flow->l4_data[pos]);
+				if (af_log_lvl == 3){
+					print_hex_ascii(flow->l4_data, flow->l4_len > 128 ? 128 : flow->l4_len);
+				}
+				return AF_FALSE;
+			}
+			else{
+				AF_DEBUG("match pos[%d] = %x\n", pos, node->pos_info[i].value);
+			}
+		}
+		if (strlen(node->search_str) > 0){
+			if (k_memstr(flow->l4_data, node->search_str, flow->l4_len)){
+				printk("match by search str, appid=%d, search_str=%s\n", node->app_id, node->search_str);
+				return AF_TRUE;
+			}
+			else{
 				return AF_FALSE;
 			}
 		}
-		AF_DEBUG("match by pos, appid=%d\n", node->app_id);
 		return AF_TRUE;
 	}
 	return AF_FALSE;
@@ -869,6 +937,7 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	}
 	else if (node->pos_num > 0)
 	{
+		
 		ret = af_match_by_pos(flow, node);
 	}
 	else
@@ -877,6 +946,7 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 				 node->sport, node->dport, node->app_id);
 		return AF_TRUE;
 	}
+
 	return ret;
 }
 
@@ -888,9 +958,12 @@ int app_filter_match(flow_info_t *flow, af_client_info_t *client)
 	{
 		list_for_each_entry_safe(node, n, &af_feature_head, head)
 		{
+			
 			if (af_match_one(flow, node))
 			{
+				printk("match feature, appid=%d, feature = %s\n", node->app_id, node->feature);
 				flow->app_id = node->app_id;
+				flow->feature = node;
 				strncpy(flow->app_name, node->app_name, sizeof(flow->app_name) - 1);
 				if (flow->src)
 					client = find_af_client_by_ip(flow->src);
@@ -905,6 +978,7 @@ int app_filter_match(flow_info_t *flow, af_client_info_t *client)
 				if (af_get_app_status(node->app_id))
 				{
 					flow->drop = AF_TRUE;
+					printk("drop appid = %d, feature = %s\n", node->app_id, node->feature);
 					feature_list_read_unlock();
 					return AF_TRUE;
 				}
@@ -1095,6 +1169,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	}
 	if (flow.drop)
 	{
+		printk("drop appid = %d, feature = %s\n", flow.app_id, flow.feature->feature);
 		ret = NF_DROP;
 	}
 
@@ -1123,7 +1198,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	u_int8_t drop = 0;
 	u_int8_t malloc_data = 0;
 
-	if (strncmp(dev->name, "br-lan", 6))
+	if (!strstr(dev->name, "lan"))
 		return NF_ACCEPT;
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
@@ -1182,10 +1257,23 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (0 != dpi_main(skb, &flow))
 		goto accept;
 
+	
 	app_filter_match(&flow, client);
+
+
+	 if (TEST_MODE()){
+		if (flow.l4_protocol == IPPROTO_UDP){
+			if (flow.dport == 53 || flow.dport == 443){	
+				printk(" %s %pI4(%d)--> %pI4(%d) len = %d, %d ,pkt num = %d \n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
+					&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id, total_packets);				
+					print_hex_ascii(flow.l4_data, flow.l4_len > 64 ? 64 : flow.l4_len);
+			}
+		}
+	}
 
 	if (flow.app_id != 0)
 	{
+		printk("match flow.app_id = %d\n", flow.app_id);
 		ct->mark = flow.app_id;
 		AF_CLIENT_LOCK_W();
 		af_update_client_app_info(client, flow.app_id, flow.drop);
@@ -1193,6 +1281,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		AF_LMT_INFO("match %s %pI4(%d)--> %pI4(%d) len = %d, %d\n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
 					&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id);
 	}
+
 	if (flow.drop)
 	{
 		ct->mark |= NF_DROP_BIT;
@@ -1367,7 +1456,7 @@ int af_send_msg_to_user(char *pbuf, uint16_t len)
 	if (len >= MAX_OAF_NL_MSG_LEN)
 		return -1;
 
-	msg_buf = kmalloc(buf_len, GFP_KERNEL);
+	msg_buf = kmalloc(buf_len, GFP_ATOMIC);
 	if (!msg_buf)
 		return -1;
 
@@ -1501,3 +1590,4 @@ static void app_filter_fini(void)
 
 module_init(app_filter_init);
 module_exit(app_filter_fini);
+

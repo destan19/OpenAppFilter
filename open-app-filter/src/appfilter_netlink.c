@@ -54,6 +54,7 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         .msg_iov = &iov,
         .msg_iovlen = 1,
     };
+    printf("%s %d \n", __func__, __LINE__);
 
     do
     {
@@ -78,6 +79,8 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         printf("magic error %x\n", af_hdr->magic);
         return;
     }
+        printf("%s %d \n", __func__, __LINE__);
+
     if (af_hdr->len <= 0 || af_hdr->len >= MAX_OAF_NETLINK_MSG_LEN)
     {
         printf("data len error\n");
@@ -91,6 +94,7 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         printf("parse json failed:%s", kdata);
         return;
     }
+    printf("%s %d \n", __func__, __LINE__);
 
     struct json_object *mac_obj = json_object_object_get(root, "mac");
 
@@ -115,6 +119,7 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
             return;
         }
     }
+    printf("%s %d \n", __func__, __LINE__);
 
     struct json_object *ip_obj = json_object_object_get(root, "ip");
     if (ip_obj)
@@ -125,6 +130,8 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         json_object_put(root);
         return;
     }
+        printf("%s %d \n", __func__, __LINE__);
+
     for (i = 0; i < json_object_array_length(visit_array); i++)
     {
         struct json_object *visit_obj = json_object_array_get_idx(visit_array, i);
@@ -165,6 +172,7 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
             add_visit_info_node(&node->visit_htable[hash], visit_node);
         }
     }
+    printf("%s %d \n", __func__, __LINE__);
 
     json_object_put(root);
 }
