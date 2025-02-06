@@ -9,8 +9,8 @@ PKG_AUTOLOAD:=oaf
 RSTRIP:=:
 
 define KernelPackage/oaf
-  SECTION:=Derry Apps
-  CATEGORY:=Derry Apps
+  SECTION:=TT Apps
+  CATEGORY:=TT Apps
   TITLE:=open app filter kernel module
   FILES:=$(PKG_BUILD_DIR)/oaf.ko 
   DEPENDS:=+kmod-ipt-conntrack
