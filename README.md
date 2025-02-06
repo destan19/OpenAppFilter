@@ -5,7 +5,7 @@ OAF is a parental control plug-in based on OpenWrt, which supports app filtering
 
 ### Preparation
 - Prepare a router that supports openwrt  
-There are already many routers that support the openwrt system, you can choose a simple one for installation,[See which users support](https://openwrt.org).  
+There are already many routers that support the openwrt system, you can choose a simple one for installation,[See which devices support](https://openwrt.org).  
 - Install the openwrt system on your router  
 The openwrt install tutorial can be found through the [forum](https://forum.openwrt.org).  
 ### How to compile OAF  
