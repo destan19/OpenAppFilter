@@ -9,6 +9,17 @@
     #appContainer {
         display: flex;
         flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .button-check {
+        padding: 3px 8px;
+        background-color: transparent; /* Set background color to transparent */
+        color: green; /* Set font color to black */
+        border: 1px solid green; /* Set border color to green */
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px; /* Reduce font size */
     }
     .category {
         width: 100%;
@@ -17,77 +28,86 @@
     .app-list {
         display: flex;
         flex-wrap: wrap;
-        justify-content: flex-start; /* 左对齐 */
-        margin-top: 10px; /* 增加与标题的间距 */
+        justify-content: flex-start;
+        margin-top: 10px;
     }
     .app-item {
         width: 140px; /* 固定宽度 */
         box-sizing: border-box;
         padding: 5px;
-        display: flex; /* 使用flex布局 */
-        align-items: center; /* 垂直居中 */
+        display: flex;
+        align-items: center; 
     }
     .app-item label {
-        display: flex; /* 使用flex布局 */
-        align-items: center; /* 垂直居中 */
-        width: 100%; /* 确保标签占满整个宽度 */
-        text-align: left; /* 左对齐文本 */
+        display: flex;
+        align-items: center; 
+        width: 100%; 
+        text-align: left; 
     }
-    .app-item input[type="checkbox"] {
-        margin-left: 2px; /* 勾选按钮离左侧2px */
-        margin-right: 8px; /* 应用程序名称离按钮8px */
+    input[type="checkbox"],
+    input[type="radio"] {
+        margin: 0; /* Reset all margins */
+        padding: 0; /* Reset padding */
+        width: 16px; /* Set a specific width */
+        height: 16px; /* Set a specific height */
+        border: 1px solid #ccc; /* Add a border */
+        border-radius: 3px; /* Add slight rounding */
+        background-color: #fff; /* Set background color */
+        vertical-align: middle; /* Align vertically in the middle */
+        appearance: none; /* Remove default styling */
+        position: relative; /* Ensure relative positioning */
     }
 
     h2 {
         margin-bottom: 10px; 
     }
     .category-title {
-        display: flex; /* 使用flex布局 */
-        justify-content: space-between; /* 两端对齐 */
-        align-items: center; /* 垂直居中 */
-        width: 100%; /* 设置宽度为100% */
-        cursor: pointer; /* 鼠标悬停时显示为可点击 */
-        margin-bottom: 10px; /* 增加下方间距 */
+        display: flex;
+        justify-content: space-between;
+        align-items: center; 
+        width: 100%;
+        cursor: pointer; 
+        margin-bottom: 10px; 
     }
     .category-name {
-        font-size: 14px; /* 设置字体大小为16px */
-        font-weight: normal; /* 设置字体为正常，不加粗 */
+        font-size: 14px; 
+        font-weight: normal;
     }
     .arrow {
-        width: 12px; /* 图标宽度 */
-        height: 12px; /* 图标高度 */
-        /* background-image: url('path/to/your/icon.svg'); 替换为你的图标路径 */
+        width: 12px; 
+        height: 12px; 
+    
 
-		background-image: url('<%=resource%>/icons/arrow.png'); /* 使用LuCI资源路径 */
-        background-size: contain; /* 确保图标适应容器 */
-        background-repeat: no-repeat; /* 防止重复 */
-        transition: transform 0.3s ease; /* 添加过渡效果 */
-        display: inline-block; /* 使旋转生效 */
-        transform: rotate(0deg); /* 初始状态箭头向右 */
+		background-image: url('<%=resource%>/icons/arrow.png'); 
+        background-size: contain; 
+        background-repeat: no-repeat; 
+        transition: transform 0.3s ease; 
+        display: inline-block; 
+        transform: rotate(0deg); 
     }
     .arrow.expanded {
-        transform: rotate(90deg); /* 展开状态箭头向下 */
+        transform: rotate(90deg); 
     }
     .category-title div {
-        gap: 6px; /* 设置子元素之间的间距为20px */
+        gap: 6px; 
     }
 
     @media (max-width: 600px) {
         .app-item {
-            width: 25%; /* 屏幕小于600px时每行显示4个 */
+            width: 25%; 
         }
     }
 
     .button-container {
         display: flex;
-        justify-content: right; /* 使按钮居中 */
-        margin-top: 20px; /* 上方留出一些空间 */
+        justify-content: right; 
+        margin-top: 20px; 
     }
 
     .submit-button {
         margin-top: 30px;
-        width: 150px; /* 设置按钮宽度 */
-        height: 30px; /* 设置按钮高度 */
+        width: 150px; 
+        height: 30px; 
         background-color: #2885e8;
         color: white;
         border: none;
@@ -144,7 +164,7 @@
 			getAppFilterData().then(() => {
 				getClassListData();
 			});
-			getAppFilterBaseData(); // 新增调用获取过滤开关和工作模式数据的函数
+			getAppFilterBaseData(); 
 		}
 
 		function getAppFilterData() {
@@ -152,7 +172,7 @@
 				new XHR().get('<%=url('admin/network/get_app_filter')%>', null,
 					function (x, data) {
 						app_filter_data = data.app_list;
-						resolve(); // 请求完成后调用 resolve
+						resolve(); 
 					}
 				);
 			});
@@ -168,42 +188,41 @@
 
         function renderAppList(data) {
             const container = document.getElementById('appContainer');
-            container.innerHTML = ''; // 清空之前的数据
+            container.innerHTML = ''; 
 
             data.class_list.forEach(category => {
                 const categoryTitle = document.createElement('div');
-                categoryTitle.className = 'category-title'; // 添加CSS类
+                categoryTitle.className = 'category-title'; 
 
                 const categoryName = document.createElement('span');
                 categoryName.textContent = `${category.name} (${category.app_list.length}个)`;
-                categoryName.className = 'category-name'; // 添加CSS类
+                categoryName.className = 'category-name';
 
                 const rightContainer = document.createElement('div');
-                rightContainer.style.display = 'flex'; // 使用flex布局
-                rightContainer.style.alignItems = 'center'; // 垂直居中
+                rightContainer.style.display = 'flex'; 
+                rightContainer.style.alignItems = 'center'; 
 
                 const appCount = document.createElement('span');
                 const selectedCount = category.app_list.filter(app => 
                     app_filter_data.includes(parseInt(app.split(',')[0]))
                 ).length;
-                appCount.textContent = `已选${selectedCount}个`; // 显示已选应用程序个数
-                appCount.className = 'app-count'; // 添加CSS类
+                appCount.textContent = `已选${selectedCount}个`; 
+                appCount.className = 'app-count'; 
 
                 const arrow = document.createElement('span');
-                arrow.className = 'arrow'; // 添加CSS类
+                arrow.className = 'arrow'; 
 
                 rightContainer.appendChild(appCount);
                 rightContainer.appendChild(arrow);
 
                 categoryTitle.appendChild(categoryName);
-                categoryTitle.appendChild(rightContainer); // 将rightContainer放在最右侧
+                categoryTitle.appendChild(rightContainer);
                 container.appendChild(categoryTitle);
 
                 const appList = document.createElement('div');
                 appList.className = 'app-list';
-                appList.style.display = 'none'; // 初始状态隐藏
+                appList.style.display = 'none'; 
 
-                // 添加点击事件来切换显示/隐藏
                 categoryTitle.onclick = function() {
                     if (appList.style.display === 'none') {
                         appList.style.display = 'flex';
@@ -217,33 +236,40 @@
                 category.app_list.forEach(app => {
                     const appItem = document.createElement('div');
                     appItem.className = 'app-item';
+
                     const label = document.createElement('label');
+
+                    const containerDiv = document.createElement('div');
+                    containerDiv.style.display = 'flex'; 
+                    containerDiv.style.alignItems = 'center';
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.name = 'app';
                     checkbox.value = app.split(',')[0];
+                    
                     if (app_filter_data.includes(parseInt(checkbox.value))) {
                         checkbox.checked = true;
                     }
 
-                    // 添加图标
                     const appDetails = app.split(',');
                     const appId = appDetails[0];
                     const appName = appDetails[1];
                     const withIcon = appDetails[2] === '1';
 
                     const icon = document.createElement('img');
-                    icon.src = withIcon ? `<%=resource%>/app_icons/${appId}.png` : `<%=resource%>/app_icons/default.png`; // 根据with_icon选择图标路径
+                    icon.src = withIcon ? `<%=resource%>/app_icons/${appId}.png` : `<%=resource%>/app_icons/default.png`; 
                     icon.alt = `Icon for ${appName}`;
-                    icon.style.width = '20px'; // 设置图标宽度
-                    icon.style.height = '20px'; // 设置图标高度
-                    icon.style.marginRight = '5px'; // 设置图标与文本之间的间距
-                    icon.style.borderRadius = '7px'; // 设置圆角
-					label.appendChild(checkbox);
-                    label.appendChild(icon); // 将图标添加到标签中
-                    
-                    label.appendChild(document.createTextNode(appName));
+                    icon.style.width = '20px'; 
+                    icon.style.height = '20px'; 
+                    icon.style.marginRight = '5px'; 
+                    icon.style.marginLeft = '5px'; 
+                    icon.style.borderRadius = '7px';
+                    containerDiv.appendChild(checkbox);
+                    containerDiv.appendChild(icon);
+                    containerDiv.appendChild(document.createTextNode(appName));
+
+                    label.appendChild(containerDiv);
                     appItem.appendChild(label);
                     appList.appendChild(appItem);
                 });
@@ -265,24 +291,22 @@
             function (x, data) {
                 init_data();
                 const modal = document.getElementById('modal');
-                modal.style.display = 'flex'; // 显示模态框
+                modal.style.display = 'flex'; 
                 setTimeout(() => {
-                    modal.style.display = 'none'; // 3秒后自动隐藏模态框
+                    modal.style.display = 'none'; 
                 }, 1000);
             }
             );
         }
 
-        // 新增接口函数
         function submitAppFilterBase() {
-            // 获取过滤开关和工作模式的值
             const filterSwitch = document.getElementById('filterSwitch').checked;
             const workMode = document.getElementById('workMode').value;
 
             const data = {
                 data: {
-                    enable: filterSwitch ? 1 : 0, // Convert boolean to 0 or 1
-                    work_mode: workMode   // 工作模式
+                    enable: filterSwitch ? 1 : 0, 
+                    work_mode: workMode 
                 }
             };
             console.log("data is " + data);
@@ -292,7 +316,7 @@
             }
             );
         }
-
+ 
 		function submitHandle() {
 			submitAppFilterBase();
 			submitAppSelection();
@@ -306,7 +330,6 @@
 			document.getElementById('modal').style.display = 'none';
 		}
 
-        // 新增获取过滤开关和工作模式数据的函数
         function getAppFilterBaseData() {
 			console.log("getAppFilterBaseData");
             new XHR().get('<%=url('admin/network/get_app_filter_base')%>', null,
@@ -316,14 +339,60 @@
                     } else {
                         document.getElementById('filterSwitch').checked = false;
                     }
-                    // 直接使用接口返回的work_mode值来设置选中的选项
                     document.getElementById('workMode').value = data.data.work_mode;
                     console.log("Base filter settings loaded");
                 }
             );
         }
 
-        window.onload = init_data;
+        function redirectToUserConfig() {
+            window.location.href = '<%=url('admin/services/appfilter/user')%>';
+        }
+        function redirectToTimeConfig() {
+            window.location.href = '<%=url('admin/services/appfilter/time')%>';
+        }
+
+   
+        function updateRunStatus() {
+            new XHR().get('<%=url('admin/network/get_oaf_status')%>', null,
+                function (x, data) {
+                    const runStatusElement = document.getElementById('run_status');
+                    const runDescElement = document.getElementById('run_desc');
+
+
+                    if (data.data.config_enable == 0) {
+                        runStatusElement.textContent = '未配置';
+                        runStatusElement.style.color = 'red';
+                    } else {
+                        if (data.data.enable === 1) {
+                            runStatusElement.textContent = '运行中';
+                            runStatusElement.style.color = 'green'; 
+                            if (data.data.time_mode == 1 && data.data.filter == 1) {
+                                runDescElement.textContent = `(${data.data.remain_time}分钟后关闭)`;
+                            }
+                        } else {
+                            runStatusElement.textContent = '未运行';
+                            runStatusElement.style.color = 'red'; 
+                            if (data.data.time_mode == 1) {
+                                if (data.data.match_time == 0) {
+                                    runDescElement.textContent = `(当前时间不在时间范围内)`;
+                                } else {
+                                    runDescElement.textContent = `(${data.data.remain_time}分钟后开启)`;
+                                }
+                            } else {
+                                runDescElement.textContent = `(当前时间不在时间范围内)`;
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+        window.onload = function() {
+            init_data();
+            updateRunStatus();
+            setInterval(updateRunStatus, 5000); 
+        };
 //]]></script>
 
 <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
@@ -333,21 +402,42 @@
 </div>
 
 <div class="cbi-section cbi-tblsection">
-    <div style="margin-bottom: 20px;">
-        <label for="filterSwitch">过滤开关:</label>
-        <input type="checkbox" id="filterSwitch" name="filterSwitch" />
-    </div>
+    <div style="max-width: 1000px; margin-left: 5px;padding: 5px;">
+        <div class="app_filter_status">
+            <label>运行状态:</label>
+            <span id="run_status">运行中</span><span id="run_desc"></span>
+        </div>
+        <div style="margin-bottom: 20px;margin-top: 10px;">
+            <label for="filterSwitch">过滤开关:</label>
+            <input type="checkbox" id="filterSwitch" name="filterSwitch" />
+        </div>
 
-    <div style="margin-bottom: 20px;">
-        <label for="workMode">工作模式:</label>
-        <select id="workMode" name="workMode">
-            <option value="0">网关模式</option>
-            <option value="1">旁路模式</option>
-        </select>
-    </div>
 
-    <div id="appContainer"></div>
-    <div class="button-container">
-        <button type="button" class="submit-button" onclick="submitHandle()">保存</button>
+        <div style="margin-bottom: 20px;">
+            <label for="workMode">工作模式:</label>
+            <select id="workMode" name="workMode">
+                <option value="0">网关模式</option>
+                <option value="1">旁路模式</option>
+            </select>
+        </div>
+
+
+        <div style="display: flex; justify-content: flex-start; align-items: center;width: 600px;">
+            <div style="width: 280px; display: inline-block;">
+                <label>生效时间:</label> 
+                <button type="button" class="button-check" onclick="redirectToTimeConfig()">查看</button>
+            </div>
+
+            <div style="width: 280px; display: inline-block; margin-left: 10px;">
+                <label>生效用户:</label> 
+                <!-- <span style="color: green;">5个</span> -->
+                <button type="button" class="button-check" onclick="redirectToUserConfig()">查看</button>
+            </div>
+        </div>
+
+        <div id="appContainer"></div>
+        <div class="button-container">
+            <button type="button" class="submit-button" onclick="submitHandle()">保存</button>
+        </div>
     </div>
 </div>

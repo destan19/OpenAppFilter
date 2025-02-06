@@ -38,6 +38,17 @@ load_rule()
     json_cleanup               
 }
 
+
+
+add_mac_to_array_callback() {
+    local section="$1"
+    local mac
+    config_get mac "$section" "mac"
+    if [ -n "$mac" ]; then
+        json_add_string "" "$mac"
+    fi
+}
+
 load_mac_list()
 {
     json_init
@@ -45,17 +56,15 @@ load_mac_list()
     json_add_int "op" 4
     json_add_object "data"
     json_add_array "mac_list"
-    config_get mac_list "user" "users"
-    if [ x"$mac_list" != x"" ];then    
-        for mac in $mac_list:          
-        do                             
-            json_add_string "" $mac
-        done                           
-    fi  
+    
+    config_foreach add_mac_to_array_callback af_user
+    
     json_str=`json_dump`
     config_apply "$json_str"
     json_cleanup
 }
+
+
 
 reload_rule(){
     config_load appfilter

@@ -11,7 +11,8 @@ local jsc = require "luci.jsonc"
 
 local m, s
 arg[1] = arg[1] or ""
-m = Map("appfilter", translate("应用过滤规则"), translate("已选择的app将会被禁止联网"))
+m = Map("appfilter", translate(""), translate(""))
+
 
 local v
 v = m:section(SimpleSection)

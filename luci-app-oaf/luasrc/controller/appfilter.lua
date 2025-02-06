@@ -15,14 +15,15 @@ function index()
 		cbi("appfilter/dev_status", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true})),
 		_("User List"), 20).leaf=true
 
-	entry({"admin", "services", "appfilter", "base_setting"}, cbi("appfilter/base_setting"), _("Basic Settings"), 22).leaf=true
-	entry({"admin", "services", "appfilter", "user_setting"}, cbi("appfilter/user_setting"), _("Effective User"), 23).leaf=true
-	entry({"admin", "services", "appfilter", "time_setting"}, cbi("appfilter/time_setting"), _("Effective Time"), 24).leaf=true
-	entry({"admin", "services", "appfilter", "app_filter"}, cbi("appfilter/app_filter", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Filter Rule"), 21).leaf=true
-	entry({"admin", "services", "appfilter", "feature"}, cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Feature"), 25).leaf=true
+	-- entry({"admin", "services", "appfilter", "base_setting"}, cbi("appfilter/base_setting"), _("Basic Settings"), 22).leaf=true
+	-- entry({"admin", "services", "appfilter", "user_setting"}, cbi("appfilter/user_setting"), _("Effective User"), 23).leaf=true
+	entry({"admin", "services", "appfilter", "time"}, cbi("appfilter/time", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("时间配置"), 25).leaf=true
+	entry({"admin", "services", "appfilter", "app_filter"}, cbi("appfilter/app_filter", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("应用过滤"), 21).leaf=true
+	entry({"admin", "services", "appfilter", "feature"}, cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Feature"), 26).leaf=true
 
+	entry({"admin", "services", "appfilter", "user"}, cbi("appfilter/user", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("用户配置"), 24).leaf=true
 	entry({"admin", "network", "user_status"}, call("user_status"), nil).leaf = true
-	entry({"admin", "network", "dev_app_status"}, call("dev_app_status"), nil).leaf = true
+	entry({"admin", "network", "get_user_list"}, call("get_user_list"), nil).leaf = true
 	entry({"admin", "network", "dev_visit_list"}, call("get_dev_visit_list"), nil).leaf = true
 	entry({"admin", "network", "feature_upgrade"}, call("handle_feature_upgrade"), nil).leaf = true
 	entry({"admin", "network", "dev_visit_time"}, call("get_dev_visit_time"), nil).leaf = true
@@ -32,6 +33,16 @@ function index()
 	entry({"admin", "network", "get_app_filter"}, call("get_app_filter"), nil).leaf = true
 	entry({"admin", "network", "get_app_filter_base"}, call("get_app_filter_base"), nil).leaf = true
 	entry({"admin", "network", "set_app_filter_base"}, call("set_app_filter_base"), nil).leaf = true
+	entry({"admin", "network", "set_app_filter_time"}, call("set_app_filter_time"), nil).leaf = true
+	entry({"admin", "network", "get_app_filter_time"}, call("get_app_filter_time"), nil).leaf = true
+	entry({"admin", "network", "get_all_users"}, call("get_all_users"), nil).leaf = true
+	entry({"admin", "network", "get_app_filter_user"}, call("get_app_filter_user"), nil).leaf = true
+	entry({"admin", "network", "set_app_filter_user"}, call("set_app_filter_user"), nil).leaf = true
+	entry({"admin", "network", "del_app_filter_user"}, call("del_app_filter_user"), nil).leaf = true
+	entry({"admin", "network", "add_app_filter_user"}, call("add_app_filter_user"), nil).leaf = true
+	entry({"admin", "network", "upload_file"}, call("handle_file_upload"), nil).leaf = true
+	entry({"admin", "network", "set_nickname"}, call("set_nickname"), nil).leaf = true
+	entry({"admin", "network", "get_oaf_status"}, call("get_oaf_status"), nil).leaf = true
 end
 
 function get_hostname_by_mac(dst_mac)
@@ -128,7 +139,7 @@ function user_status()
 end
 
 
-function dev_app_status()
+function get_user_list()
 	local json = require "luci.jsonc"
 	luci.http.prepare_content("application/json")
 	local visit_obj=utl.ubus("appfilter", "dev_list", {});
@@ -143,12 +154,54 @@ function get_class_list()
 	luci.http.write_json(class_obj);
 end
 
+function get_all_users()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local flag = luci.http.formvalue("flag")
+	local page = luci.http.formvalue("page")
+	local class_obj=utl.ubus("appfilter", "get_all_users", {flag=flag, page=page});
+	luci.http.write_json(class_obj);
+end
+
+function get_oaf_status()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local resp_obj=utl.ubus("appfilter", "get_oaf_status", {});
+	luci.http.write_json(resp_obj);
+end
+
+function get_app_filter_user()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local resp_obj=utl.ubus("appfilter", "get_app_filter_user", {});
+	luci.http.write_json(resp_obj);
+end
+
+function del_app_filter_user()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj.mac = luci.http.formvalue("mac")
+	llog("del appfilter user "..req_obj.mac);
+	local resp_obj=utl.ubus("appfilter", "del_app_filter_user", req_obj);
+	luci.http.write_json(resp_obj);
+end
+
+function add_app_filter_user()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj.mac_list = luci.http.formvalue("mac_list")
+	req_obj.mac_list = json.parse(req_obj.mac_list)
+	local resp_obj=utl.ubus("appfilter", "add_app_filter_user", req_obj);
+	luci.http.write_json(resp_obj);
+end
+
 function get_app_filter()
 	local json = require "luci.jsonc"
 	luci.http.prepare_content("application/json")
-	local class_obj=utl.ubus("appfilter", "get_app_filter", {});
-	llog("get appfilter");
-	luci.http.write_json(class_obj);
+	local resp_obj=utl.ubus("appfilter", "get_app_filter", {});
+	luci.http.write_json(resp_obj);
 end
 
 function set_app_filter()
@@ -156,20 +209,36 @@ function set_app_filter()
 	luci.http.prepare_content("application/json")
 	local req_obj = {}
 	req_obj.app_list = luci.http.formvalue("app_list")
-	llog("set app filter "..req_obj.app_list);
-	req_obj.app_list = json.parse(req_obj.app_list)  -- 将字符串转换为JSON格式
-	local class_obj=utl.ubus("appfilter", "set_app_filter", req_obj);
-	luci.http.write_json(class_obj);
+	req_obj.app_list = json.parse(req_obj.app_list) 
+	local resp_obj=utl.ubus("appfilter", "set_app_filter", req_obj);
+	luci.http.write_json(resp_obj);
 end
 
+function set_nickname()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj.mac = luci.http.formvalue("mac")
+	req_obj.nickname = luci.http.formvalue("nickname")
+	llog("set nickname "..req_obj.mac.." "..req_obj.nickname);
+	local resp_obj=utl.ubus("appfilter", "set_nickname", req_obj);
+	luci.http.write_json(resp_obj);
+end
 
 function get_app_filter_base()
 	local json = require "luci.jsonc"
-	llog("11get appfilter base");
 	luci.http.prepare_content("application/json")
-	local class_obj=utl.ubus("appfilter", "get_app_filter_base", {});
-	llog("22get appfilter base");
-	luci.http.write_json(class_obj);
+	local resp_obj=utl.ubus("appfilter", "get_app_filter_base", {});
+	luci.http.write_json(resp_obj);
+end
+
+function set_app_filter_user()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj.mode = luci.http.formvalue("mode")
+	local resp_obj=utl.ubus("appfilter", "set_app_filter_user", req_obj);
+	luci.http.write_json(resp_obj);
 end
 
 function set_app_filter_base()
@@ -182,18 +251,34 @@ function set_app_filter_base()
 	luci.http.write_json(resp_obj);
 end
 
-function get_dev_visit_time(mac)
+-- data: {"mode":1,"weekday_list":[1,2,3,4,5,6,0],"start_time":"22:22","end_time":"12:00","allow_time":30,"deny_time":5}
+function set_app_filter_time()
+	local json = require "luci.jsonc"
+	llog("set appfilter time");
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj = json.parse(luci.http.formvalue("data"))
+	local resp_obj=utl.ubus("appfilter", "set_app_filter_time", req_obj);
+	luci.http.write_json(resp_obj);
+end
+
+function get_app_filter_time()
 	local json = require "luci.jsonc"
 	luci.http.prepare_content("application/json")
-	local fd = io.open("/proc/net/af_client","r")
-	status_buf=fd:read('*a')
-	fd:close()
-	user_array=json.parse(status_buf)
-	local req_obj = {}
+	local resp_obj=utl.ubus("appfilter", "get_app_filter_time", {});
+	luci.http.write_json(resp_obj);
+end
+
+function get_dev_visit_time(mac)
+	llog("get dev visit time 2 "..mac);
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+		local req_obj = {}
 	req_obj.mac = mac;
 	local visit_obj=utl.ubus("appfilter", "dev_visit_time", req_obj);
-	local user_array=visit_obj.app_list
-	luci.http.write_json(user_array);
+	llog("ubus ok");
+	local visit_list=visit_obj.list
+	luci.http.write_json(visit_list);
 end
 
 function get_app_class_visit_time(mac)
@@ -212,32 +297,62 @@ function get_dev_visit_list(mac)
 	luci.http.prepare_content("application/json")
 	local req_obj = {}
 	req_obj.mac = mac;
+	local resp_obj=utl.ubus("appfilter", "dev_visit_list", req_obj);
+	luci.http.write_json(resp_obj);
+end
 
-	local visit_obj=utl.ubus("appfilter", "visit_list", req_obj);
-	local user_array=visit_obj.dev_list
-	local history={}
-	for i, v in pairs(user_array) do
-		visit_array=user_array[i].visit_info
-		for j,s in pairs(visit_array) do
-			print(user_array[i].mac, user_array[i].ip,visit_array[j].appid, visit_array[j].latest_time)
-			total_time=visit_array[j].latest_time - visit_array[j].first_time;
-			history[#history+1]={
-				mac=user_array[i].mac,
-				ip=user_array[i].ip,
-				hostname=get_hostname_by_mac(user_array[i].mac),
-				appid=visit_array[j].appid,
-				appname=get_app_name_by_id(visit_array[j].appid),
-				total_num=0,
-				drop_num=0,
-				latest_action=visit_array[j].latest_action,
-				latest_time=os.date("%Y/%m/%d %H:%M:%S", visit_array[j].latest_time),
-				first_time=os.date("%Y/%m/%d %H:%M:%S", visit_array[j].first_time),
-				total_time=total_time
-			}
-		end
-	end
-	table.sort(history, cmp_func)
-	luci.http.write_json(history);
+function handle_file_upload()
+    local http = require "luci.http"
+    local fs = require "nixio.fs"
+    local upload_dir = "/tmp/uploads/"
+    local file_name = "uploaded_file"
+    llog("handle_file_upload started");
+
+    -- Ensure the upload directory exists
+    if not fs.access(upload_dir) then
+        fs.mkdir(upload_dir)
+    end
+
+    llog("Upload directory checked/created");
+
+    local file_path = upload_dir .. file_name
+    local fp
+
+    llog("file_path: " .. file_path);
+    http.setfilehandler(
+        function(meta, chunk, eof)
+            -- Log metadata information
+            llog("File upload metadata: " .. (meta and meta.name or "nil") .. ", " .. (meta and meta.file or "nil"))
+            llog("File upload chunk size: " .. (chunk and #chunk or 0))
+
+            if not fp then
+                fp = io.open(file_path, "w")
+                llog("File opened for writing: " .. file_path)
+            end
+            if fp and chunk then
+                fp:write(chunk)
+                llog("Chunk written to file")
+            end
+            if fp and eof then
+                fp:close()
+                llog("File upload completed and file closed")
+                -- Ensure the file is processed or moved to the correct location
+                process_uploaded_file(file_path)
+                luci.http.prepare_content("application/json")
+                luci.http.write_json({ success = true, message = "File uploaded successfully" })
+            end
+        end
+    )
+    llog("handle_file_upload setup complete");
+end
+
+function process_uploaded_file(file_path)
+    -- Add logic here to process the uploaded file
+    llog("Processing uploaded file: " .. file_path)
+    -- Example: Move the file to a permanent location
+    local permanent_path = "/etc/config/" .. file_name
+    os.execute("mv " .. file_path .. " " .. permanent_path)
+    llog("File moved to: " .. permanent_path)
 end
 
 function llog(message)

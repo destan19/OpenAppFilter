@@ -1,8 +1,10 @@
 <%+cbi/valueheader%>
-<span style="color: red">
+<span style="color: green">
 <%
 	local val = self:cfgvalue(section) or self.default or ""
 	write(pcdata(val))
 %>
 </span>
+
+
 <%+cbi/valuefooter%>

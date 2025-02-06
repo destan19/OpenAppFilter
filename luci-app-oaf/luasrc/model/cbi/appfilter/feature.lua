@@ -12,6 +12,16 @@ local http = luci.http
 local SYS = require "luci.sys"
 local m, s
 
+local function llog(message)
+    local log_file = "/tmp/log/oaf_luci.log"  
+    local fd = io.open(log_file, "a")  
+    if fd then
+        local timestamp = os.date("%Y-%m-%d %H:%M:%S")  
+        fd:write(string.format("[%s] %s\n", timestamp, message))  
+        fd:close() 
+    end
+end
+
 m = Map("appfilter", translate(""),
     translate("The feature library is used to describe app features, app filtering effect and number-dependent feature library"))
 
@@ -24,13 +34,25 @@ if nixio.fs.access("/tmp/feature.cfg") then
 end
 format=SYS.exec("uci get appfilter.feature.format")
 if format == "" then
-    format="v2.0"
+    format="v3.0"
 end
 
-local display_str = "<strong>"..translate("Current version")..":  </strong>" .. version .. 
-                    "<br><strong>"..translate("Feature format")..":</strong>  " ..format ..
-                    "<br><strong>"..translate("App number")..":</strong>  " ..rule_count ..
-                    "<br><strong>"..translate("Feature download")..":</strong><a href=\"http://www.openappfilter.com\" target=\"_blank\">www.openappfilter.com</a>"
+local display_str = "<style>" ..
+                    ".label-style {}" ..
+                    ".item-style { margin-top:15px;}" ..
+                    "</style>" ..
+                    "<div class='item-style'>" ..
+                        "<span class='label-style'>"..translate("Current version")..":</span> " .. version .. 
+                    "</div>" ..
+                    "<div class='item-style'>" ..
+                        "<span class='label-style'>"..translate("Feature format")..":</span> " ..format ..
+                    "</div>" ..
+                    "<div class='item-style'>" ..
+                        "<span class='label-style'>"..translate("App number")..":</span> " ..rule_count ..
+                    "</div>" ..
+                    "<div class='item-style'>" ..
+                        "<span class='label-style'>"..translate("Feature download")..":</span> <a href=\"http://www.openappfilter.com\" target=\"_blank\">www.openappfilter.com</a>" ..
+                    "</div>"
 s = m:section(TypedSection, "feature", translate("App Feature"), display_str)
 
 fu = s:option(FileUpload, "")
@@ -45,7 +67,7 @@ dir = "/tmp/upload/"
 nixio.fs.mkdir(dir)
 http.setfilehandler(function(meta, chunk, eof)
     local feature_file = "/etc/appfilter/feature.cfg"
-    local f_format="v1.0"
+    local f_format="v3.0"
     if not fd then
         if not meta then
             return
@@ -62,31 +84,51 @@ http.setfilehandler(function(meta, chunk, eof)
     end
     if eof and fd then
         fd:close()
-        local fd2 = io.open("/tmp/upload/" .. meta.file)
-        local version_line = fd2:read("*l");
-        local format_line = fd2:read("*l");
+        -- Extract the tar.gz file
+        local tar_cmd = "tar -zxvf /tmp/upload/" .. meta.file .. " -C /tmp/upload/ >/dev/null"
+        local success = os.execute(tar_cmd)
+        if success ~= 0 then
+            um.value = translate("Failed to update feature file, format error")
+            return
+        else
+            um.value = translate("Update the feature file successfully, please refresh the page")
+        end
+
+        local feature_dir="/tmp/upload/feature"
+        local fd2 = io.open("/tmp/upload/feature.cfg")
+        if not fd2 then
+            um.value = translate("Failed to extract feature file, file not found")
+            os.execute("rm /tmp/upload/* -fr")
+            return
+        end
+        local version_line = fd2:read("*l")
+        local format_line = fd2:read("*l")
         fd2:close()
         local ret = string.match(version_line, "#version")
         if ret ~= nil then
             if string.match(format_line, "#format") then
                 f_format = SYS.exec("echo '"..format_line.."'|awk '{print $2}'")
             end
-            if not string.match(f_format, format)  then
+            if not string.match(f_format, format) then
                 um.value = translate("Failed to update feature file, format error"..",feature format:"..f_format)
-                os.execute("rm /tmp/upload/* -fr");
+                os.execute("rm /tmp/upload/* -fr")
                 return
             end
-            local cmd = "cp /tmp/upload/" .. meta.file .. " " .. feature_file;
-            os.execute(cmd);
-            os.execute("chmod 666 " .. feature_file);
-            os.execute("rm /tmp/appfilter -fr");
-            os.execute("uci set appfilter.feature.update=1");
-            luci.sys.exec("/etc/init.d/appfilter restart");
+            local cmd = "cp /tmp/upload/feature.cfg " .. feature_file
+            os.execute(cmd)
+            os.execute("rm /www/luci-static/resources/app_icons/* -fr");
+            cmd = "cp /tmp/upload/app_icons/* /www/luci-static/resources/app_icons/ -fr >/dev/null"
+            os.execute(cmd)
+            os.execute("chmod 666 " .. feature_file)
+            os.execute("rm /tmp/appfilter -fr")
+            os.execute("uci set appfilter.feature.update=1")
+            os.execute("uci commit appfilter")
+           luci.sys.exec("/etc/init.d/appfilter restart")
             um.value = translate("Update the feature file successfully, please refresh the page")
         else
             um.value = translate("Failed to update feature file, format error")
         end
-        os.execute("rm /tmp/upload/* -fr");
+        os.execute("rm /tmp/upload/* -fr")
     end
 
 end)
@@ -99,4 +141,7 @@ if luci.http.formvalue("upload") then
 elseif luci.http.formvalue("download") then
     Download()
 end
+
 return m
+
+

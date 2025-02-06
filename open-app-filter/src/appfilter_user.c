@@ -27,8 +27,10 @@ THE SOFTWARE.
 #include <libubus.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
+#include <json-c/json.h>
 #include <linux/socket.h>
 #include <sys/socket.h>
+#include "appfilter_config.h"
 #include "appfilter.h"
 #include "appfilter_user.h"
 
@@ -79,7 +81,6 @@ void init_dev_node_htable()
 dev_node_t *add_dev_node(char *mac)
 {
     unsigned int hash = 0;
-    printf("add dev node\n");
     if (g_cur_user_num >= MAX_SUPPORT_USER_NUM)
     {
         printf("error, user num reach max %d\n", g_cur_user_num);
@@ -184,6 +185,40 @@ void update_dev_hostname(void)
     }
     fclose(fp);
 }
+
+void clean_dev_nickname_iter(void *arg, dev_node_t *node)
+{
+    node->nickname[0] = '\0';
+}
+
+void clean_dev_nickname(void)
+{
+    dev_foreach(NULL, clean_dev_nickname_iter);
+}
+
+void update_dev_nickname(void)
+{
+    char nickname_buf[128] = {0};
+    char mac_str[128] = {0};
+    struct uci_context *uci_ctx = uci_alloc_context();
+    clean_dev_nickname();
+    int num = af_get_uci_list_num(uci_ctx, "user_info", "user_info");
+
+    for (int i = 0; i < num; i++) {
+        af_uci_get_array_value(uci_ctx, "user_info.@user_info[%d].mac", i, mac_str, sizeof(mac_str));
+        dev_node_t *node = find_dev_node(mac_str);
+        if (!node)
+            continue;
+
+        af_uci_get_array_value(uci_ctx, "user_info.@user_info[%d].nickname", i, nickname_buf, sizeof(nickname_buf));
+        printf("update dev nickname: %s\n", nickname_buf);
+        strncpy(node->nickname, nickname_buf, sizeof(node->nickname));
+    }   
+    printf("update dev nickname ok\n");
+    uci_free_context(uci_ctx);
+}
+
+
 
 void clean_dev_online_status(void)
 {
@@ -294,7 +329,7 @@ void update_dev_from_arp(void)
 void update_dev_online_status(void)
 {
     update_dev_from_oaf();
-    update_dev_from_arp();
+    //update_dev_from_arp();
 }
 
 #define DEV_OFFLINE_TIME (SECONDS_PER_DAY * 3)
@@ -377,18 +412,25 @@ void flush_dev_expire_node(void)
     }
 }
 
+
+void update_dev_list(void)
+{
+    clean_dev_online_status();
+    update_dev_hostname();
+    update_dev_nickname();
+    update_dev_online_status();
+}
+
+
 void dump_dev_list(void)
+
 {
     int i, j;
     int count = 0;
     char hostname_buf[MAX_HOSTNAME_SIZE] = {0};
     char ip_buf[MAX_IP_LEN] = {0};
 
-    clean_dev_online_status();
 
-    update_dev_hostname();
-
-    update_dev_online_status();
 
     FILE *fp = fopen(OAF_DEV_LIST_FILE, "w");
     if (!fp)
@@ -422,7 +464,6 @@ void dump_dev_list(void)
             node = node->next;
         }
     }
-    printf("%s %d \n", __func__, __LINE__);
     for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
     {
         dev_node_t *node = dev_hash_table[i];
@@ -448,7 +489,6 @@ void dump_dev_list(void)
             node = node->next;
         }
     }
-    printf("%s %d \n", __func__, __LINE__);
 EXIT:
     fclose(fp);
 }

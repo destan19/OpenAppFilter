@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include <json-c/json.h>
 #include "appfilter_user.h"
 #include "appfilter_netlink.h"
+#include "appfilter.h"
 #define MAX_NL_RCV_BUF_SIZE 4096
 
 #define REPORT_INTERVAL_SECS 60
@@ -54,7 +55,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         .msg_iov = &iov,
         .msg_iovlen = 1,
     };
-    printf("%s %d \n", __func__, __LINE__);
 
     do
     {
@@ -79,7 +79,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         printf("magic error %x\n", af_hdr->magic);
         return;
     }
-        printf("%s %d \n", __func__, __LINE__);
 
     if (af_hdr->len <= 0 || af_hdr->len >= MAX_OAF_NETLINK_MSG_LEN)
     {
@@ -94,7 +93,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         printf("parse json failed:%s", kdata);
         return;
     }
-    printf("%s %d \n", __func__, __LINE__);
 
     struct json_object *mac_obj = json_object_object_get(root, "mac");
 
@@ -119,7 +117,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
             return;
         }
     }
-    printf("%s %d \n", __func__, __LINE__);
 
     struct json_object *ip_obj = json_object_object_get(root, "ip");
     if (ip_obj)
@@ -130,7 +127,6 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         json_object_put(root);
         return;
     }
-        printf("%s %d \n", __func__, __LINE__);
 
     for (i = 0; i < json_object_array_length(visit_array); i++)
     {
@@ -156,24 +152,27 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
 
         int hash = hash_appid(appid);
         visit_info_t *head = node->visit_htable[hash];
-
-        if (head && (cur_time.tv_sec - head->latest_time) < 300)
-        {
-            head->latest_time = cur_time.tv_sec;
+        visit_info_t *p = head;
+        while(p){
+            LOG_DEBUG("appid = %d, p->appid = %d, p->latest_time = %d, cur_time.tv_sec = %d, cur_time.tv_sec - p->latest_time = %d\n",
+                 appid, p->appid, p->latest_time, cur_time.tv_sec, cur_time.tv_sec - p->latest_time);
+            if((p->appid == appid) && ((cur_time.tv_sec - p->latest_time) < 300)){
+                LOG_DEBUG("match appid = %d\n", appid, cur_time.tv_sec - p->latest_time);
+                break;
+            }
+ 
+            p = p->next;
         }
-        else
-        {
-            visit_info_t *visit_node = (visit_info_t *)calloc(1, sizeof(visit_info_t));
-            visit_node->action = action;
-            visit_node->appid = appid;
-            visit_node->latest_time = cur_time.tv_sec;
-            visit_node->first_time = cur_time.tv_sec - MIN_VISIT_TIME;
-            visit_node->next = NULL;
-            add_visit_info_node(&node->visit_htable[hash], visit_node);
+        if (!p){
+            p = (visit_info_t *)calloc(1, sizeof(visit_info_t));
+            p->appid = appid;
+            p->next = NULL;
+            p->first_time = cur_time.tv_sec - MIN_VISIT_TIME;
+            add_visit_info_node(&node->visit_htable[hash], p);
         }
+        p->action = action;
+        p->latest_time = cur_time.tv_sec;
     }
-    printf("%s %d \n", __func__, __LINE__);
-
     json_object_put(root);
 }
 

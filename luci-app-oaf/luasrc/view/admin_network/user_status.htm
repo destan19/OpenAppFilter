@@ -1,67 +1,450 @@
 <% local dsp=require "luci.dispatcher" -%>
-	<script type="text/javascript">//<![CDATA[
-		XHR.poll(5, '<%=url('admin/network/dev_app_status')%>', null,
-			function (x, st) {
-				var tb = document.getElementById('user_status_table');
-				var dev_list_str = JSON.stringify(st);
-				if (st && tb) {
-					while (tb.rows.length > 1)
-						tb.deleteRow(1);
-					var devlist = st.devlist
-					for (var i = 0; i < devlist.length; i++) {
-						var hostname = ""
-						if (devlist[i].hostname == "" || devlist[i].hostname == "*") {
-							hostname = "--";
-						}
-						else {
-							hostname = devlist[i].hostname;
-						}
-						var tr = tb.insertRow(-1);
-						tr.className = 'tr cbi-rowstyle-' + ((i % 2) + 1);
-						tr.insertCell(-1).innerHTML = i + 1;
-						tr.insertCell(-1).innerHTML = hostname;
-						tr.insertCell(-1).innerHTML = "<a href='<%=url('admin/services/appfilter/user_list/')%>" + devlist[i].mac + "'>" + devlist[i].mac + "</a>";
-						tr.insertCell(-1).innerHTML = devlist[i].ip;
-						var app_list_str = "";
-						for (var j = 0; j < devlist[i].applist.length; j++) {
-							console.log(devlist[i].applist[j].name);
-							app_list_str += devlist[i].applist[j].name;
-							if (j != devlist[i].applist.length - 1)
-								app_list_str += ","
-						}
-						if (app_list_str == "") {
-							app_list_str = "--"
-						}
-						tr.insertCell(-1).innerHTML = app_list_str;
-						if (devlist[i].online == 1) {
-							tr.insertCell(-1).innerHTML = "<%:Online%>";
-						} else {
-							tr.insertCell(-1).innerHTML = "<%:Offline%>";
-						}
-						var childs = tr.childNodes;
-						Array.prototype.forEach.call(childs, function (child) {
-							child.className = 'td';
 
-						});
+<script type="text/javascript" src="<%=resource%>/echarts.min.js?v=5.0"></script>
+
+	<script type="text/javascript">//<![CDATA[
+		let visit_time_data = []; // Use mock data for chart display
+		let user_list_data = {
+			total_num: 0,
+			list: [
+				
+			]
+		}
+		let cur_page = 1;
+
+		function getAllUsersData(page) {
+			new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: page},
+				function (x, data) {
+					user_list_data = data.data
+					render_user_list(user_list_data);
+				}
+			);
+		}
+
+		window.onload = function() {
+			cur_page = 1;
+			getAllUsersData(cur_page);
+
+			setInterval(function() {
+				console.log("get user data");
+				getAllUsersData(cur_page);
+				// new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: 0},
+				// 	function (x, data) {
+				// 		user_list_data = data.data
+				// 		render_user_list(user_list_data);
+				// 	}
+				// );
+			}, 3000);
+		}
+
+		function showSuccessMessage(message = '设置成功') {
+			const modal = document.getElementById('modal');
+			const messageElement = modal.querySelector('p');
+			messageElement.textContent = message;
+			modal.style.display = 'flex';
+			setTimeout(() => {
+				modal.style.display = 'none';
+			}, 1000);
+		}
+
+		
+
+		function generateMockData() {
+			return [
+				{ app_id: "App1", visit_time: 3600 },
+				{ app_id: "App2", visit_time: 1800 },
+				{ app_id: "App3", visit_time: 2400 },
+				{ app_id: "App4", visit_time: 1200 },
+				{ app_id: "App5", visit_time: 3000 }
+			];
+		}
+
+		function generateUserListData() {
+			return {
+				total_num: 5,
+				list: [
+					{
+						hostname: "Device1",
+						mac: "00:11:22:33:44:55",
+						ip: "192.168.1.2",
+						applist: [{ name: "App1" }, { name: "App2" }],
+						online: 1
 					}
+				]
+			};
+		}
+
+		function generateVisitListData() {
+			return {
+				list: [
+					{
+						appname: "App1",
+						hostname: "Device1",
+						mac: "00:11:22:33:44:55",
+						first_time: "2023-10-01 10:00:00",
+						total_time: 3600,
+						latest_action: 0
+					}
+			
+				]
+			};
+		}
+
+		function render_user_list(data) {
+			var tb = document.getElementById('user_status_table');
+			var total_num = data.total_num
+			var user_list = data.list;
+			console.log("total_num = " + total_num);
+			// table
+			if (user_list && tb) {
+				while (tb.rows.length > 1)
+					tb.deleteRow(1);
+				for (var i = 0; i < user_list.length; i++) {
+					var nickname = user_list[i].nickname || "";
+					var hostname = user_list[i].hostname || "";
+					var displayName = nickname || hostname || "--";
+
+					var tr = tb.insertRow(-1);
+					tr.className = 'tr';
+					tr.insertCell(-1).innerHTML = `
+						<div style="display: flex; align-items: center;">
+							<div>
+								<div>${displayName}</div>
+								<div>${user_list[i].mac}</div>
+							</div>
+						</div>
+					`;
+					tr.insertCell(-1).innerHTML = user_list[i].ip;
+
+					var app_list_str = user_list[i].applist.map(app => {
+						// Assuming app.name corresponds to the app's icon filename
+						return `<img src="<%=resource%>/app_icons/${app.id}.png" alt="${app.name}" title="${app.name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 8px;">`;
+					}).join("") || "--";
+					tr.insertCell(-1).innerHTML = app_list_str;
+					tr.insertCell(-1).innerHTML = user_list[i].online == 1 ? "<%:Online%>" : "<%:Offline%>";
+					tr.insertCell(-1).innerHTML = `
+						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}')" style="margin-right: 5px;">查看详情</button>
+						<button type="button" class="cbi-button cbi-button-add" onclick="showModifyNickname('${user_list[i].mac}')">修改备注</button>
+					`;
+
+					
+					var childs = tr.childNodes;
+					Array.prototype.forEach.call(childs, function (child) {
+						child.className = 'td';
+					});
 				}
 			}
-		);
+		}
+
+		function render_visit_list_table(data) {
+			var tb = document.getElementById('visit_list_table');
+			var visit_list = data.list;
+			if (visit_list && tb) {
+				/* clear all rows */
+				while (tb.rows.length > 1)
+					tb.deleteRow(1);
+				for (var i = 0; i < visit_list.length; i++) {
+					var action_status = visit_list[i].act == 1 ? "<%:Filtered%>" : "<%:Unfiltered%>";
+					var hostname = visit_list[i].hostname == "" || visit_list[i].hostname == "*" ? "--" : visit_list[i].hostname;
+					var tr = tb.insertRow(-1);
+					tr.className = 'tr';
+
+					// Add app icon before app name with fixed height for alignment
+					tr.insertCell(-1).innerHTML = `
+						<div style="height: 24px; display: flex; align-items: center;">
+							<img src="<%=resource%>/app_icons/${visit_list[i].id}.png" alt="${visit_list[i].name}" title="${visit_list[i].name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 8px;">
+							<span>${visit_list[i].name}</span>
+						</div>
+					`;
+
+
+					// Convert timestamp to readable date string
+					var first_time_date = new Date(visit_list[i].ft * 1000); // Assuming first_time is in seconds
+					var first_time_str = first_time_date.toLocaleString(); // Convert to local date string
+
+					var latest_time_date = new Date(visit_list[i].lt * 1000); // Assuming first_time is in seconds
+					var latest_time_str = latest_time_date.toLocaleString(); // Convert to local date string
+
+
+
+
+					tr.insertCell(-1).innerHTML = first_time_str;
+					tr.insertCell(-1).innerHTML = latest_time_str;
+					var hour = parseInt(visit_list[i].tt / 3600);
+					var seconds = visit_list[i].tt % 3600;
+					var min = parseInt(seconds / 60)
+					var total_time_str;
+					if (visit_list[i].act == 1)
+						total_time_str = "-"
+					else {
+						if (hour > 0)
+							total_time_str = hour + "<%:h%>" + min + "<%:m%>"
+						else {
+							if (min == 0)
+								min = 1;
+							total_time_str = min + "<%:m%>"
+						}
+					}
+
+					tr.insertCell(-1).innerHTML = total_time_str;
+					tr.insertCell(-1).innerHTML = action_status;
+					var childs = tr.childNodes;
+					Array.prototype.forEach.call(childs, function (child) {
+						child.className = 'td';
+
+					});
+
+				}
+			}
+		}
+        // new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: 0},
+        //     function (x, data) {
+        //    		user_list_data = data.data
+		// 		render_user_list(user_list_data);
+        //     }
+        // );
+    
+
+
+
+		// XHR.poll(3, '<%=url('admin/network/get_all_users')%>', {flag: 3, page: 0},
+		// 	function (x, data) {
+		// 		user_list_data = data.data;
+		// 		render_user_list(user_list_data);
+		// 	}
+		// );
+	
+
+
+		function showDetails(mac) {
+			var modal = document.getElementById('detailsModal');
+			modal.style.display = 'flex';
+
+			new XHR().get('<%=url('admin/network/dev_visit_time')%>/' + mac, null,
+				function (x, st) {
+					visit_time_data = st;
+					console.log("visit_time_data = " + visit_time_data);
+					display_app_visit_view(visit_time_data);
+				}
+			);
+
+			new XHR().get('<%=url('admin/network/dev_visit_list')%>/' + mac, null,
+				function (x, st) {
+					visit_list_data = st;
+					console.log("visit_list_data = " + visit_list_data);
+					render_visit_list_table(visit_list_data);
+				}
+			);
+		}
+
+		function showModifyNickname(mac) {
+			var modal = document.getElementById('nicknameModal');
+			modal.style.display = 'flex';
+			document.getElementById('nicknameMac').value = mac;
+			document.getElementById('nicknameMacDisplay').textContent = mac;
+			document.getElementById('nicknameInput').value = '';
+		}
+
+		function validateNickname(nickname) {
+			const invalidChars = /[\s'"]/;
+			return !invalidChars.test(nickname) && nickname.length <= 32;
+		}
+
+		function submitNicknameChange() {
+			var mac = document.getElementById('nicknameMac').value;
+			var nickname = document.getElementById('nicknameInput').value;
+
+			if (!validateNickname(nickname)) {
+				alert('请输入合法的备注');
+				return;
+			}
+
+			new XHR().post('<%=url('admin/network/set_nickname')%>', 
+			{ mac: mac, nickname: nickname },
+			function(x, data) {
+				console.log('Nickname updated successfully');
+				closeModal('nicknameModal');
+				showSuccessMessage('设置成功');
+				// Optionally, refresh the user list to reflect changes
+				getAllUsersData(cur_page);
+			});
+		}
+
+		function closeModal(modalId) {
+			var modal = document.getElementById(modalId);
+			if (modal) {
+				modal.style.display = 'none';
+			}
+		}
+
+		function showTabContent(tabId) {
+			var tabs = document.querySelectorAll('.tab-body');
+			var tabItems = document.querySelectorAll('.tab-item');
+
+			tabs.forEach(function(tab) {
+				tab.classList.remove('active');
+			});
+
+			tabItems.forEach(function(item) {
+				item.classList.remove('active');
+			});
+
+			document.getElementById(tabId).classList.add('active');
+			document.querySelector('.tab-item[onclick="showTabContent(\'' + tabId + '\')"]').classList.add('active');
+		}
+
+    function get_display_time(total_time) {
+        var hour = parseInt(total_time / 3600);
+        var seconds = total_time % 3600;
+        var min = parseInt(seconds / 60)
+        var seconds2 = seconds % 60;
+        var total_time_str;
+
+        if (hour > 0)
+            total_time_str = hour + "<%:h%>" + min + "<%:m%>"
+        else {
+            if (min == 0 && seconds2 != 0)
+                min = 1;
+            total_time_str = min + "<%:m%>"
+        }
+        return total_time_str;
+    }
+
+    function display_app_visit_view(data) {
+        var chartElement = document.getElementById('app_time_chart');
+        if (!chartElement) {
+            console.error("Chart element not found");
+            return;
+        }
+        var myChart = echarts.init(chartElement);
+        if (!data) {
+            return;
+        }
+		var total_time = 0
+		var app_stat_array = new Array();
+		if (data.length == 0){
+			var app_obj ={}
+			app_obj.name = "未知APP"
+			app_obj.value = 0
+			app_obj.legendname = app_obj.name
+			app_stat_array.push(app_obj)
+		}
+		else{
+			for (var i = 0; i < data.length; i++) {
+				var app_obj = {};
+				app_obj.value = data[i].t;
+				app_obj.legendname = data[i].name;
+				var tmp_time = get_display_time(data[i].t);
+				app_obj.name = data[i].name + "  " + tmp_time;
+				total_time += data[i].t
+				app_stat_array.push(app_obj);
+			}
+		}
+		console.log("hello")
+        var total_time_str = get_display_time(total_time);
+        var option = {
+			grid:{
+			},
+            title: [
+                {
+                    text: "<%:App Time Statistics%>",
+                    textStyle: {
+                        fontSize: 16,
+                        color: "black"
+                    },
+                    left: "2%"
+                },
+                {
+                    text: '',
+                    subtext: total_time_str,
+                    textStyle: {
+                        fontSize: 15,
+                        color: "black"
+                    },
+                    subtextStyle: {
+                        fontSize: 15,
+                        color: 'black'
+                    },
+                    textAlign: "center",
+                    x: '34.5%',
+                    y: '44%',
+                }],
+            tooltip: {
+                trigger: 'item',
+                formatter: function (parms) {
+                    var total_time = get_display_time(parms.data.value);
+                    var str = parms.seriesName + "</br>" +
+                        parms.marker + "" + parms.data.legendname + "</br>" +
+                        "<%:Visit Time%>: " + total_time + "</br>" +
+                        "<%:Percentage%>: " + parms.percent + "%";
+                    return str;
+                }
+            },
+            legend: {
+                type: "scroll",
+                orient: 'vertical',
+                left: '75%',
+                align: 'left',
+                top: 'middle',
+                textStyle: {
+                    color: '#8C8C8C'
+                },
+                height: 250
+            },
+            series: [
+                {
+                    name: "<%:Visit Time%>",
+                    type: 'pie',
+                    radius: ['58%', '70%'],
+                    center: ['35%', '50%'], // 饼图的中心位置,调整离开左侧的距离
+                    clockwise: false,
+                    avoidLabelOverlap: true,
+                    itemStyle: {
+                        borderRadius: 1,
+                        borderColor: "#fff",
+                        borderWidth: 1,
+                    },
+                    label: {
+                        show: true,
+                        position: 'outside',
+                        formatter: '{b}: {c} ({d}%)',
+                        normal: {
+                            show: true,
+                            position: 'outter',
+                            formatter: function (parms) {
+                                return parms.data.legendname
+                            }
+                        }
+                    },
+                    labelLine: {
+                        show: true,
+                        length: 8,
+                        length2: 7,
+                        smooth: true,
+                    },
+                    data: app_stat_array
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+    }
+
+// user_list_data = generateUserListData();
+// visit_list_data = generateVisitListData();
 
 //]]></script>
 
+<div style="max-height: 750px; overflow-y: auto;padding-right: 20px;"> <!-- Added container with fixed height and overflow -->
 
 	<div class="cbi-section cbi-tblsection">
+
+		<div style="max-width: 1000px; margin-left: 5px;padding: 5px;">
+
 		<table class="table cbi-section-table" id="user_status_table">
 			<tr class="tr table-titles">
 				<th class="th">
-					<%:Id%>
-				</th>
-				<th class="th">
-					<%:Hostname%>
-				</th>
-				<th class="th">
-					<%:Mac%>
+					<%:设备信息%>
 				</th>
 				<th class="th">
 					<%:Ip%>
@@ -72,6 +455,9 @@
 				<th class="th">
 					<%:Online Status%>
 				</th>
+				<th class="th">
+					<%:Actions%>
+				</th>
 			</tr>
 			<tr class="tr">
 				<td class="td" colspan="8"><em><br />
@@ -79,4 +465,174 @@
 					</em></td>
 			</tr>
 		</table>
+
+		</div>
 	</div>
+</div>
+<!-- Details Modal -->
+<div id="detailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 750px; height: 500px; display: flex; flex-direction: column; position: relative;">
+        <button type="button" onclick="closeModal('detailsModal')" style="position: absolute; top: 10px; right: 10px; background-color: transparent; border: none; font-size: 24px; color: #333; cursor: pointer; width: 30px; height: 30px;">&times;</button>
+        <h4 style="margin-top:2px">设备详情</h4>
+        
+        <!-- Tab List -->
+        <ul class="tab-list">
+            <!-- <li class="tab-item onclick="showTabContent('tab1')">基本信息</li> -->
+            <li class="tab-item active" onclick="showTabContent('tab2')">APP统计</li>
+			<li class="tab-item" onclick="showTabContent('tab3')">访问记录</li>
+        </ul>
+
+        <!-- <div id="tab1" class="tab-body" >
+
+			<div class="info-container">
+				<div class="info-row">
+					<div class="info-column">
+						<p><span class="field-label">MAC地址:</span> <span class="field-value" id="device_mac">--</span></p>
+						<p><span class="field-label">在线状态:</span> <span class="field-value" id="device_ip">--</span></p>
+						<p><span class="field-label">在线/离线时间:</span> <span class="field-value" id="download_total">--</span></p>
+						<p><span class="field-label">在线APP:</span> <span class="field-value" id="download_total">--</span></p>
+					</div>
+					<div class="info-column">
+						<p><span class="field-label">IP地址:</span> <span class="field-value" id="group">--</span></p>
+						<p><span class="field-label">主机名:</span> <span class="field-value" id="group">--</span></p>
+						<p><span class="field-label">备注:</span> <span class="field-value" id="hostname">--</span></p>
+					</div>
+				</div>
+			</div>
+        </div> -->
+        <div id="tab2" class="tab-body active">
+			<div class="pie-chart">
+				<div id="app_time_chart" style="width:100%;height: 350px;">
+				</div>
+			</div>
+        </div>
+
+		<div id="tab3" class="tab-body">
+			<div style="max-height: 350px; overflow-y: auto;padding-right: 20px;"> <!-- Added container with fixed height and overflow -->
+				<table class="table cbi-section-table" id="visit_list_table">
+					<tr class="tr table-titles">
+						<th class="th">
+							<%:APP名称%>
+						</th>
+			
+						<th class="th">
+							<%:开始访问时间%>
+						</th>
+
+						<th class="th">
+							<%:最后访问时间%>
+						</th>
+						<th class="th">
+							<%:访问时长%>
+						</th>
+						<th class="th">
+							<%:过滤状态%>
+						</th>
+					</tr>
+					<tr class="tr">
+						<td class="td" colspan="8"><em><br />
+								<%:Collecting data...%>
+							</em></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+
+    </div>
+</div>
+
+<!-- Nickname Modal -->
+<div id="nicknameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 400px; display: flex; flex-direction: column; position: relative;">
+        <button type="button" onclick="closeModal('nicknameModal')" style="position: absolute; top: 10px; right: 10px; background-color: transparent; border: none; font-size: 24px; color: #333; cursor: pointer; width: 30px; height: 30px;">&times;</button>
+        <h4 style="margin-top:2px">修改备注</h4>
+        <p style="margin-bottom: 10px;"><span class="field-label">MAC地址:</span> <span id="nicknameMacDisplay">--</span></p>
+        <input type="hidden" id="nicknameMac" value="">
+        <p style="margin-bottom: 10px;"><span class="field-label">备注:</span> <input type="text" id="nicknameInput" style="padding: 5px; background-color: white;width: 200px"></p>
+        <div style="display: flex; justify-content: flex-end;">
+			<button type="button" class="cbi-button cbi-button-add" onclick="closeModal('nicknameModal')">取消</button>
+            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()" style="margin-right: 10px;">确定</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+	<div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
+		<p style="margin: 0;">设置成功</p>
+	</div>
+</div>
+<style>
+    .tab-container {
+        margin-top: 20px;
+    }
+    .tab-list {
+        display: flex;
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        border-bottom: 1px solid #ccc;
+    }
+    .tab-item {
+        padding: 3px 16px;
+        cursor: pointer;
+        border: 1px solid #ccc;
+        border-bottom: none;
+        background-color: #f9f9f9;
+        border-radius: 5px 5px 0 0;
+        margin-right: 6px;
+        transition: background-color 0.3s ease;
+    }
+    .tab-item.active {
+        font-weight: bold;
+		background-color: #ccc;
+        color: rgb(80, 80, 140); /* Change text color to blue */
+    }
+    .tab-item:hover {
+        background-color: #d0d0d0;
+    }
+
+	.tab-body {
+		margin-top: 5px;
+		display: none;
+		padding: 25px;
+	}
+	.tab-body.active {
+		
+		display: block;
+	}
+
+	.pie-chart {
+		width: 600px;
+	}
+
+	.field-label {
+		font-weight: bold;
+		color: #333;
+		width: 75px; /* Set a fixed width for all labels */
+		display: inline-block; /* Ensure the width is applied */
+	}
+	.field-value {
+		color: #4CAF50;
+	}
+	.info-container {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-left: 20px;
+	}
+	.info-row {
+		display: flex;
+	}
+	.info-column {
+		width: 50%;
+		text-align: left;
+	}
+	.info-column p {
+		margin-bottom: 20px;
+	}
+
+	#user_status_table .td, #visit_list_table .td {
+        padding: 2px !important; /* Remove padding from table cells */
+    }
+
+</style>

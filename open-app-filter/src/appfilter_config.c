@@ -23,6 +23,7 @@ THE SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include "appfilter_config.h"
+#include "appfilter.h"
 #include <uci.h>
 
 app_name_info_t app_name_table[MAX_SUPPORT_APP_NUM];
@@ -35,7 +36,7 @@ static struct uci_context *uci_ctx = NULL;
 static struct uci_package *uci_appfilter;
 
 
-int uci_get_int_value(struct uci_context *ctx, char *key)
+int af_uci_get_int_value(struct uci_context *ctx, char *key)
 {
     struct uci_element *e;
     struct uci_ptr ptr;
@@ -72,7 +73,7 @@ done:
 }
 
 
-int uci_get_value(struct uci_context *ctx, char *key, char *output, int out_len)
+int af_uci_get_value(struct uci_context *ctx, char *key, char *output, int out_len)
 {
     struct uci_element *e;
     struct uci_ptr ptr;
@@ -303,6 +304,18 @@ int af_uci_set_int_value(struct uci_context *ctx, char *key, int value)
     return ret;
 }
 
+int af_uci_del_array_value(struct uci_context *ctx, char *key_fmt, int index){
+    char key[128] = {0};
+    sprintf(key, key_fmt, index);
+    return af_uci_delete(ctx, key);
+}
+
+int af_uci_set_array_value(struct uci_context *ctx, char *key_fmt, int index, char *value){
+    char key[128] = {0};
+    sprintf(key, key_fmt, index);
+    return af_uci_set_value(ctx, key, value);
+}
+
 int af_uci_commit(struct uci_context *ctx, const char * package) {
     struct uci_ptr ptr;
     int ret = UCI_OK;
@@ -324,7 +337,50 @@ done:
     return UCI_OK;
 }
 
+int af_get_uci_list_num(struct uci_context * ctx, char *package, char *section){
+    int count = 0;
+    struct uci_ptr p;
+    struct uci_element *e; 
+    struct uci_package *pkg = NULL;
 
+    if (UCI_OK != uci_load(ctx, package, &pkg)){
+        return -1; 
+    }   
+    uci_foreach_element(&pkg->sections, e){ 
+        struct uci_section *s = uci_to_section(e);
+        if (strcmp(s->type, section)){
+            continue;
+        }
+        count++;
+    }   
+    uci_unload(ctx, pkg);
+    return count;
+}
+int af_uci_get_array_value(struct uci_context *ctx, char *key_fmt, int index, char *output, int out_len)
+{
+    char key[128] = {0};
+    sprintf(key, key_fmt, index);
+    return af_uci_get_value(ctx, key, output, out_len);
+}
+
+int af_uci_add_section(struct uci_context * ctx, char *package_name, char *section)
+{
+    struct uci_section *s = NULL;
+    struct uci_package *p = NULL;
+    int ret;
+    ret = uci_load(ctx, package_name , &p);
+    if (ret != UCI_OK)
+        goto done;
+
+    ret = uci_add_section(ctx, p, section, &s);
+    if (ret != UCI_OK)
+        goto done;
+    ret = uci_save(ctx, p); 
+done:
+    if (s) 
+        fprintf(stdout, "%s\n", s->e.name);
+    return ret;
+}
 //
 static struct uci_package *
 config_init_package(const char *config)
@@ -427,78 +483,6 @@ int check_time_valid(char *t)
         return 1;
 }
 
-void dump_af_time(af_ctl_time_t *t)
-{
-    int i;
-    printf("---------dump af time-------------\n");
-    printf("%d:%d ---->%d:%d\n", t->start.hour, t->start.min,
-           t->end.hour, t->end.min);
-    for (i = 0; i < 7; i++)
-    {
-        printf("%d ", t->days[i]);
-    }
-    printf("\n");
-}
-
-af_ctl_time_t *load_appfilter_ctl_time_config(void)
-{
-    char start_time_str[64] = {0};
-    char end_time_str[64] = {0};
-    char start_time_str2[64] = {0};
-    char end_time_str2[64] = {0};
-    char days_str[64] = {0};
-    int value = 0;
-    int ret = 0;
-    af_ctl_time_t *t = NULL;
-    struct uci_context *ctx = uci_alloc_context();
-    if (!ctx)
-        return NULL;
-
-    memset(start_time_str, 0x0, sizeof(start_time_str));
-    memset(end_time_str, 0x0, sizeof(end_time_str));
-    memset(start_time_str2, 0x0, sizeof(start_time_str2));
-    memset(end_time_str2, 0x0, sizeof(end_time_str2));
-
-    uci_get_value(ctx, "appfilter.time.start_time", start_time_str, sizeof(start_time_str));
-    uci_get_value(ctx, "appfilter.time.end_time", end_time_str, sizeof(end_time_str));
-    uci_get_value(ctx, "appfilter.time.start_time2", start_time_str2, sizeof(start_time_str2));
-    uci_get_value(ctx, "appfilter.time.end_time2", end_time_str2, sizeof(end_time_str2));
-    uci_get_value(ctx, "appfilter.time.days", days_str, sizeof(days_str));
-
-
-    t = malloc(sizeof(af_ctl_time_t));
-
-    value = uci_get_int_value(ctx, "appfilter.time.time_mode");
-    if (value < 0)
-        t->time_mode = 0;
-    else
-        t->time_mode = value;
-    if (check_time_valid(start_time_str) && check_time_valid(end_time_str)){
-        sscanf(start_time_str, "%d:%d", &t->start.hour, &t->start.min);
-        sscanf(end_time_str, "%d:%d", &t->end.hour, &t->end.min);
-    }
-    if (check_time_valid(start_time_str2) && check_time_valid(end_time_str2)){
-        sscanf(start_time_str2, "%d:%d", &t->start2.hour, &t->start2.min);
-        sscanf(end_time_str2, "%d:%d", &t->end2.hour, &t->end2.min);
-    }
-
-    char *p = strtok(days_str, " ");
-    if (!p)
-        goto EXIT;
-    do
-    {
-        int day = atoi(p);
-        if (day >= 0 && day <= 6)
-            t->days[day] = 1;
-        else
-            ret = 0;
-    } while (p = strtok(NULL, " "));
-EXIT:
-	uci_free_context(ctx);
-    return t;
-}
-
-
 
 int config_get_appfilter_enable(void)
 {
@@ -506,7 +490,7 @@ int config_get_appfilter_enable(void)
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx)
         return NULL;
-	enable = uci_get_int_value(ctx, "appfilter.global.enable");
+	enable = af_uci_get_int_value(ctx, "appfilter.global.enable");
     if (enable < 0)
         enable = 0;
     
@@ -520,7 +504,7 @@ int config_get_lan_ip(char *lan_ip, int len)
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx)
         return -1;
-    ret = uci_get_value(ctx, "network.lan.ipaddr", lan_ip, len);
+    ret = af_uci_get_value(ctx, "network.lan.ipaddr", lan_ip, len);
     uci_free_context(ctx);
     return ret;
 }
@@ -531,7 +515,7 @@ int config_get_lan_mask(char *lan_mask, int len)
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx)
         return -1;
-    ret = uci_get_value(ctx, "network.lan.netmask", lan_mask, len);
+    ret = af_uci_get_value(ctx, "network.lan.netmask", lan_mask, len);
     uci_free_context(ctx);
     return ret;
 }

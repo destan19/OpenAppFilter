@@ -36,6 +36,9 @@ THE SOFTWARE.
 #include "appfilter_user.h"
 #include "appfilter_config.h"
 #include <uci.h>
+#include "appfilter.h"
+
+extern int g_oaf_config_change;
 
 struct ubus_context *ubus_ctx = NULL;
 static struct blob_buf b;
@@ -126,6 +129,99 @@ void ubus_dump_visit_list(struct blob_buf *b, char *mac)
     }
     blobmsg_close_array(b, array);
 }
+
+// Function to compare JSON objects based on the "lt" field
+int compare_lt(const void *a, const void *b) {
+    struct json_object *obj_a = *(struct json_object **)a;
+    struct json_object *obj_b = *(struct json_object **)b;
+
+    struct json_object *lt_a, *lt_b;
+    json_object_object_get_ex(obj_a, "lt", &lt_a);
+    json_object_object_get_ex(obj_b, "lt", &lt_b);
+
+    int lt_val_a = json_object_get_int(lt_a);
+    int lt_val_b = json_object_get_int(lt_b);
+
+    return lt_val_b - lt_val_a;
+}
+
+
+static int
+appfilter_handle_dev_visit_list(struct ubus_context *ctx, struct ubus_object *obj,
+                          struct ubus_request_data *req, const char *method,
+                          struct blob_attr *msg)
+{
+    int i, j;
+    struct json_object *root_obj = json_object_new_object();
+    struct json_object *visit_array = json_object_new_array();
+
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (!msg_obj_str)
+    {
+        printf("format json failed\n");
+        return 0;
+    }
+
+    printf("msg_obj_str:%s\n", msg_obj_str);
+    struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+    struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
+    if (!mac_obj)
+    {
+        printf("mac is null\n");
+        return 0;
+    }
+    printf("%s %d\n", __func__, __LINE__);
+
+    char *mac = json_object_get_string(mac_obj);
+    dev_node_t *node = find_dev_node(mac);
+
+    if (!node)
+    {
+        printf("not found mac:%s\n", mac);
+        return 0;
+    }
+
+    json_object_object_add(root_obj, "hostname", json_object_new_string(node->hostname));
+    json_object_object_add(root_obj, "mac", json_object_new_string(node->mac));
+    json_object_object_add(root_obj, "ip", json_object_new_string(node->ip));
+
+    for (j = 0; j < MAX_VISIT_HASH_SIZE; j++)
+    { 
+        visit_info_t *p_info = node->visit_htable[j];
+        while (p_info)
+        {
+            char *first_time_str = format_time(p_info->first_time);
+            char *latest_time_str = format_time(p_info->latest_time);
+            int total_time = p_info->latest_time - p_info->first_time;
+            struct json_object *visit_obj = json_object_new_object();
+            json_object_object_add(visit_obj, "name", json_object_new_string(get_app_name_by_id(p_info->appid)));
+            json_object_object_add(visit_obj, "id", json_object_new_int(p_info->appid));
+            json_object_object_add(visit_obj, "act", json_object_new_int(p_info->action));
+            json_object_object_add(visit_obj, "ft", json_object_new_int(p_info->first_time));
+            json_object_object_add(visit_obj, "lt", json_object_new_int(p_info->latest_time));
+            json_object_object_add(visit_obj, "tt", json_object_new_int(total_time));
+            json_object_array_add(visit_array, visit_obj);
+
+            if (first_time_str)
+                free(first_time_str);
+            if (latest_time_str)
+                free(latest_time_str);
+            p_info = p_info->next;
+        }
+    }
+
+    // Sort the visit_array based on the "lt" field
+    json_object_array_sort(visit_array, compare_lt);
+
+    json_object_object_add(root_obj, "total_num", json_object_new_int(json_object_array_length(visit_array)));
+    json_object_object_add(root_obj, "list", visit_array);
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, root_obj);
+    ubus_send_reply(ctx, req, b.head);
+    json_object_put(root_obj);
+    return 0;
+}
+
 
 void update_app_visit_time_list(char *mac, struct app_visit_stat_info *visit_info)
 {
@@ -300,12 +396,6 @@ appfilter_handle_dev_list(struct ubus_context *ctx, struct ubus_object *obj,
         dev_node_t *node = dev_hash_table[i];
         while (node)
         {
-            if (node->online == 0)
-            {
-
-                node = node->next;
-                continue;
-            }
             struct json_object *dev_obj = json_object_new_object();
             struct json_object *app_array = json_object_new_array();
             app_visit_time_info_t top5_app_list[5];
@@ -330,52 +420,11 @@ appfilter_handle_dev_list(struct ubus_context *ctx, struct ubus_object *obj,
 
             json_object_object_add(dev_obj, "online", json_object_new_int(1));
             json_object_object_add(dev_obj, "hostname", json_object_new_string(hostname));
-            json_object_object_add(dev_obj, "latest_app", json_object_new_string("test"));
+            json_object_object_add(dev_obj, "nickname", json_object_new_string(""));
+
+
             json_object_array_add(dev_array, dev_obj);
 
-            node = node->next;
-            count++;
-            if (count >= MAX_SUPPORT_DEV_NUM)
-                goto END;
-        }
-    }
-    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
-    {
-        dev_node_t *node = dev_hash_table[i];
-        while (node)
-        {
-            if (node->online != 0)
-            {
-
-                node = node->next;
-                continue;
-            }
-            struct json_object *dev_obj = json_object_new_object();
-            struct json_object *app_array = json_object_new_array();
-            app_visit_time_info_t top5_app_list[5];
-            memset(top5_app_list, 0x0, sizeof(top5_app_list));
-            update_top5_app(node, top5_app_list);
-
-            for (j = 0; j < 5; j++)
-            {
-                if (top5_app_list[j].app_id == 0)
-                    break;
-                struct json_object *app_obj = json_object_new_object();
-                json_object_object_add(app_obj, "id", json_object_new_int(top5_app_list[j].app_id));
-                json_object_object_add(app_obj, "name", json_object_new_string(get_app_name_by_id(top5_app_list[j].app_id)));
-                json_object_array_add(app_array, app_obj);
-            }
-
-            json_object_object_add(dev_obj, "applist", app_array);
-            json_object_object_add(dev_obj, "mac", json_object_new_string(node->mac));
-            char hostname[32] = {0};
-            get_hostname_by_mac(node->mac, hostname);
-            json_object_object_add(dev_obj, "ip", json_object_new_string(node->ip));
-
-            json_object_object_add(dev_obj, "online", json_object_new_int(0));
-            json_object_object_add(dev_obj, "hostname", json_object_new_string(hostname));
-            json_object_object_add(dev_obj, "latest_app", json_object_new_string("test"));
-            json_object_array_add(dev_array, dev_obj);
             node = node->next;
             count++;
             if (count >= MAX_SUPPORT_DEV_NUM)
@@ -393,8 +442,8 @@ END:
     return 0;
 }
 
-static int
-appfilter_handle_visit_time(struct ubus_context *ctx, struct ubus_object *obj,
+
+static int appfilter_handle_visit_time(struct ubus_context *ctx, struct ubus_object *obj,
                             struct ubus_request_data *req, const char *method,
                             struct blob_attr *msg)
 {
@@ -420,15 +469,15 @@ appfilter_handle_visit_time(struct ubus_context *ctx, struct ubus_object *obj,
 
     struct json_object *resp_obj = json_object_new_object();
     struct json_object *app_info_array = json_object_new_array();
-    json_object_object_add(resp_obj, "app_list", app_info_array);
+    json_object_object_add(resp_obj, "list", app_info_array);
+    json_object_object_add(resp_obj, "total_num", json_object_new_int(info.num));
     int i;
     for (i = 0; i < info.num; i++)
     {
         struct json_object *app_info_obj = json_object_new_object();
-        json_object_object_add(app_info_obj, "app_id",
-                               json_object_new_string(get_app_name_by_id(info.visit_list[i].app_id)));
-        json_object_object_add(app_info_obj, "visit_time",
-                               json_object_new_int(info.visit_list[i].total_time));
+        json_object_object_add(app_info_obj, "id", json_object_new_int(info.visit_list[i].app_id));
+        json_object_object_add(app_info_obj, "name", json_object_new_string(get_app_name_by_id(info.visit_list[i].app_id)));
+        json_object_object_add(app_info_obj, "t", json_object_new_int(info.visit_list[i].total_time));
         json_object_array_add(app_info_array, app_info_obj);
     }
 
@@ -642,6 +691,7 @@ static int handle_set_app_filter(struct ubus_context *ctx, struct ubus_object *o
     }
     af_uci_commit(uci_ctx, "appfilter");
     reload_oaf_rule();
+    g_oaf_config_change = 1;
 
     uci_free_context(uci_ctx);
     struct blob_buf b = {};
@@ -669,8 +719,8 @@ static int handle_get_app_filter_base(struct ubus_context *ctx, struct ubus_obje
     }
     int enable = 0;
     int work_mode = 0;
-    enable = uci_get_int_value(uci_ctx, "appfilter.global.enable");
-    work_mode = uci_get_int_value(uci_ctx, "appfilter.global.work_mode");
+    enable = af_uci_get_int_value(uci_ctx, "appfilter.global.enable");
+    work_mode = af_uci_get_int_value(uci_ctx, "appfilter.global.work_mode");
 
     json_object_object_add(data_obj, "enable", json_object_new_int(enable));
     json_object_object_add(data_obj, "work_mode", json_object_new_int(work_mode));
@@ -719,6 +769,7 @@ static int handle_set_app_filter_base(struct ubus_context *ctx, struct ubus_obje
     af_uci_set_int_value(uci_ctx, "appfilter.global.work_mode", json_object_get_int(work_mode_obj));
     af_uci_commit(uci_ctx, "appfilter");
     reload_oaf_rule();
+    g_oaf_config_change = 1;
     uci_free_context(uci_ctx);
     struct blob_buf b = {};
     blob_buf_init(&b, 0);
@@ -729,12 +780,631 @@ static int handle_set_app_filter_base(struct ubus_context *ctx, struct ubus_obje
     return 0;
 }
 
+
+
+static int handle_get_app_filter_time(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    struct json_object *response = json_object_new_object();
+    struct json_object *data_obj = json_object_new_object();
+    
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+
+    // Get time_mode
+    int time_mode = af_uci_get_int_value(uci_ctx, "appfilter.time.time_mode");
+    json_object_object_add(data_obj, "mode", json_object_new_int(time_mode));
+
+    // Get days
+    char days_str[128] = {0};
+    af_uci_get_value(uci_ctx, "appfilter.time.days", days_str, sizeof(days_str));
+    printf("days_str: %s\n", days_str);
+    struct json_object *days_array = json_object_new_array();
+    char *day = strtok(days_str, " ");
+    while (day) {
+        json_object_array_add(days_array, json_object_new_int(atoi(day)));
+        day = strtok(NULL, " ");
+    }
+    json_object_object_add(data_obj, "weekday_list", days_array);
+
+    // Get start_time and end_time
+    char start_time[32] = {0};
+    char end_time[32] = {0};
+    af_uci_get_value(uci_ctx, "appfilter.time.start_time", start_time, sizeof(start_time));
+    af_uci_get_value(uci_ctx, "appfilter.time.end_time", end_time, sizeof(end_time));
+    json_object_object_add(data_obj, "start_time", json_object_new_string(start_time));
+    json_object_object_add(data_obj, "end_time", json_object_new_string(end_time));
+
+    // Get deny_time and allow_time
+    int deny_time = af_uci_get_int_value(uci_ctx, "appfilter.time.deny_time");
+    int allow_time = af_uci_get_int_value(uci_ctx, "appfilter.time.allow_time");
+    json_object_object_add(data_obj, "deny_time", json_object_new_int(deny_time));
+    json_object_object_add(data_obj, "allow_time", json_object_new_int(allow_time));
+
+    // Get time list and parse into objects with start_time and end_time
+    char time_str[512] = {0};
+    af_uci_get_list_value(uci_ctx, "appfilter.time.time", time_str, sizeof(time_str), " ");
+    struct json_object *time_array = json_object_new_array();
+    char *time_period = strtok(time_str, " ");
+    while (time_period) {
+        char start[16] = {0};
+        char end[16] = {0};
+        char *delimiter = strchr(time_period, '-');
+        if (delimiter) {
+            // Copy start_time (characters before '-')
+            strncpy(start, time_period, delimiter - time_period);
+            start[delimiter - time_period] = '\0';
+            
+            // Copy end_time (characters after '-')
+            strcpy(end, delimiter + 1);
+
+            // Create time period object
+            struct json_object *period_obj = json_object_new_object();
+            json_object_object_add(period_obj, "start", json_object_new_string(start));
+            json_object_object_add(period_obj, "end", json_object_new_string(end));
+            json_object_array_add(time_array, period_obj);
+        }
+        time_period = strtok(NULL, " ");
+    }
+    json_object_object_add(data_obj, "time_list", time_array);
+
+    json_object_object_add(response, "data", data_obj);
+    
+    uci_free_context(uci_ctx);
+    
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+
+//  {"end_time":"12:00","weekday_list":[1,2,3,4,5,6,0],"deny_time":5,"start_time":"22:22","allow_time":30,"mode":1}
+// {"mode":0,"weekday_list":[1,2],"time_list":[{"start":"00:11","end":"00:12"},{"start":"12:00","end":"14:00"}]}
+static int handle_set_app_filter_time(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    printf("set appfilter time\n");
+    int mode = 0;
+    struct json_object *response = json_object_new_object();
+    int i;
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (!msg_obj_str) {
+        printf("format json failed\n");
+        return 0;
+    }
+     printf("msg_obj_str: %s\n", msg_obj_str);
+    struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+    struct json_object *mode_obj = json_object_object_get(req_obj, "mode");
+    struct json_object *weekday_list_obj = json_object_object_get(req_obj, "weekday_list");
+    if (!mode_obj || !weekday_list_obj) {
+        printf("mode_obj or weekday_list_obj is NULL\n");
+        return 0;
+    }
+    printf("mode_obj: %d\n", json_object_get_int(mode_obj));
+
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+    mode = json_object_get_int(mode_obj);
+    af_uci_set_int_value(uci_ctx, "appfilter.time.time_mode", mode);
+
+    // Build days string from weekday array
+    char days_str[128] = {0};
+    for (i = 0; i < json_object_array_length(weekday_list_obj); i++) {
+        struct json_object *weekday_obj = json_object_array_get_idx(weekday_list_obj, i);
+        char tmp[8];
+        snprintf(tmp, sizeof(tmp), "%d", json_object_get_int(weekday_obj));
+        if (i > 0) strcat(days_str, " ");
+        strcat(days_str, tmp);
+    }
+    af_uci_set_value(uci_ctx, "appfilter.time.days", days_str);
+
+    if (mode == 0) {
+        struct json_object *time_list_obj = json_object_object_get(req_obj, "time_list");
+        if (!time_list_obj) {
+            printf("time_list_obj is NULL\n");
+            goto EXIT;
+        }
+        af_uci_delete(uci_ctx, "appfilter.time.time");
+        int time_list_len = json_object_array_length(time_list_obj);
+        for (i = 0; i < time_list_len; i++) {
+            struct json_object *time_obj = json_object_array_get_idx(time_list_obj, i);
+            struct json_object *start_time_obj = json_object_object_get(time_obj, "start");
+            struct json_object *end_time_obj = json_object_object_get(time_obj, "end");
+            if (!start_time_obj || !end_time_obj) {
+                printf("start_time_obj or end_time_obj is NULL\n");
+                goto EXIT;
+            }
+            char time_str[128] = {0};
+            sprintf(time_str, "%s-%s", json_object_get_string(start_time_obj), json_object_get_string(end_time_obj));
+            printf("time_str: %s\n", time_str);
+            af_uci_add_list(uci_ctx, "appfilter.time.time", time_str);
+        }
+    }
+    else  {
+        struct json_object *deny_time_obj = json_object_object_get(req_obj, "deny_time");
+        struct json_object *allow_time_obj = json_object_object_get(req_obj, "allow_time");
+        struct json_object *start_time_obj = json_object_object_get(req_obj, "start_time");
+        struct json_object *end_time_obj = json_object_object_get(req_obj, "end_time");
+        if (!deny_time_obj || !allow_time_obj || !start_time_obj || !end_time_obj) {
+            printf("deny_time_obj or allow_time_obj or start_time_obj or end_time_obj is NULL\n");
+            goto EXIT;
+        }
+        af_uci_set_int_value(uci_ctx, "appfilter.time.deny_time", json_object_get_int(deny_time_obj));
+        af_uci_set_int_value(uci_ctx, "appfilter.time.allow_time", json_object_get_int(allow_time_obj));
+        af_uci_set_value(uci_ctx, "appfilter.time.start_time", json_object_get_string(start_time_obj));
+        af_uci_set_value(uci_ctx, "appfilter.time.end_time", json_object_get_string(end_time_obj));
+    }
+    af_uci_commit(uci_ctx, "appfilter");
+    g_oaf_config_change = 1;
+    printf("uci commit ok\n");
+  //  reload_oaf_rule();
+EXIT:
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+#if 0
+
+
+typedef void (*iter_func)(void *arg, dev_node_t *dev);
+//todo:dev for each
+extern dev_node_t *dev_hash_table[MAX_DEV_NODE_HASH_SIZE];
+
+dev_node_t *add_dev_node(char *mac);
+void init_dev_node_htable();
+void dump_dev_list(void);
+void dump_dev_visit_list(void);
+dev_node_t *find_dev_node(char *mac);
+void dev_foreach(void *arg, iter_func iter);
+#endif
+
+
+
+typedef struct all_users_info {
+    int flag;
+    struct json_object *users_array;
+} all_users_info_t;
+
+void all_users_callback(void *arg, dev_node_t *dev)
+{
+    int flag = 0;
+    int i;
+    all_users_info_t *au_info = (all_users_info_t *)arg;
+    flag = au_info->flag;
+    struct json_object *users_array = au_info->users_array;
+
+    if (json_object_array_length(users_array) >= MAX_SUPPORT_DEV_NUM)
+    {
+        printf("users_array length >= MAX_SUPPORT_DEV_NUM\n");
+        return;
+    }
+
+    struct json_object *user_obj = json_object_new_object();
+    json_object_object_add(user_obj, "mac", json_object_new_string(dev->mac));
+    json_object_object_add(user_obj, "online", json_object_new_int(1));
+
+    if (flag > 0) {
+        json_object_object_add(user_obj, "ip", json_object_new_string(dev->ip));
+      
+    }
+
+    if (flag > 1){
+        json_object_object_add(user_obj, "hostname", json_object_new_string(dev->hostname));
+        json_object_object_add(user_obj, "nickname", json_object_new_string(dev->nickname));
+    }
+
+    if (flag > 2){
+        struct json_object *app_array = json_object_new_array();
+        app_visit_time_info_t top5_app_list[5];
+        memset(top5_app_list, 0x0, sizeof(top5_app_list));
+        update_top5_app(dev, top5_app_list);
+        for (i = 0; i < 5; i++)
+        {
+            if (top5_app_list[i].app_id == 0)
+                break;
+
+            struct json_object *app_obj = json_object_new_object();
+            json_object_object_add(app_obj, "id", json_object_new_int(top5_app_list[i].app_id));
+            json_object_object_add(app_obj, "name", json_object_new_string(get_app_name_by_id(top5_app_list[i].app_id)));
+
+            json_object_array_add(app_array, app_obj);
+        }
+        json_object_object_add(user_obj, "applist", app_array);
+    }
+    json_object_array_add(users_array, user_obj);
+}
+
+
+
+static int handle_get_all_users(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+
+                                 struct blob_attr *msg) {
+    struct json_object *response = json_object_new_object();
+    struct json_object *data_obj = json_object_new_object();
+    int flag = 0;
+    int page = 0;
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (msg_obj_str)
+    {
+        struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+        struct json_object *flag_obj = json_object_object_get(req_obj, "flag");
+        struct json_object *page_obj = json_object_object_get(req_obj, "page");
+        if (flag_obj) {
+            flag = json_object_get_int(flag_obj);
+        }
+        if (page_obj) {
+            page = json_object_get_int(page_obj);
+        }
+    }
+
+    printf("flag: %d, page: %d\n", flag, page);
+    all_users_info_t au_info;
+    au_info.flag = flag;
+    au_info.users_array = json_object_new_array();
+
+    struct json_object *users_array = json_object_new_array();
+
+    update_dev_nickname();
+
+    dev_foreach(&au_info, all_users_callback);
+
+    json_object_object_add(data_obj, "list", au_info.users_array);
+
+    json_object_object_add(response, "data", data_obj);
+    
+    uci_free_context(uci_ctx);
+    
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+#if 0
+config user user
+    list mac 12:00:00:00:00:00
+    list mac 12:00:00:00:00:00
+    list mac 12:00:00:00:00:00
+
+#endif
+
+
+
+static int handle_get_app_filter_user(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    struct json_object *response = json_object_new_object();
+    struct json_object *data_obj = json_object_new_object();
+    
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+
+    int mode = af_uci_get_int_value(uci_ctx, "appfilter.global.user_mode");
+    if (mode < 0)
+        mode = 0;
+    json_object_object_add(data_obj, "mode", json_object_new_int(mode));
+
+    struct json_object *user_array = json_object_new_array();
+    char mac_str[128] = {0};
+    int num = af_get_uci_list_num(uci_ctx, "appfilter", "af_user");
+    for (int i = 0; i < num; i++) {
+        af_uci_get_array_value(uci_ctx, "appfilter.@af_user[%d].mac", i, mac_str, sizeof(mac_str));
+        
+        struct json_object *user_obj = json_object_new_object();
+        json_object_object_add(user_obj, "mac", json_object_new_string(mac_str));
+        dev_node_t *dev = find_dev_node(mac_str);
+        if (dev){
+            json_object_object_add(user_obj, "nickname", json_object_new_string(dev->nickname));
+            json_object_object_add(user_obj, "hostname", json_object_new_string(dev->hostname));
+        }else{
+            json_object_object_add(user_obj, "nickname", json_object_new_string(""));
+            json_object_object_add(user_obj, "hostname", json_object_new_string(""));
+        }
+        json_object_array_add(user_array, user_obj);
+    }
+
+    json_object_object_add(data_obj, "list", user_array);
+    json_object_object_add(response, "data", data_obj);
+    
+    uci_free_context(uci_ctx);
+    
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+
+}
+
+
+static int handle_set_app_filter_user(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    struct json_object *response = json_object_new_object();
+    int i;
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (!msg_obj_str) {
+        printf("format json failed\n");
+        return 0;
+    }
+    printf("msg_obj_str: %s\n", msg_obj_str);
+    struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+    struct json_object *mode_object = json_object_object_get(req_obj, "mode");
+    if (!mode_object) {
+        printf("mode_object is NULL\n");
+        return 0;
+    }
+    printf("mode_object: %d\n", json_object_get_int(mode_object));
+
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+
+    af_uci_set_int_value(uci_ctx, "appfilter.global.user_mode", json_object_get_int(mode_object));
+    af_uci_commit(uci_ctx, "appfilter");
+    reload_oaf_rule();
+
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+
+
+
+static int handle_del_app_filter_user(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    printf("handle_del_app_filter_user\n");
+    struct json_object *response = json_object_new_object();
+    int i;
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (!msg_obj_str) {
+        printf("format json failed\n");
+        return 0;
+    }
+    printf("msg_obj_str: %s\n", msg_obj_str);
+    struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+    struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
+    if (!mac_obj) {
+        printf("mac_obj is NULL\n");
+        return 0;
+    }
+    printf("mac: %s\n", json_object_get_string(mac_obj));
+
+ 
+
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return 0;
+    }
+    char mac_str[128] = {0};
+       int num = af_get_uci_list_num(uci_ctx, "appfilter", "af_user");
+    for (int i = 0; i < num; i++) {
+        af_uci_get_array_value(uci_ctx, "appfilter.@af_user[%d].mac", i, mac_str, sizeof(mac_str));
+        if (strcmp(mac_str, json_object_get_string(mac_obj)) == 0) {
+            printf("delete af_user[%d]\n", i);
+
+            char buf[128] = {0};
+            sprintf(buf, "appfilter.@af_user[%d]", i);
+            af_uci_delete(uci_ctx, buf);
+            break;
+        }
+    }
+
+    af_uci_commit(uci_ctx, "appfilter");
+    reload_oaf_rule();
+
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+
+
+
+static int handle_add_app_filter_user(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    printf("handle_add_app_filter_user\n");
+    struct json_object *response = json_object_new_object();
+    int i;
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (!msg_obj_str) {
+        printf("format json failed\n");
+        return -1;
+    }
+    printf("msg_obj_str: %s\n", msg_obj_str);
+    struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+    struct json_object *mac_array = json_object_object_get(req_obj, "mac_list");
+    if (!mac_array)
+        return -1;
+    
+    
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return -1;
+    }
+
+    int len = json_object_array_length(mac_array);
+    printf("len: %d\n", len);
+    for (int i = 0; i < len; i++) {
+        struct json_object *mac_obj = json_object_array_get_idx(mac_array, i);
+        af_uci_add_section(uci_ctx, "appfilter", "af_user");
+        af_uci_set_value(uci_ctx, "appfilter.@af_user[-1].mac", json_object_get_string(mac_obj));
+    }
+    printf("add af_user ok\n");
+    af_uci_commit(uci_ctx, "appfilter");
+    reload_oaf_rule();
+
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+static int handle_set_nickname(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+
+    struct json_object *response = json_object_new_object();
+    int i;
+    char *msg_obj_str = blobmsg_format_json(msg, true);
+    if (!msg_obj_str) {
+        printf("format json failed\n");
+        return -1;
+    }
+    printf("msg_obj_str: %s\n", msg_obj_str);
+    struct json_object *req_obj = json_tokener_parse(msg_obj_str);
+    struct json_object *mac_obj = json_object_object_get(req_obj, "mac");
+   
+    struct json_object *nickname_obj = json_object_object_get(req_obj, "nickname");
+    if (!nickname_obj || !mac_obj)
+        return -1;
+    
+    
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        printf("Failed to allocate UCI context\n");
+        return -1;
+    }
+    int num = af_get_uci_list_num(uci_ctx, "user_info", "user_info");
+    char mac_str[128] = {0};
+    int index = -1;
+    for (i = 0; i < num; i++) {
+        af_uci_get_array_value(uci_ctx, "user_info.@user_info[%d].mac", i, mac_str, sizeof(mac_str));
+        if (strcmp(mac_str, json_object_get_string(mac_obj)) == 0) {
+            index = i;
+            printf("found nickname index: %d\n", index);
+            break;
+        }
+    }
+
+    if (strlen(json_object_get_string(nickname_obj)) > 0) {
+        if (index == -1) {
+            af_uci_add_section(uci_ctx, "user_info", "user_info");
+        }
+        af_uci_set_array_value(uci_ctx, "user_info.@user_info[%d].mac", index, json_object_get_string(mac_obj));
+        af_uci_set_array_value(uci_ctx, "user_info.@user_info[%d].nickname", index, json_object_get_string(nickname_obj));
+    }
+    else{
+        char uci_option[128] = {0};
+        sprintf(uci_option, "user_info.@user_info[%d]", index);
+        af_uci_delete(uci_ctx, uci_option);
+        printf("delete nickname mac = %s\n", json_object_get_string(mac_obj));
+    }
+
+  
+    af_uci_commit(uci_ctx, "user_info");
+    reload_oaf_rule();
+
+    uci_free_context(uci_ctx);
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+}
+
+extern af_run_time_status_t g_af_status;
+
+
+static int handle_get_oaf_status(struct ubus_context *ctx, struct ubus_object *obj,
+                                 struct ubus_request_data *req, const char *method,
+                                 struct blob_attr *msg) {
+    struct json_object *response = json_object_new_object();
+    struct json_object *data_obj = json_object_new_object();
+    char result[128] = {0};
+    int enable = 0;
+    
+    exec_with_result_line("cat /proc/sys/oaf/enable", result, sizeof(result));
+    enable = atoi(result);
+ 
+    json_object_object_add(data_obj, "enable", json_object_new_int(enable));
+    json_object_object_add(data_obj, "config_enable", json_object_new_int(g_af_config.global.enable));
+    json_object_object_add(data_obj, "time_mode", json_object_new_int(g_af_config.time.time_mode));
+    json_object_object_add(data_obj, "match_time", json_object_new_int(g_af_status.match_time));
+
+    if (g_af_config.time.time_mode == 1) {
+        json_object_object_add(data_obj, "filter", json_object_new_int(g_af_status.filter));
+        if (g_af_status.filter == 1) { // 过滤中
+            json_object_object_add(data_obj, "remain_time", json_object_new_int(g_af_config.time.deny_time - g_af_status.deny_time));
+        }
+        else {
+            json_object_object_add(data_obj, "remain_time", json_object_new_int(g_af_config.time.allow_time - g_af_status.allow_time));
+        }
+    }
+
+
+    json_object_object_add(response, "data", data_obj);
+    
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    blobmsg_add_object(&b, response);
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    json_object_put(response);
+    return 0;
+
+}
+
 static const struct blobmsg_policy empty_policy[1] = {
     //[DEV_NAME] = { .name = "name", .type = BLOBMSG_TYPE_STRING },
 };
 
 static struct ubus_method appfilter_object_methods[] = {
-    UBUS_METHOD("visit_list", appfilter_handle_visit_list, empty_policy),
+    UBUS_METHOD("dev_visit_list", appfilter_handle_dev_visit_list, empty_policy),
     UBUS_METHOD("dev_visit_time", appfilter_handle_visit_time, empty_policy),
     UBUS_METHOD("app_class_visit_time", handle_app_class_visit_time, empty_policy),
     UBUS_METHOD("dev_list", appfilter_handle_dev_list, empty_policy),
@@ -744,6 +1414,16 @@ static struct ubus_method appfilter_object_methods[] = {
 
     UBUS_METHOD("set_app_filter_base", handle_set_app_filter_base, empty_policy),
     UBUS_METHOD("get_app_filter_base", handle_get_app_filter_base, empty_policy),
+    UBUS_METHOD("set_app_filter_time", handle_set_app_filter_time, empty_policy),
+    UBUS_METHOD("get_app_filter_time", handle_get_app_filter_time, empty_policy),
+    UBUS_METHOD("get_all_users", handle_get_all_users, empty_policy),
+    UBUS_METHOD("get_app_filter_user", handle_get_app_filter_user, empty_policy),
+    UBUS_METHOD("set_app_filter_user", handle_set_app_filter_user, empty_policy),
+    UBUS_METHOD("del_app_filter_user", handle_del_app_filter_user, empty_policy),
+    UBUS_METHOD("add_app_filter_user", handle_add_app_filter_user, empty_policy),
+    UBUS_METHOD("set_nickname", handle_set_nickname, empty_policy),
+    UBUS_METHOD("get_oaf_status", handle_get_oaf_status, empty_policy),
+
 };
 
 static struct ubus_object_type main_object_type =

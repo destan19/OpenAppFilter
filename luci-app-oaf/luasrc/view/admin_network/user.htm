@@ -1,0 +1,361 @@
+<style>
+    /* Base styles similar to the time template */
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+
+    input[type="radio"] {
+        margin: 0; /* Reset all margins */
+        padding: 0; /* Reset padding */
+        width: 16px; /* Set a specific width */
+        height: 16px; /* Set a specific height */
+        border: 1px solid #ccc; /* Add a border */
+        /* Remove border-radius and appearance to keep default styling */
+        background-color: #fff; /* Set background color */
+        vertical-align: middle; /* Align vertically in the middle */
+        /* Remove appearance: none; to keep default styling */
+        position: relative; /* Ensure relative positioning */
+    }
+    .user-list {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    
+    .user-list th, .user-list td {
+        padding: 8px;
+        border: 1px solid #ddd;
+        text-align: left;
+    }
+    
+    /* Add user button */
+    .add-user-btn {
+        margin-top: 10px;
+        padding: 5px 15px;
+        background-color: #113861;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    .mode-selection {
+        margin-bottom: 10px;
+        margin-top: 10px;
+    }
+    .delete-button {
+        padding: 3px 8px;
+        background-color: #ff4444;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 5px;
+        width: 60%;
+        max-width: 600px;
+    }
+    
+    .user-selection {
+        max-height: 300px;
+        overflow-y: auto;
+        margin: 15px 0;
+    }
+    
+    .user-item {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+    }
+    
+    .submit-button {
+        margin-top: 30px;
+        width: 150px;
+        height: 30px;
+        background-color: #2885e8;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+</style>
+
+<script type="text/javascript">//<![CDATA[
+    let userData = {
+        users: [],
+        mode: 1
+    };
+
+            
+    let allUsers = [
+           
+        ];
+    function initData() {
+        userData.list = [
+       
+        ];
+        getAppFilterUserData();
+        getAllUsersData();
+    }
+
+
+    function getAllUsersData() {
+        new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 2, page: 0},
+            function (x, data) {
+                allUsers = data.data.list;
+                renderAutoUserData();
+            }
+        );
+    }
+
+
+    function getAppFilterUserData() {
+        new XHR().get('<%=url('admin/network/get_app_filter_user')%>', null,
+            function (x, data) {
+                userData = data.data;
+                renderUserData();
+                render_mode_description(userData.mode);
+            }
+        );
+    }
+
+
+    function renderUserData() {
+        const table = document.getElementById('user_table');
+        const rows = table.querySelectorAll('.tr:not(.table-titles)');
+        rows.forEach(row => row.remove());
+        
+        // Update mode selection radio buttons
+        const modeRadios = document.querySelectorAll('input[name="mode"]');
+
+        console.log("userData.mode = " + userData.mode);
+        modeRadios.forEach(radio => {
+            console.log("radio.value = " + radio.value);
+            radio.checked = parseInt(radio.value) === userData.mode;
+        });
+        if (userData.mode === 1) {
+            document.getElementById('user_table').style.display = 'table';
+            document.getElementById('auto_user_table').style.display = 'none';
+        } else {
+            document.getElementById('user_table').style.display = 'none';
+            document.getElementById('auto_user_table').style.display = 'table';
+        }
+
+        // Hide add button and actions column header in manual mode
+        const addButton = document.querySelector('.cbi-button-add');
+        const actionsHeader = document.querySelector('.table-titles .th:last-child');
+        if (addButton) {
+            addButton.style.display = userData.mode === 1 ? 'inline-block' : 'none';
+        }
+        if (actionsHeader) {
+            actionsHeader.style.display = userData.mode === 1 ? '' : 'none';
+        }
+        
+        const displayList = userData.mode === 1 ? userData.list : allUsers;
+        
+        displayList.forEach((user, index) => {
+            const hostname = user.hostname || '--';
+            const nickname = user.nickname || '--';
+            const row = document.createElement('div');
+            row.className = 'tr';
+            row.innerHTML = `
+                <div class="td">${user.mac}</div>
+                <div class="td">${hostname}</div>
+                <div class="td">${nickname}</div>
+                ${userData.mode === 1 ? `<div class="td"><button type="button" class="delete-button" onclick="removeUser(${index})">删除</button></div>` : ''}
+            `;
+            table.appendChild(row);
+        });
+    }
+
+
+    function renderAutoUserData() {
+        const table = document.getElementById('auto_user_table');
+        const rows = table.querySelectorAll('.tr:not(.table-titles)');
+        rows.forEach(row => row.remove());
+        console.log("allUsers  111");
+        const displayList =  allUsers;
+        console.log("allUsers 222");
+        displayList.forEach((user, index) => {
+            const hostname = user.hostname || '--';
+            const nickname = user.nickname || '--';
+            const row = document.createElement('div');
+            row.className = 'tr';
+            row.innerHTML = `
+                <div class="td">${user.mac}</div>
+                <div class="td">${hostname}</div>
+                <div class="td">${nickname}</div>
+            `;
+            table.appendChild(row);
+        });
+        console.log("allUsers 333");
+    }
+
+    function showSuccessMessage(message = '设置成功') {
+        const modal = document.getElementById('modal');
+        const messageElement = modal.querySelector('p');
+        messageElement.textContent = message;
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 1000);
+    }
+
+    function removeUser(index) {
+        const userToRemove = userData.list[index];
+        new XHR().post('<%=url('admin/network/del_app_filter_user')%>', 
+            { mac: userToRemove.mac },
+            function(x, data) {
+                getAppFilterUserData();
+                showSuccessMessage('删除成功');
+            }
+        );
+    }
+    
+
+    function showUserModal() {
+        const modal = document.getElementById('userModal');
+        modal.style.display = 'flex';
+        
+        const userList = document.getElementById('userList');
+        userList.innerHTML = '';
+
+        allUsers.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.style.padding = '8px';
+            userElement.style.borderBottom = '1px solid #eee';
+            
+            // Determine the display name
+            const displayName = user.nickname || user.hostname || '';
+            
+            userElement.innerHTML = `
+                <label style="display: flex; align-items: center;">
+                    <input type="checkbox" value="${user.mac}" style="margin-right: 8px;">
+                    <span>${user.mac}</span>
+                    <span style="color: #666; margin-left: 8px;">${displayName ? `(${displayName})` : ''}</span>
+                </label>
+            `;
+            userList.appendChild(userElement);
+        });
+    }
+    
+    function closeUserModal() {
+        const modal = document.getElementById('userModal');
+        modal.style.display = 'none';
+    }
+
+    function addSelectedUsers() {
+        const userList = document.getElementById('userList');
+        const checkboxes = userList.querySelectorAll('input[type="checkbox"]:checked');
+        
+        const selectedMacs = Array.from(checkboxes).map(checkbox => checkbox.value);
+        
+        console.log(selectedMacs);
+        new XHR().post('<%=url('admin/network/add_app_filter_user')%>', 
+            { mac_list: selectedMacs },
+            function(x, data) {
+                getAppFilterUserData();
+                closeUserModal();
+                showSuccessMessage('添加成功');
+            }
+        );
+    }
+
+    function render_mode_description(newMode) {
+        const modeDescription = document.getElementById('modeDescription');
+        if (newMode === 0) {
+            modeDescription.textContent = '自动模式下，所有新加入的终端将会被管控，手机随机MAC也适用';
+        } else {
+            modeDescription.textContent = '手动模式下，只有指定终端被管控';
+        }
+    }
+
+    function switchMode(newMode) {
+        userData.mode = newMode;
+        renderUserData();
+        render_mode_description(newMode);
+
+        new XHR().post('<%=url('admin/network/set_app_filter_user')%>', 
+        { mode: newMode },
+        function(x, data) {
+            console.log('Mode updated successfully');
+            showSuccessMessage('模式切换成功');
+        });
+    }
+
+    window.onload = initData;
+//]]></script>
+
+<div class="cbi-section cbi-tblsection">
+    <div style="max-width: 1000px; margin-left: 5px;padding: 5px;">
+        <div class="mode-selection">
+            <input type="radio" name="mode" value="0" onclick="switchMode(0)"> 自动模式
+            <input type="radio" name="mode" value="1" checked onclick="switchMode(1)"> 手动模式
+        </div>
+
+    <!-- Add a new element for mode description -->
+    <div id="modeDescription" style="margin-bottom: 15px;">
+        手动模式下，只有以下添加的终端被管控
+    </div>
+    
+    <div class="table" id="user_table" style="display: none;">
+        <div class="tr table-titles">
+            <div class="th"><%:MAC%></div>
+            <div class="th"><%:主机名%></div>
+            <div class="th"><%:备注%></div>
+            <div class="th"><%:Actions%></div>
+        </div>
+    </div>
+
+    <div class="table" id="auto_user_table" style="display: none;">
+        <div class="tr table-titles">
+            <div class="th"><%:MAC%></div>
+            <div class="th"><%:主机名%></div>
+            <div class="th"><%:备注%></div>
+        </div>
+    </div>
+
+    <div class="cbi-section-create">
+        <input type="button" class="cbi-button cbi-button-add" value="<%:添加用户%>" onclick="showUserModal()" />
+    </div>
+
+    </div>
+</div>
+
+    <div id="userModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 400px; height: 300px; display: flex; flex-direction: column;">
+            <h3 style="margin: 0 0 15px 0;">选择设备</h3>
+            <div id="userList" style="flex: 1; overflow-y: auto;">
+            </div>
+            <div style="margin-top: 15px; text-align: right;">
+                <button type="button" onclick="addSelectedUsers()" style="margin-right: 10px; padding: 5px 15px;">确定</button>
+                <button type="button" onclick="closeUserModal()" style="padding: 5px 15px;">取消</button>
+            </div>
+        </div>
+    </div> 
+
+
+    <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
+            <p style="margin: 0;">设置成功</p>
+        </div>
+    </div>

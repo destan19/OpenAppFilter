@@ -34,64 +34,118 @@ THE SOFTWARE.
 #include <arpa/inet.h>
 #include "appfilter.h"
 
+int current_log_level = LOG_LEVEL_INFO;
+af_run_time_status_t g_af_status;
+int g_oaf_config_change = 0;
 
-void check_appfilter_enable(void)
-{
-    int enable = 1;
-    struct tm *t;
-	af_ctl_time_t *af_t = NULL;
-    time_t tt;
-    time(&tt);
-    enable = config_get_appfilter_enable();
-
-    if (0 == enable)
-        goto EXIT;
-    af_t = load_appfilter_ctl_time_config();
-    if (!af_t)
-    {
-        enable = 0;
-        goto EXIT;
-    }
-
-    t = localtime(&tt);
-    if (af_t->days[t->tm_wday] != 1)
-    {
-        if (af_t->time_mode == 0){
-            enable = 0;
-            goto EXIT;
-        }
-    }
-
-    int cur_mins = t->tm_hour * 60 + t->tm_min;
-    if (((af_t->start.hour * 60 + af_t->start.min < cur_mins) && (cur_mins < af_t->end.hour * 60 + af_t->end.min))
-        || ((af_t->start2.hour * 60 + af_t->start2.min < cur_mins) && (cur_mins < af_t->end2.hour * 60 + af_t->end2.min))
-    )
-    {
-        if (af_t->time_mode == 0){
-            enable = 1;
-        }
-        else{
-            enable = 0;
-        }
-    }
-    else{
-        if (af_t->time_mode == 0){
-            enable = 0;
-        }
-        else{
-            enable = 1;
-        }
-    }
-EXIT:
-    if (enable)
-    {
-        system("echo 1 >/proc/sys/oaf/enable ");
-    }
-    else
-        system("echo 0 >/proc/sys/oaf/enable ");
-	if (af_t)
-   		free(af_t);
+void af_init_time_status(void){
+    g_af_status.filter = 0;
+    g_af_status.deny_time = 0;
+    g_af_status.allow_time = 0;
+    g_af_status.match_time = 0;
 }
+
+
+void af_init_status(void){
+    af_init_time_status();
+}
+
+
+/** 
+config time 'time'
+	option time_mode '0'
+	option start_time '00:00'
+	option end_time '23:59'
+	option days '1 2 3 4 5'
+	list time '12:00-13:00'
+	list time '15:00-16:00'
+	list time '18:00-19:00'
+	list time '21:00-21:30'
+	list time '22:00-23:00'
+	list time '23:01-23:30'
+	list time '23:50-23:40'
+*/
+
+int af_load_time_config(af_time_config_t *t_config)
+{
+    char time_list_buf[MAX_TIME_LIST_LEN] = {0};
+    char days_buf[128] = {0};
+    char start_time_buf[128] = {0};
+    char end_time_buf[128] = {0};
+    struct uci_context *ctx = uci_alloc_context();
+    if (!ctx)
+        return -1;
+    memset(t_config, 0, sizeof(af_time_config_t));
+    t_config->time_mode = af_uci_get_int_value(ctx, "appfilter.time.time_mode");
+    t_config->deny_time = af_uci_get_int_value(ctx, "appfilter.time.deny_time");
+    t_config->allow_time = af_uci_get_int_value(ctx, "appfilter.time.allow_time");
+    
+    af_uci_get_value(ctx, "appfilter.time.start_time", start_time_buf, sizeof(start_time_buf));
+    af_uci_get_value(ctx, "appfilter.time.end_time", end_time_buf, sizeof(end_time_buf));
+    af_uci_get_value(ctx, "appfilter.time.days", days_buf, sizeof(days_buf));
+    LOG_INFO("mode = %d, start_time: %s, end_time: %s, days: %s", t_config->time_mode, start_time_buf, end_time_buf, days_buf);
+    sscanf(start_time_buf, "%d:%d", &t_config->seg_time.start_time.hour, &t_config->seg_time.start_time.min);
+    sscanf(end_time_buf, "%d:%d", &t_config->seg_time.end_time.hour, &t_config->seg_time.end_time.min);
+
+    t_config->time_num = 0;
+    char *p = strtok(days_buf, " ");
+    if (!p)
+        goto EXIT;
+    do
+    {
+        t_config->days[atoi(p)] = 1;
+    } while (p = strtok(NULL, " "));
+
+    af_uci_get_list_value(ctx, "appfilter.time.time", time_list_buf, sizeof(time_list_buf), " ");
+    p = strtok(time_list_buf, " ");
+    if (!p)
+        goto EXIT;
+    do
+    {
+        sscanf(p, "%d:%d-%d:%d", &t_config->time_list[t_config->time_num].start_time.hour,
+             &t_config->time_list[t_config->time_num].start_time.min, &t_config->time_list[t_config->time_num].end_time.hour, &t_config->time_list[t_config->time_num].end_time.min);
+        LOG_INFO("time[%d] %d:%d-%d:%d\n", t_config->time_num, t_config->time_list[t_config->time_num].start_time.hour, t_config->time_list[t_config->time_num].start_time.min,
+                 t_config->time_list[t_config->time_num].end_time.hour, t_config->time_list[t_config->time_num].end_time.min);
+        t_config->time_num++;
+    } while (p = strtok(NULL, " "));
+EXIT:
+    uci_free_context(ctx);
+    return 0;
+}
+
+
+void af_load_global_config(af_global_config_t *config){
+    int ret = 0;
+    struct uci_context *ctx = uci_alloc_context();
+    if (!ctx)
+        return;
+    ret = af_uci_get_int_value(ctx, "appfilter.global.enable");
+    if (ret < 0)
+        config->enable = 0;
+    else
+        config->enable = ret;
+
+    ret = af_uci_get_int_value(ctx, "appfilter.global.user_mode");
+    if (ret < 0)
+        config->user_mode = 0;
+    else
+        config->user_mode = ret;
+
+    ret = af_uci_get_int_value(ctx, "appfilter.global.work_mode");
+    if (ret < 0)
+        config->work_mode = 0;
+    else
+        config->work_mode = ret;
+    uci_free_context(ctx);
+    LOG_INFO("enable=%d, user_mode=%d, work_mode=%d", config->enable, config->user_mode, config->work_mode);
+}
+
+void af_load_config(af_config_t *config){
+    memset(config, 0, sizeof(af_config_t));
+    af_load_global_config(&config->global);
+    af_load_time_config(&config->time);
+}
+
 
 void update_lan_ip(void){
     char ip_str[32] = {0};
@@ -125,34 +179,125 @@ void update_lan_ip(void){
     system(cmd_buf);
 }
 
+
+
+
+int af_check_time_manual(af_time_config_t *t_config) {
+    time_t now = time(NULL);
+    struct tm *current_time = localtime(&now);
+    int current_minutes = current_time->tm_hour * 60 + current_time->tm_min;
+
+    LOG_DEBUG("current time: %02d:%02d\n", current_time->tm_hour, current_time->tm_min);
+
+    for (int i = 0; i < t_config->time_num; i++) {
+        int start_minutes = t_config->time_list[i].start_time.hour * 60 + t_config->time_list[i].start_time.min;
+        int end_minutes = t_config->time_list[i].end_time.hour * 60 + t_config->time_list[i].end_time.min;
+        LOG_DEBUG("check time: %02d:%02d-%02d:%02d\n", 
+               t_config->time_list[i].start_time.hour, t_config->time_list[i].start_time.min,
+               t_config->time_list[i].end_time.hour, t_config->time_list[i].end_time.min);
+        
+        if (current_minutes >= start_minutes && current_minutes <= end_minutes) {
+            LOG_DEBUG("current time in time list\n");
+            g_af_status.match_time = 1;
+            return 1;
+        }
+    }
+    g_af_status.match_time = 0;
+    return 0;
+}
+
+int af_check_time_dynamic(af_time_config_t *t_config) {
+    time_t now = time(NULL);
+    struct tm *current_time = localtime(&now);
+    int current_minutes = current_time->tm_hour * 60 + current_time->tm_min;
+
+    int start_minutes = t_config->seg_time.start_time.hour * 60 + t_config->seg_time.start_time.min;
+    int end_minutes = t_config->seg_time.end_time.hour * 60 + t_config->seg_time.end_time.min;
+    LOG_DEBUG("check seg_time: %02d:%02d-%02d:%02d\n", 
+           t_config->seg_time.start_time.hour, t_config->seg_time.start_time.min,
+           t_config->seg_time.end_time.hour, t_config->seg_time.end_time.min);
+    if (!(current_minutes >= start_minutes && current_minutes <= end_minutes)) {
+        LOG_DEBUG("current time not in seg_time\n");
+        af_init_time_status();
+        return 0; 
+    }
+
+    g_af_status.match_time = 1;
+    if (g_af_status.filter == 1) {
+        g_af_status.deny_time++;
+        if (g_af_status.deny_time >= t_config->deny_time) {
+            g_af_status.filter = 0;
+            g_af_status.deny_time = 0;
+            LOG_DEBUG("deny time over, filter = 0");
+        }
+        LOG_DEBUG("deny_time: %d\n", g_af_status.deny_time);
+    } else {
+        g_af_status.allow_time++;
+        if (g_af_status.allow_time >= t_config->allow_time) {
+            g_af_status.filter = 1;
+            g_af_status.allow_time = 0;
+            LOG_DEBUG("allow time over, filter = 1");
+        }
+        LOG_DEBUG("allow_time: %d\n", g_af_status.allow_time);
+    }
+    return g_af_status.filter;
+}
+
+int af_check_time(af_time_config_t *t_config) {
+    time_t now = time(NULL);
+    struct tm *current_time = localtime(&now);
+    LOG_DEBUG("current day: %d\n", current_time->tm_wday);
+    if (!t_config->days[current_time->tm_wday]) {
+        LOG_DEBUG("current day not in configured days\n");
+        af_init_time_status();
+        return 0;
+    }
+    if (t_config->time_mode == 0) {
+        LOG_DEBUG("manual mode\n");
+        return af_check_time_manual(t_config);
+    } else {
+        LOG_DEBUG("dynamic mode\n");
+        return af_check_time_dynamic(t_config);
+    }
+}
+
+
+void update_oaf_status(void){
+    int ret = 0;
+    int cur_enable = 0;
+    ret = af_check_time(&g_af_config.time);
+    if (ret == 1){
+        system("echo 1 >/proc/sys/oaf/enable");
+    }
+    else{
+        system("echo 0 >/proc/sys/oaf/enable");
+    }
+}
+
+
 void dev_list_timeout_handler(struct uloop_timeout *t)
 {
     static int count = 0;
     count++;
-
-
-
-    printf("%s %d count2 = %d\n", __func__, __LINE__, count);
-
-
-    dump_dev_list();
-        printf("%s %d count = %d\n", __func__, __LINE__, count);
-
-    check_dev_visit_info_expire();
-        printf("%s %d count = %d\n", __func__, __LINE__, count);
-
-    flush_expire_visit_info();
-    //dump_dev_visit_list();
-    update_lan_ip();
-    check_appfilter_enable();
-        printf("%s %d count = %d\n", __func__, __LINE__, count);
-
-    if (check_dev_expire()){
-        flush_expire_visit_info();
-        flush_dev_expire_node();
+    if (count % 10 == 0){
+        update_dev_list();
+        dump_dev_list();
+        update_oaf_status();
     }
-        printf("%s %d count = %d\n", __func__, __LINE__, count);
-    uloop_timeout_set(t, 10000);
+    if (count % 60 == 0){
+        check_dev_visit_info_expire();
+        update_lan_ip();
+        if (check_dev_expire()){
+            flush_dev_expire_node();
+        }
+        flush_expire_visit_info();
+    }
+    if (g_oaf_config_change == 1){
+        af_load_config(&g_af_config);
+        update_oaf_status();
+        g_oaf_config_change = 0;
+    }
+    uloop_timeout_set(t, 1000);
 }
 
 struct uloop_timeout dev_tm = {
@@ -162,22 +307,24 @@ static struct uloop_fd appfilter_nl_fd = {
     .cb = appfilter_nl_handler,
 };
 
+
+
+
 int main(int argc, char **argv)
 {
     int ret = 0;
+    LOG_INFO("appfilter start");
+    af_load_config(&g_af_config);
+    af_init_status();
     uloop_init();
-    printf("init appfilter2\n");
     init_dev_node_htable();
-
     init_app_name_table();
     init_app_class_name_table();
     if (appfilter_ubus_init() < 0)
     {
-        fprintf(stderr, "Failed to connect to ubus\n");
+        LOG_ERROR("Failed to connect to ubus\n");
         return 1;
     }   
-
-
     appfilter_nl_fd.fd = appfilter_nl_init();
     uloop_fd_add(&appfilter_nl_fd, ULOOP_READ);
     af_msg_t msg;
