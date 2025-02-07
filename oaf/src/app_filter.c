@@ -258,7 +258,6 @@ int add_app_feature(int appid, char *name, char *feature)
 		AF_ERROR("error, name or feature is null\n");
 		return -1;
 	}
-	printk("feature = %s\n", feature);
 	// tcp;8000;www.sina.com;0:get_name;00:0a-01:11
 	memset(&dport_info, 0x0, sizeof(dport_info));
 	while (*p++)
@@ -291,19 +290,16 @@ int add_app_feature(int appid, char *name, char *feature)
 			break;
 		case AF_STR_PARAM_INDEX:
 			strncpy(search_str, begin, p - begin);
-			printk("search_str = %s\n", search_str);
 			break;
 		case AF_IGNORE_PARAM_INDEX:
 			strncpy(tmp_buf, begin, p - begin);
 			ignore = k_atoi(tmp_buf);
 			break;
 		}
-		printk("featuren = %s, param_num = %d\n", feature, param_num);
 		param_num++;
 		begin = p + 1;
 	}
 
-	printk("param_num = %d, ignore = %d, dict = %s\n", param_num, ignore, dict);
 	// old version
 	if (param_num == AF_DICT_PARAM_INDEX){
 		strncpy(dict, begin, p - begin);
