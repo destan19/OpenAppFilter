@@ -341,8 +341,6 @@ void af_init_feature(char *feature_str)
 	if (strstr(feature_str, "#"))
 		return;
 
-	printk("feature_str = %s\n", feature_str);
-
 	k_sscanf(feature_str, "%d%[^:]", &app_id, app_name);
 	while (*p++)
 	{
@@ -820,10 +818,6 @@ int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
 			}
 			if (flow->l4_data[pos] != node->pos_info[i].value)
 			{
-				AF_DEBUG("not match pos[%d] = %x, flow[%d] = %x\n", pos, node->pos_info[i].value, pos, flow->l4_data[pos]);
-				if (af_log_lvl == 3){
-					print_hex_ascii(flow->l4_data, flow->l4_len > 128 ? 128 : flow->l4_len);
-				}
 				return AF_FALSE;
 			}
 			else{

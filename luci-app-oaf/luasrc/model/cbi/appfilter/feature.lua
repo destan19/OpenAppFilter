@@ -29,7 +29,7 @@ local rule_count = 0
 local version = ""
 local format = ""
 if nixio.fs.access("/tmp/feature.cfg") then
-    rule_count = tonumber(SYS.exec("cat /tmp/feature.cfg | wc -l"))
+    rule_count = tonumber(SYS.exec("cat /tmp/feature.cfg | grep -v ^$ |grep -v ^# | wc -l"))
     version = SYS.exec("cat /tmp/feature.cfg |grep \"#version\" | awk '{print $2}'")
 end
 format=SYS.exec("uci get appfilter.feature.format")
