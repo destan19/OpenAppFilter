@@ -100,6 +100,6 @@ typedef struct af_run_time_status{
     int match_time;
 }af_run_time_status_t;
 
-af_config_t g_af_config;
 
+extern af_config_t g_af_config;
 #endif

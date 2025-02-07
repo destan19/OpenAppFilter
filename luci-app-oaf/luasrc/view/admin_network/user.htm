@@ -121,7 +121,8 @@
     function getAllUsersData() {
         new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 2, page: 0},
             function (x, data) {
-                allUsers = data.data.list;
+ 				if (Array.isArray(data.data.list))  
+                	allUsers = data.data.list;
                 renderAutoUserData();
             }
         );
@@ -131,7 +132,10 @@
     function getAppFilterUserData() {
         new XHR().get('<%=url('admin/network/get_app_filter_user')%>', null,
             function (x, data) {
+
                 userData = data.data;
+				if (!Array.isArray(userData.list))                                  
+                	userData.list=[]   
                 renderUserData();
                 render_mode_description(userData.mode);
             }

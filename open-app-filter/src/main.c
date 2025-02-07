@@ -37,6 +37,7 @@ THE SOFTWARE.
 int current_log_level = LOG_LEVEL_INFO;
 af_run_time_status_t g_af_status;
 int g_oaf_config_change = 0;
+af_config_t g_af_config;
 
 void af_init_time_status(void){
     g_af_status.filter = 0;

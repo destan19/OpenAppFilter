@@ -1250,7 +1250,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	 if (TEST_MODE()){
 		if (flow.l4_protocol == IPPROTO_UDP){
 			if (flow.dport == 53 || flow.dport == 443){	
-				printk(" %s %pI4(%d)--> %pI4(%d) len = %d, %d ,pkt num = %d \n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
+				printk(" %s %pI4(%d)--> %pI4(%d) len = %d, %d ,pkt num = %llu \n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
 					&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id, total_packets);				
 					print_hex_ascii(flow.l4_data, flow.l4_len > 64 ? 64 : flow.l4_len);
 			}

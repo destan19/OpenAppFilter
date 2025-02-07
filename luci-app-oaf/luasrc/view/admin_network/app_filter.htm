@@ -171,6 +171,7 @@
 			return new Promise((resolve, reject) => {
 				new XHR().get('<%=url('admin/network/get_app_filter')%>', null,
 					function (x, data) {
+							if (Array.isArray(data.app_list))
 						app_filter_data = data.app_list;
 						resolve(); 
 					}
