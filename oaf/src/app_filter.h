@@ -177,6 +177,5 @@ void af_mac_list_init(void);
 void af_mac_list_clear(void);
 af_mac_info_t * find_af_mac(unsigned char *mac);
 int is_user_match_enable(void);
-extern int g_oaf_enable;
 
 #endif

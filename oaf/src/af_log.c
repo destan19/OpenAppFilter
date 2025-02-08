@@ -9,7 +9,9 @@
 int af_log_lvl = 1;
 int af_test_mode = 0;
 // todo: rename af_log.c
-int g_oaf_enable __read_mostly = 0;
+int g_oaf_filter_enable __read_mostly = 0;
+int g_oaf_record_enable __read_mostly = 0;
+int g_by_pass_accl = 1;
 int af_work_mode = AF_MODE_GATEWAY;
 unsigned int af_lan_ip = 0;
 unsigned int af_lan_mask = 0;
@@ -33,7 +35,21 @@ static struct ctl_table oaf_table[] = {
 	},
 	{
 		.procname	= "enable",
-		.data		= &g_oaf_enable,
+		.data		= &g_oaf_filter_enable,
+		.maxlen 	= sizeof(int),
+		.mode		= 0666,
+		.proc_handler	= proc_dointvec,
+	},
+	{
+		.procname	= "by_pass_accl",
+		.data		= &g_by_pass_accl,
+		.maxlen 	= sizeof(int),
+		.mode		= 0666,
+		.proc_handler	= proc_dointvec,
+	},
+	{
+		.procname	= "record_enable",
+		.data		= &g_oaf_record_enable,
 		.maxlen 	= sizeof(int),
 		.mode		= 0666,
 		.proc_handler	= proc_dointvec,

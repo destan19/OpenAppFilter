@@ -118,6 +118,51 @@
         background-color: #0f77e6;
     }
 
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 20px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(20px);
+    }
+
 </style>
 
 <script type="text/javascript">//<![CDATA[
@@ -302,15 +347,15 @@
 
         function submitAppFilterBase() {
             const filterSwitch = document.getElementById('filterSwitch').checked;
-            const workMode = document.getElementById('workMode').value;
-
+            const workMode = parseInt(document.getElementById('workMode').value, 10);
+            const recordSwitch = document.getElementById('recordSwitch').checked;
             const data = {
                 data: {
                     enable: filterSwitch ? 1 : 0, 
-                    work_mode: workMode 
+                    work_mode: workMode,
+                    record_enable: recordSwitch ? 1 : 0
                 }
             };
-            console.log("data is " + data);
             new XHR().post('<%=url('admin/network/set_app_filter_base')%>', data,
             function (x, data) {
                 console.log("Base filter settings updated");
@@ -340,8 +385,12 @@
                     } else {
                         document.getElementById('filterSwitch').checked = false;
                     }
+                    if (data.data.record_enable == 1) {
+                        document.getElementById('recordSwitch').checked = true;
+                    } else {
+                        document.getElementById('recordSwitch').checked = false;
+                    }
                     document.getElementById('workMode').value = data.data.work_mode;
-                    console.log("Base filter settings loaded");
                 }
             );
         }
@@ -408,22 +457,34 @@
             <label>运行状态:</label>
             <span id="run_status">运行中</span><span id="run_desc"></span>
         </div>
-        <div style="margin-bottom: 20px;margin-top: 10px;">
-            <label for="filterSwitch">过滤开关:</label>
-            <input type="checkbox" id="filterSwitch" name="filterSwitch" />
+        <div style="margin-top: 10px; display: flex; align-items: center;">
+            <label for="filterSwitch" style="margin-right: 5px;">应用过滤</label>
+            <label class="switch">
+                <input type="checkbox" id="filterSwitch" name="filterSwitch" />
+                <span class="slider"></span>
+            </label>
+            <label for="recordSwitch" style="margin-left: 20px;margin-right: 5px;">应用记录</label>
+            <label class="switch">
+                <input type="checkbox" id="recordSwitch" name="recordSwitch" />
+                <span class="slider"></span>
+            </label>
         </div>
 
-
-        <div style="margin-bottom: 20px;">
+        <div style="margin-top: 10px;">
             <label for="workMode">工作模式:</label>
             <select id="workMode" name="workMode">
                 <option value="0">网关模式</option>
                 <option value="1">旁路模式</option>
             </select>
         </div>
+ 
 
+        <div style="margin-top: 10px;">
+            <span>应用选择:</span>
+        </div>
+        <div id="appContainer"></div>
 
-        <div style="display: flex; justify-content: flex-start; align-items: center;width: 600px;">
+        <div style="display: flex; justify-content: flex-start; align-items: center;width: 600px;margin-top: 10px;">
             <div style="width: 280px; display: inline-block;">
                 <label>生效时间:</label> 
                 <button type="button" class="button-check" onclick="redirectToTimeConfig()">查看</button>
@@ -435,8 +496,6 @@
                 <button type="button" class="button-check" onclick="redirectToUserConfig()">查看</button>
             </div>
         </div>
-
-        <div id="appContainer"></div>
         <div class="button-container">
             <button type="button" class="submit-button" onclick="submitHandle()">保存</button>
         </div>

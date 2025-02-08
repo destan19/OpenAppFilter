@@ -36,7 +36,7 @@ THE SOFTWARE.
 
 int current_log_level = LOG_LEVEL_INFO;
 af_run_time_status_t g_af_status;
-int g_oaf_config_change = 0;
+int g_oaf_config_change = 1;
 af_config_t g_af_config;
 
 void af_init_time_status(void){
@@ -275,6 +275,15 @@ void update_oaf_status(void){
     }
 }
 
+void update_oaf_record_status(void){
+    if(g_af_config.global.record_enable == 1){
+        system("echo 1 >/proc/sys/oaf/record_enable");
+    }
+    else{
+        system("echo 0 >/proc/sys/oaf/record_enable");
+    }
+}
+
 
 void dev_list_timeout_handler(struct uloop_timeout *t)
 {
@@ -294,8 +303,10 @@ void dev_list_timeout_handler(struct uloop_timeout *t)
         update_oaf_status();
     }
     if (g_oaf_config_change == 1){
+        update_lan_ip();
         af_load_config(&g_af_config);
         update_oaf_status();
+        update_oaf_record_status();
         g_oaf_config_change = 0;
     }
     uloop_timeout_set(t, 1000);

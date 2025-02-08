@@ -71,6 +71,7 @@ typedef struct af_global_config_t{
     int enable;
     int user_mode;
     int work_mode;
+    int record_enable;
 }af_global_config_t;
 
 typedef struct time_config{
