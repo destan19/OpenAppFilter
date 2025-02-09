@@ -122,7 +122,6 @@ int validate_range_value(char *range_str)
 		}
 		else
 		{
-			printk("error, invalid char %x\n", *p);
 			return 0;
 		}
 	}
@@ -317,7 +316,7 @@ int add_app_feature(int appid, char *name, char *feature)
 		proto = IPPROTO_UDP;
 	else
 	{
-		printk("proto %s is not support\n", proto_str);
+		printk("proto %s is not support, feature = %s\n", proto_str, feature);
 		return -1;
 	}
 	sscanf(src_port_str, "%d", &src_port);
@@ -827,7 +826,7 @@ int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
 		}
 		if (strlen(node->search_str) > 0){
 			if (k_memstr(flow->l4_data, node->search_str, flow->l4_len)){
-				printk("match by search str, appid=%d, search_str=%s\n", node->app_id, node->search_str);
+				AF_DEBUG("match by search str, appid=%d, search_str=%s\n", node->app_id, node->search_str);
 				return AF_TRUE;
 			}
 			else{
@@ -938,7 +937,7 @@ int match_feature(flow_info_t *flow)
 		{
 			if (af_match_one(flow, node))
 			{
-				printk("match feature, appid=%d, feature = %s\n", node->app_id, node->feature);
+				AF_LMT_INFO("match feature, appid=%d, feature = %s\n", node->app_id, node->feature);
 				flow->app_id = node->app_id;
 				flow->feature = node;
 				strncpy(flow->app_name, node->app_name, sizeof(flow->app_name) - 1);

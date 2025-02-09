@@ -106,6 +106,9 @@
 
 					var tr = tb.insertRow(-1);
 					tr.className = 'tr';
+					if (user_list[i].online != 1) {
+						tr.style.color = '#A9A9A9'; // 设置离线行的字体颜色为浅灰色
+					}
 					tr.insertCell(-1).innerHTML = `
 						<div style="display: flex; align-items: center;">
 							<div>
@@ -123,7 +126,9 @@
 						return `<img src="<%=resource%>/app_icons/${app.id}.png" alt="${app.name}" title="${app.name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 8px;">`;
 					}).join("") || "--";
 					tr.insertCell(-1).innerHTML = app_list_str;
-					tr.insertCell(-1).innerHTML = user_list[i].online == 1 ? "<%:Online%>" : "<%:Offline%>";
+					tr.insertCell(-1).innerHTML = user_list[i].online == 1 
+						? `<span style="color: green;"><%:Online%></span>` 
+						: "<%:Offline%>";
 					tr.insertCell(-1).innerHTML = `
 						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}')" style="margin-right: 5px;">查看详情</button>
 						<button type="button" class="cbi-button cbi-button-add" onclick="showModifyNickname('${user_list[i].mac}')">修改备注</button>

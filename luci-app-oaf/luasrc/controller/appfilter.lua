@@ -7,7 +7,7 @@ function index()
 	end
 	
 	local page
-	entry({"admin", "services", "appfilter"}, alias("admin", "services", "appfilter", "user_list"),_("App Filter"), 10).dependent = true
+	entry({"admin", "services", "appfilter"}, alias("admin", "services", "appfilter", "app_filter"),_("App Filter"), 10).dependent = true
 
 
 	entry({"admin", "services", "appfilter", "user_list"}, 

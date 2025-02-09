@@ -32,10 +32,10 @@ if nixio.fs.access("/tmp/feature.cfg") then
     rule_count = tonumber(SYS.exec("cat /tmp/feature.cfg | grep -v ^$ |grep -v ^# | wc -l"))
     version = SYS.exec("cat /tmp/feature.cfg |grep \"#version\" | awk '{print $2}'")
 end
-format=SYS.exec("uci get appfilter.feature.format")
-if format == "" then
-    format="v3.0"
-end
+-- format=SYS.exec("uci get appfilter.feature.format")
+-- if format == "" then
+format="v3.0"
+-- end
 
 local display_str = "<style>" ..
                     ".label-style {}" ..

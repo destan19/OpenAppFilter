@@ -17,77 +17,76 @@
     .app-list {
         display: flex;
         flex-wrap: wrap;
-        justify-content: flex-start; /* 左对齐 */
-        margin-top: 10px; /* 增加与标题的间距 */
+        justify-content: flex-start;
+        margin-top: 10px; 
     }
     .app-item {
-        width: 140px; /* 固定宽度 */
+        width: 140px;
         box-sizing: border-box;
         padding: 5px;
-        display: flex; /* 使用flex布局 */
-        align-items: center; /* 垂直居中 */
+        display: flex; 
+        align-items: center; 
     }
     .app-item label {
-        display: flex; /* 使用flex布局 */
-        align-items: center; /* 垂直居中 */
-        width: 100%; /* 确保标签占满整个宽度 */
-        text-align: left; /* 左对齐文本 */
+        display: flex; 
+        align-items: center; 
+        width: 100%; 
+        text-align: left; 
     }
     .app-item input[type="checkbox"] {
-        margin-left: 2px; /* 勾选按钮离左侧2px */
-        margin-right: 8px; /* 应用程序名称离按钮8px */
+        margin-left: 2px;
+        margin-right: 8px; 
     }
 
     h2 {
         margin-bottom: 10px; 
     }
     .category-title {
-        display: flex; /* 使用flex布局 */
-        justify-content: space-between; /* 两端对齐 */
-        align-items: center; /* 垂直居中 */
-        width: 100%; /* 设置宽度为100% */
-        cursor: pointer; /* 鼠标悬停时显示为可点击 */
-        margin-bottom: 10px; /* 增加下方间距 */
+        display: flex;
+        justify-content: space-between; 
+        align-items: center; 
+        width: 100%; 
+        cursor: pointer; 
+        margin-bottom: 10px;
     }
     .category-name {
-        font-size: 14px; /* 设置字体大小为16px */
-        font-weight: normal; /* 设置字体为正常，不加粗 */
+        font-size: 14px; 
+        font-weight: normal; 
     }
     .arrow {
-        width: 12px; /* 图标宽度 */
-        height: 12px; /* 图标高度 */
-        /* background-image: url('path/to/your/icon.svg'); 替换为你的图标路径 */
+        width: 12px; 
+        height: 12px; 
 
-		background-image: url('<%=resource%>/icons/arrow.png'); /* 使用LuCI资源路径 */
-        background-size: contain; /* 确保图标适应容器 */
-        background-repeat: no-repeat; /* 防止重复 */
-        transition: transform 0.3s ease; /* 添加过渡效果 */
-        display: inline-block; /* 使旋转生效 */
-        transform: rotate(0deg); /* 初始状态箭头向右 */
+		background-image: url('<%=resource%>/icons/arrow.png'); 
+        background-size: contain; 
+        background-repeat: no-repeat; 
+        transition: transform 0.3s ease; 
+        display: inline-block; 
+        transform: rotate(0deg); 
     }
     .arrow.expanded {
-        transform: rotate(90deg); /* 展开状态箭头向下 */
+        transform: rotate(90deg);
     }
     .category-title div {
-        gap: 6px; /* 设置子元素之间的间距为20px */
+        gap: 6px;
     }
 
     @media (max-width: 600px) {
         .app-item {
-            width: 25%; /* 屏幕小于600px时每行显示4个 */
+            width: 25%; 
         }
     }
 
     .button-container {
         display: flex;
-        justify-content: right; /* 使按钮居中 */
-        margin-top: 20px; /* 上方留出一些空间 */
+        justify-content: right;
+        margin-top: 20px; 
     }
 
     .submit-button {
         margin-top: 30px;
-        width: 150px; /* 设置按钮宽度 */
-        height: 30px; /* 设置按钮高度 */
+        width: 150px;
+        height: 30px; 
         background-color: #2885e8;
         color: white;
         border: none;
@@ -98,7 +97,6 @@
         background-color: #0f77e6;
     }
 
-    /* Add new styles for time rules */
     .time-rules {
         margin-top: 20px;
         border: 1px solid #ddd;
@@ -147,7 +145,7 @@
     }
     .setting-item label {
         display: inline-block;
-        width: 150px;
+        width: 170px;
     }
     .setting-item input {
         width: 100px;
@@ -209,11 +207,9 @@
         
 		
 		function init_data() {
-			// getAppFilterData().then(() => {
-			// 	getClassListData();
-			// });
-			// getAppFilterBaseData(); // 新增调用获取过滤开关和工作模式数据的函数
-            getAppFilterTimeData();
+            getAppFilterTimeData().then(() => {
+                renderTimeData();
+            });
 		}
 
 		function getAppFilterTimeData() {
@@ -222,8 +218,7 @@
 					function (x, data) {
 						time_data = data.data;
                         console.log(data.data);
-                        renderTimeData();
-						resolve(); // 请求完成后调用 resolve
+						resolve(); 
 					}
 				);
 			});
@@ -232,19 +227,34 @@
 
 		function submitHandle() {
 			const time_data = getTimeFormData();
+			const maxEntries = 64;
+
+			if (!time_data.time_list || time_data.time_list.length === 0) {
+				const errorContainer = document.getElementById('errorContainer');
+				errorContainer.innerHTML = '至少添加一个时间段';
+				return;
+			}
+
+			if (time_data.time_list.length > maxEntries) {
+				const errorContainer = document.getElementById('errorContainer');
+				errorContainer.innerHTML = '时间段不能超过64条';
+				return; 
+			}
+
 			console.log('Time Rules:', time_data);
-            const data = {
-                data: time_data
-            }
-            new XHR().post('<%=url('admin/network/set_app_filter_time')%>', data,
-            function (x, data) {
-                init_data();
-                const modal = document.getElementById('modal');
-                modal.style.display = 'flex'; // 显示模态框
-                setTimeout(() => {
-                    modal.style.display = 'none'; // 3秒后自动隐藏模态框
-                }, 1000);            }
-            );
+			const data = {
+				data: time_data
+			};
+			new XHR().post('<%=url('admin/network/set_app_filter_time')%>', data,
+				function (x, data) {
+					init_data();
+					const modal = document.getElementById('modal');
+					modal.style.display = 'flex'; 
+					setTimeout(() => {
+						modal.style.display = 'none';
+					}, 1000);
+				}
+			);
 		}
 
 		function openModal() {
@@ -255,7 +265,6 @@
 			document.getElementById('modal').style.display = 'none';
 		}
 
-        // 新增获取过滤开关和工作模式数据的函数
         function getAppFilterBaseData() {
 			console.log("getAppFilterBaseData");
             new XHR().get('<%=url('admin/network/get_app_filter_base')%>', null,
@@ -265,7 +274,6 @@
                     } else {
                         document.getElementById('filterSwitch').checked = false;
                     }
-                    // 直接使用接口返回的work_mode值来设置选中的选项
                     document.getElementById('workMode').value = data.data.work_mode;
                     console.log("Base filter settings loaded");
                 }
@@ -278,9 +286,18 @@
             row.innerHTML = `
                 <td><input type="time" class="start-time" required></td>
                 <td><input type="time" class="end-time" required></td>
-                <td><button class="delete-time-btn" onclick="deleteTimeRow(this)">删除</button></td>
+                <td><button type="button" class="delete-time-btn" onclick="deleteTimeRow(this)">删除</button></td>
             `;
             tbody.appendChild(row);
+
+            setTimeout(() => {
+                const startTimeInput = row.querySelector('.start-time');
+                const endTimeInput = row.querySelector('.end-time');
+                startTimeInput.value = "00:00";
+                endTimeInput.value = "23:59";
+            }, 0);
+
+            addTimeValidation();
         }
 
         function deleteTimeRow(btn) {
@@ -317,14 +334,14 @@
                 weekday_list: weekdays
             };
 
-            if (mode === "0") { // 固定时间模式
+            if (mode === "0") {
                 const time_list = Array.from(document.getElementById('timeTableBody').rows)
                     .map(row => ({
                         start: row.querySelector('.start-time').value,
                         end: row.querySelector('.end-time').value
                     }));
                 timeData.time_list = time_list;
-            } else { // 动态时间模式
+            } else { 
                 timeData.start_time = document.getElementById('startTime').value;
                 timeData.end_time = document.getElementById('endTime').value;
                 timeData.allow_time = parseInt(document.getElementById('allowTime').value);
@@ -339,30 +356,66 @@
             element.nextElementSibling.classList.toggle('expanded');
         }
 
+        function addTimeValidation() {
+            document.querySelectorAll('.start-time, .end-time').forEach(input => {
+                input.addEventListener('blur', validateTime);
+            });
+        }
+
+        function validateTime(event) {
+            const row = event.target.closest('tr');
+            const startTimeInput = row.querySelector('.start-time');
+            const endTimeInput = row.querySelector('.end-time');
+
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = '';
+
+            let errorMessage = '';
+
+            if (!isValidTimeFormat(startTime) || !isValidTimeFormat(endTime)) {
+                errorMessage = '时间格式不合法，请输入有效的时间格式 (HH:MM)';
+            } else if (startTime >= endTime) {
+                errorMessage = '结束时间必须大于开始时间';
+            }
+
+            if (errorMessage) {
+                const errorElement = document.createElement('div');
+                errorElement.className = 'error-message';
+                errorElement.style.color = 'red';
+                errorElement.style.fontSize = '12px';
+                errorElement.textContent = errorMessage;
+                errorContainer.appendChild(errorElement);
+            }
+        }
+
+        function isValidTimeFormat(time) {
+            const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+            return timePattern.test(time);
+        }
+
         function renderTimeData() {
             // Set mode
             const timeMode = document.getElementById('timeMode');
-            timeMode.value = time_data.mode
-            toggleModeContent();
+            timeMode.value = time_data.mode;
 
-            // Set weekday checkboxes based on mode
+            // Clear previous selections
+            document.querySelectorAll('input[name="weekday"]').forEach(cb => cb.checked = false);
+
+            // Set weekday checkboxes for both modes
             time_data.weekday_list.forEach(day => {
-                if (time_data.mode === 0) {
-                    // For static mode, set checkboxes in staticWeekdaySelector
-                    const checkbox = document.querySelector('#staticWeekdaySelector input[name="weekday"][value="' + day + '"]');
-                    if (checkbox) checkbox.checked = true;
-                } else {
-                    // For dynamic mode, set checkboxes in advanced-content
-                    const checkbox = document.querySelector('.advanced-content input[name="weekday"][value="' + day + '"]');
-                    if (checkbox) checkbox.checked = true;
-                }
+                const staticCheckbox = document.querySelector(`#staticWeekdaySelector input[name="weekday"][value="${day}"]`);
+                const dynamicCheckbox = document.querySelector(`.advanced-content input[name="weekday"][value="${day}"]`);
+                if (staticCheckbox) staticCheckbox.checked = true;
+                if (dynamicCheckbox) dynamicCheckbox.checked = true;
             });
 
-            if (time_data.mode === 0) {
-                // Render time ranges
-                const tbody = document.getElementById('timeTableBody');
-                tbody.innerHTML = '';
-                
+            // Render static mode data
+            const tbody = document.getElementById('timeTableBody');
+            tbody.innerHTML = '';
+            if (time_data.time_list) {
                 time_data.time_list.forEach(timeRange => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -372,27 +425,60 @@
                     `;
                     tbody.appendChild(row);
                 });
-            } else { // 动态时间模式
-                if (time_data.start_time || time_data.end_time) {
-                    // If we have time data, expand the advanced settings
-                    const advancedToggle = document.querySelector('.advanced-toggle');
-                    if (advancedToggle) {
-                        toggleAdvanced(advancedToggle);
-                    }
-                }
-                if (time_data.start_time) {
-                    document.getElementById('startTime').value = time_data.start_time;
-                }
-                if (time_data.end_time) {
-                    document.getElementById('endTime').value = time_data.end_time;
-                }
-                if (time_data.allow_time) {
-                    document.getElementById('allowTime').value = time_data.allow_time;
-                }
-                if (time_data.deny_time) {
-                    document.getElementById('denyTime').value = time_data.deny_time;
-                }
             }
+
+            // Render dynamic mode data
+            if (time_data.start_time) {
+                document.getElementById('startTime').value = time_data.start_time;
+            }
+            if (time_data.end_time) {
+                document.getElementById('endTime').value = time_data.end_time;
+            }
+            if (time_data.allow_time) {
+                document.getElementById('allowTime').value = time_data.allow_time;
+            }
+            if (time_data.deny_time) {
+                document.getElementById('denyTime').value = time_data.deny_time;
+            }
+
+            // Ensure the correct content is displayed based on the mode
+            toggleModeContent();
+
+            // Add validation to time inputs
+            addTimeValidation();
+
+
+        }
+
+        function validateDynamicTime() {
+            const startTimeInput = document.getElementById('startTime');
+            const endTimeInput = document.getElementById('endTime');
+            const dynamicErrorContainer = document.getElementById('dynamicErrorContainer');
+            dynamicErrorContainer.innerHTML = ''; // 清空之前的错误信息
+
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+            let errorMessage = '';
+
+            if (!isValidTimeFormat(startTime) || !isValidTimeFormat(endTime)) {
+                errorMessage = '时间格式不合法，请输入有效的时间格式 (HH:MM)';
+            } else if (startTime >= endTime) {
+                errorMessage = '结束时间必须大于开始时间';
+            }
+
+            if (errorMessage) {
+                const errorElement = document.createElement('div');
+                errorElement.className = 'error-message';
+                errorElement.style.color = 'red';
+                errorElement.style.fontSize = '12px';
+                errorElement.textContent = errorMessage;
+                dynamicErrorContainer.appendChild(errorElement);
+            }
+        }
+
+        function isValidTimeFormat(time) {
+            const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+            return timePattern.test(time);
         }
 
         window.onload = init_data;
@@ -434,7 +520,7 @@
             <div class="weekday-item"><input type="checkbox" name="weekday" value="6"> 周六</div>
             <div class="weekday-item"><input type="checkbox" name="weekday" value="0"> 周日</div>
         </div>
-
+     
         <!-- 固定时间模式内容 -->
         <div id="staticTimeContent">
             <table class="time-table">
@@ -447,26 +533,28 @@
                 </thead>
                 <tbody id="timeTableBody">
                 </tbody>
-            </table>
 
+               
+            </table>
+            <div id="errorContainer" style="color: red; font-size: 12px; margin-top: 10px;"></div>
             <button class="add-time-btn" onclick="addTimeRow()">添加时间段</button>
         </div>
 
         <!-- 动态时间模式内容 -->
         <div id="dynamicTimeContent" style="display: none;">
             <div style="color: #666; font-size: 13px; margin-bottom: 15px;">
-                动态时间是指动态调整应用过滤开关，比如小孩学习1个小时后奖励20分钟玩游戏
+                动态时间模式是指动态调整应用过滤开关，比如小孩学习1个小时后奖励20分钟玩游戏，超过娱乐时间后自动开启过滤，反复循环。
             </div>
             
             <div class="dynamic-time-settings">
                 <div class="setting-item">
                     <label>每次启用时长(学习时间):</label>
-                    <input type="number" id="denyTime" min="1" value="5">
+                    <input type="number" id="denyTime" min="1" value="60">
                     <span>分钟</span>
                 </div>
                 <div class="setting-item" style="margin-bottom: 15px;">
                     <label>每次关闭时长(课余时间):</label>
-                    <input type="number" id="allowTime" min="1" value="30">
+                    <input type="number" id="allowTime" min="1" value="10">
                     <span>分钟</span>
                 </div>
           
@@ -490,9 +578,9 @@
                         
                         <div class="setting-item">
                             <label>每天学习时间范围：</label>
-                            <input type="time" id="startTime" required style="margin-right: 5px;">
+                            <input type="time" id="startTime" required style="margin-right: 5px;" onchange="validateDynamicTime()">
                             <span>-</span>
-                            <input type="time" id="endTime" required style="margin-left: 5px;">
+                            <input type="time" id="endTime" required style="margin-left: 5px;" onchange="validateDynamicTime()">
                         </div>
                         <div class="setting-item" style="color: #666; font-size: 12px; margin-top: 5px;">
                             <span>该时间范围表示每天上学的时间段，是一段连续时间，在该时间段内实行过滤规则动态开启关闭，时间范围外默认关闭过滤</span>
@@ -500,6 +588,7 @@
                     </div>
                 </div>
             </div>
+            <div id="dynamicErrorContainer" style="color: red; font-size: 12px; margin-top: 10px;"></div>
         </div>
     </div>
 

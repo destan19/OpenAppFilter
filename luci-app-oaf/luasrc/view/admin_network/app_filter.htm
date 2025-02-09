@@ -101,7 +101,7 @@
     .button-container {
         display: flex;
         justify-content: right; 
-        margin-top: 20px; 
+        margin-top: 5px; 
     }
 
     .submit-button {
@@ -236,7 +236,7 @@
             const container = document.getElementById('appContainer');
             container.innerHTML = ''; 
 
-            data.class_list.forEach(category => {
+            data.class_list.forEach((category, index) => {
                 const categoryTitle = document.createElement('div');
                 categoryTitle.className = 'category-title'; 
 
@@ -267,7 +267,13 @@
 
                 const appList = document.createElement('div');
                 appList.className = 'app-list';
-                appList.style.display = 'none'; 
+                
+                if (index === 1 || index === 2) {
+                    appList.style.display = 'flex';
+                    arrow.classList.add('expanded');
+                } else {
+                    appList.style.display = 'none';
+                }
 
                 categoryTitle.onclick = function() {
                     if (appList.style.display === 'none') {

@@ -177,8 +177,14 @@ void update_dev_hostname(void)
         sscanf(line_buf, "%*s %s %s %s", mac_buf, ip_buf, hostname_buf);
         dev_node_t *node = find_dev_node(mac_buf);
         if (!node)
-            continue;
-        if (strlen(hostname_buf) > 0)
+        {
+            node = add_dev_node(mac_buf);
+            strncpy(node->ip, ip_buf, sizeof(node->ip));
+            node->online = 0;
+            node->offline_time = get_timestamp();
+        }
+
+        if (strlen(hostname_buf) > 0 && hostname_buf[0] != '*')
         {
             strncpy(node->hostname, hostname_buf, sizeof(node->hostname));
         }
@@ -365,7 +371,7 @@ int check_dev_expire(void)
                     }
                 }
                 expire_count++;
-                printf("dev:%s expired, offline time = %ds, count=%d, visit_count=%d\n",
+                LOG_WARN("dev:%s expired, offline time = %ds, count=%d, visit_count=%d\n",
                        node->mac, offline_time, expire_count, visit_count);
             }
         NEXT:
@@ -429,8 +435,6 @@ void dump_dev_list(void)
     int count = 0;
     char hostname_buf[MAX_HOSTNAME_SIZE] = {0};
     char ip_buf[MAX_IP_LEN] = {0};
-
-
 
     FILE *fp = fopen(OAF_DEV_LIST_FILE, "w");
     if (!fp)

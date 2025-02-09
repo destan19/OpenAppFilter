@@ -126,6 +126,12 @@ void af_load_global_config(af_global_config_t *config){
     else
         config->enable = ret;
 
+    ret = af_uci_get_int_value(ctx, "appfilter.global.record_enable");
+    if (ret < 0)
+        config->record_enable = 0;
+    else
+        config->record_enable = ret;
+
     ret = af_uci_get_int_value(ctx, "appfilter.global.user_mode");
     if (ret < 0)
         config->user_mode = 0;
@@ -291,7 +297,6 @@ void dev_list_timeout_handler(struct uloop_timeout *t)
     count++;
     if (count % 10 == 0){
         update_dev_list();
-        dump_dev_list();
     }
     if (count % 60 == 0){
         check_dev_visit_info_expire();
@@ -301,6 +306,7 @@ void dev_list_timeout_handler(struct uloop_timeout *t)
         }
         flush_expire_visit_info();
         update_oaf_status();
+        dump_dev_list();
     }
     if (g_oaf_config_change == 1){
         update_lan_ip();
