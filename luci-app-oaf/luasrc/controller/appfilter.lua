@@ -22,6 +22,7 @@ function index()
 	entry({"admin", "services", "appfilter", "feature"}, cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Feature"), 26).leaf=true
 
 	entry({"admin", "services", "appfilter", "user"}, cbi("appfilter/user", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("用户配置"), 24).leaf=true
+	entry({"admin", "services", "appfilter", "advance"}, cbi("appfilter/advance", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("高级设置"), 27).leaf=true
 	entry({"admin", "network", "user_status"}, call("user_status"), nil).leaf = true
 	entry({"admin", "network", "get_user_list"}, call("get_user_list"), nil).leaf = true
 	entry({"admin", "network", "dev_visit_list"}, call("get_dev_visit_list"), nil).leaf = true
@@ -43,6 +44,8 @@ function index()
 	entry({"admin", "network", "upload_file"}, call("handle_file_upload"), nil).leaf = true
 	entry({"admin", "network", "set_nickname"}, call("set_nickname"), nil).leaf = true
 	entry({"admin", "network", "get_oaf_status"}, call("get_oaf_status"), nil).leaf = true
+	entry({"admin", "network", "get_app_filter_adv"}, call("get_app_filter_adv"), nil).leaf = true
+	entry({"admin", "network", "set_app_filter_adv"}, call("set_app_filter_adv"), nil).leaf = true
 end
 
 function get_hostname_by_mac(dst_mac)
@@ -250,6 +253,24 @@ function set_app_filter_base()
 	local resp_obj=utl.ubus("appfilter", "set_app_filter_base", req_obj);
 	luci.http.write_json(resp_obj);
 end
+
+function get_app_filter_adv()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local resp_obj=utl.ubus("appfilter", "get_app_filter_adv", {});
+	luci.http.write_json(resp_obj);
+end
+function set_app_filter_adv()
+	local json = require "luci.jsonc"
+	llog("set appfilter base");
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj = json.parse(luci.http.formvalue("data"))
+	local resp_obj=utl.ubus("appfilter", "set_app_filter_adv", req_obj);
+	luci.http.write_json(resp_obj);
+end
+
+
 
 -- data: {"mode":1,"weekday_list":[1,2,3,4,5,6,0],"start_time":"22:22","end_time":"12:00","allow_time":30,"deny_time":5}
 function set_app_filter_time()

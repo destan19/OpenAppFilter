@@ -299,7 +299,7 @@ void af_visit_info_report(void)
 }
 static inline int get_packet_dir(struct net_device *in)
 {
-	if (0 == strncmp(in->name, "br-lan", 6))
+	if (strstr(in->name, g_lan_ifname))
 	{
 		return PKT_DIR_UP;
 	}

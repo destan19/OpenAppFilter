@@ -38,6 +38,7 @@ int current_log_level = LOG_LEVEL_INFO;
 af_run_time_status_t g_af_status;
 int g_oaf_config_change = 1;
 af_config_t g_af_config;
+int g_hnat_init = 0;
 
 void af_init_time_status(void){
     g_af_status.filter = 0;
@@ -117,6 +118,7 @@ EXIT:
 
 void af_load_global_config(af_global_config_t *config){
     int ret = 0;
+	char lan_ifname[32] = {0};
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx)
         return;
@@ -143,6 +145,24 @@ void af_load_global_config(af_global_config_t *config){
         config->work_mode = 0;
     else
         config->work_mode = ret;
+    ret = af_uci_get_int_value(ctx, "appfilter.global.tcp_rst");
+    if (ret < 0)
+        config->tcp_rst = 1;
+    else
+        config->tcp_rst = ret;
+
+    ret = af_uci_get_int_value(ctx, "appfilter.global.disable_hnat");
+    if (ret < 0)
+        config->disable_hnat = 1;
+    else
+        config->disable_hnat = ret;
+
+    ret = af_uci_get_value(ctx, "appfilter.global.disable_hnat", lan_ifname, sizeof(lan_ifname));
+	if (ret < 0)
+		strncpy(config->lan_ifname, "br-lan", sizeof(config->lan_ifname) - 1);
+	else
+		strncpy(config->lan_ifname, lan_ifname, sizeof(config->lan_ifname) - 1);
+
     uci_free_context(ctx);
     LOG_INFO("enable=%d, user_mode=%d, work_mode=%d", config->enable, config->user_mode, config->work_mode);
 }
@@ -290,6 +310,13 @@ void update_oaf_record_status(void){
     }
 }
 
+void af_hnat_init(void){
+    if (g_hnat_init == 0){
+        system("/usr/bin/hnat.sh");
+        g_hnat_init = 1;
+    }
+}
+
 
 void dev_list_timeout_handler(struct uloop_timeout *t)
 {
@@ -314,6 +341,9 @@ void dev_list_timeout_handler(struct uloop_timeout *t)
         update_oaf_status();
         update_oaf_record_status();
         g_oaf_config_change = 0;
+    }
+    if (count > 60){ // delay init
+        af_hnat_init();
     }
     uloop_timeout_set(t, 1000);
 }

@@ -117,15 +117,17 @@ void af_conn_update(af_conn_t *conn, u32 app_id, u8 drop)
     spin_unlock(&af_conn_lock);
 }
 
+#define MAX_AF_CONN_CHECK_COUNT 5
 void af_conn_clean_timeout(void)
 {
     int i;
     af_conn_t *conn;
     struct hlist_node *n;
     unsigned long timeout = AF_CONN_TIMEOUT * HZ;
-
+    static int last_bucket = 0;
+    int count = 0;
     spin_lock(&af_conn_lock);
-    for (i = 0; i < AF_CONN_HASH_SIZE; i++)
+    for (i = last_bucket; i < AF_CONN_HASH_SIZE; i++)
     {
         hlist_for_each_entry_safe(conn, n, &af_conn_table[i], node)
         {
@@ -136,6 +138,14 @@ void af_conn_clean_timeout(void)
                 kfree(conn);
             }
         }
+        last_bucket = i;
+        count++;
+        if (count > MAX_AF_CONN_CHECK_COUNT)
+            break;
+    }
+    if (last_bucket == AF_CONN_HASH_SIZE - 1)
+    {
+        last_bucket = 0;
     }
     spin_unlock(&af_conn_lock);
 } 

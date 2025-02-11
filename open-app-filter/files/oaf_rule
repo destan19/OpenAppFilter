@@ -73,11 +73,16 @@ reload_rule(){
     load_mac_list
 }
 
-reload_base_config(){       
-    config_load appfilter              
+reload_base_config(){  
+    config_load appfilter 
     config_get work_mode "global" "work_mode"
+    config_get lan_ifname "global" "lan_ifname"
     echo "$work_mode" >/proc/sys/oaf/work_mode
-}
+      
+    if [ x"" != x"$lan_ifname" ];then
+        echo "$lan_ifname" >/proc/sys/oaf/lan_ifname
+    fi                   
+}       
 
 case $1 in
 "reload")

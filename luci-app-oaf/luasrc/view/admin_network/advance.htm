@@ -1,0 +1,229 @@
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+    h1, h2 {
+        color: #333;
+    }
+    .desc {
+        margin-top: 10px;
+        width: 650px;
+
+    }
+    .desc span{
+        margin-top:5px;
+        font-size:13px;
+        color:gray;
+    }
+
+    .button-check {
+        padding: 3px 8px;
+        background-color: transparent; /* Set background color to transparent */
+        color: green; /* Set font color to black */
+        border: 1px solid green; /* Set border color to green */
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px; /* Reduce font size */
+    }
+
+
+    input[type="checkbox"],
+    input[type="radio"] {
+        margin: 0; /* Reset all margins */
+        padding: 0; /* Reset padding */
+        width: 16px; /* Set a specific width */
+        height: 16px; /* Set a specific height */
+        border: 1px solid #ccc; /* Add a border */
+        border-radius: 3px; /* Add slight rounding */
+        background-color: #fff; /* Set background color */
+        vertical-align: middle; /* Align vertically in the middle */
+        appearance: none; /* Remove default styling */
+        position: relative; /* Ensure relative positioning */
+    }
+
+    h2 {
+        margin-bottom: 10px; 
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: right; 
+        margin-top: 5px; 
+    }
+
+    .submit-button {
+        margin-top: 30px;
+        width: 150px; 
+        height: 30px; 
+        background-color: #2885e8;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .submit-button:hover {
+        background-color: #0f77e6;
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 20px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(20px);
+    }
+
+</style>
+
+<script type="text/javascript">//<![CDATA[
+
+		function init_data() {
+			getAppFilterAdvData(); 
+		}
+        function showSuccessMessage(message = '设置成功') {
+			const modal = document.getElementById('modal');
+			const messageElement = modal.querySelector('p');
+			messageElement.textContent = message;
+			modal.style.display = 'flex';
+			setTimeout(() => {
+				modal.style.display = 'none';
+			}, 1000);
+		}
+
+		
+
+        function validateLanIfname(lanIfname) {
+            const regex = /^[a-zA-Z0-9-]{2,8}$/;
+            return regex.test(lanIfname);
+        }
+
+        function submitAppFilterAdv() {
+            const tcpRstSwitch = document.getElementById('tcpRstSwitch').checked;
+            const lanIfname = document.getElementById('lan_ifname').value;
+            const disableHnatSwitch = document.getElementById('disableHnatSwitch').checked;
+
+            if (!validateLanIfname(lanIfname)) {
+                alert('LAN接口名称无效。请确保其长度不超过8，并且只包含字母、数字和-。');
+                return;
+            }
+
+            const data = {
+                data: {
+                    lan_ifname: lanIfname,
+                    disable_hnat: disableHnatSwitch ? 1 : 0,
+                }
+            };
+            new XHR().post('<%=url('admin/network/set_app_filter_adv')%>', data,
+            function (x, data) {
+                showSuccessMessage();
+            });
+        }
+ 
+		function submitHandle() {
+			submitAppFilterAdv();
+		}
+
+		function openModal() {
+			document.getElementById('modal').style.display = 'block';
+            setTimeout(closeModal, 2000);
+		}
+
+		function closeModal() {
+			document.getElementById('modal').style.display = 'none';
+		}
+
+        function getAppFilterAdvData() {
+			console.log("getAppFilterAdvData");
+            new XHR().get('<%=url('admin/network/get_app_filter_adv')%>', null,
+                function (x, data) {
+                    document.getElementById('lan_ifname').value = data.data.lan_ifname;
+                    if (data.data.disable_hnat == 1) {
+                        document.getElementById('disableHnatSwitch').checked = true;
+                    } else {
+                        document.getElementById('disableHnatSwitch').checked = false;
+                    }
+
+                }
+            );
+        }
+
+
+        window.onload = function() {
+            init_data();
+        };
+//]]></script>
+
+<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
+        <p style="margin: 0;">设置成功</p>
+    </div>
+</div>
+
+<div class="cbi-section cbi-tblsection">
+    <div style="max-width: 1000px; margin-left: 10px;padding: 5px;">
+
+        <div style="margin-top: 10px; display: flex; align-items: center;">
+            <label for="disableHnatSwitch" style="margin-right: 5px;width:150px">关闭NAT加速</label>
+            <label class="switch">
+                <input type="checkbox" id="disableHnatSwitch" name="disableHnatSwitch" />
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="desc">
+            <span>如果采用lede或者闭源驱动固件，会包含软硬件加速模块，这些模块会影响过滤功能，如果测试发现没有效果可以关闭后再测试，在防火墙或者网络加速菜单中可查看关闭状态，开启加速后需要重启设备生效。</span>
+        </div>
+
+        <div style="margin-top: 10px; display: flex; align-items: center;">
+            <label for="lan_ifname" style="margin-right: 5px;width:150px">LAN接口</label>
+            <input type="text" id="lan_ifname" style="padding: 5px; background-color: white;width: 200px">
+        </div>
+
+        <div class="desc">
+            <span>LAN接口的名称，用于探测终端信息，系统默认都是桥接口(br-lan)，如果将lan口修改成了物理接口，请修改为对应的名称，比如eth0。</span>
+        </div>
+
+
+        <div class="button-container">
+            <button type="button" class="submit-button" onclick="submitHandle()">保存</button>
+        </div>
+    </div>
+</div>
