@@ -17,6 +17,7 @@ unsigned int af_lan_ip = 0;
 unsigned int af_lan_mask = 0;
 char g_lan_ifname[64] = "br-lan";
 int g_tcp_rst = 1;
+int g_feature_init = 0;
 char g_oaf_version[64] = AF_VERSION;
 /* 
 	cat /proc/sys/oaf/debug
@@ -25,6 +26,13 @@ static struct ctl_table oaf_table[] = {
 	{
 		.procname	= "debug",
 		.data		= &af_log_lvl,
+		.maxlen 	= sizeof(int),
+		.mode		= 0666,
+		.proc_handler	= proc_dointvec,
+	},
+	{
+		.procname	= "feature_init",
+		.data		= &g_feature_init,
 		.maxlen 	= sizeof(int),
 		.mode		= 0666,
 		.proc_handler	= proc_dointvec,

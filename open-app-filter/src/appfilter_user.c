@@ -284,58 +284,9 @@ void update_dev_from_oaf(void)
     fclose(fp);
 }
 
-void update_dev_from_arp(void)
-{
-    char line_buf[256] = {0};
-    char mac_buf[32] = {0};
-    char ip_buf[32] = {0};
-    char lan_ip[32] = {0};
-    char lan_mask[32] = {0};
-
-    exec_with_result_line(CMD_GET_LAN_IP, lan_ip, sizeof(lan_ip));
-    exec_with_result_line(CMD_GET_LAN_MASK, lan_mask, sizeof(lan_mask));
-    if (strlen(lan_ip) < MIN_INET_ADDR_LEN || strlen(lan_mask) < MIN_INET_ADDR_LEN)
-    {
-        return;
-    }
-
-    FILE *fp = fopen("/proc/net/arp", "r");
-    if (!fp)
-    {
-        printf("open dev file....failed\n");
-        return;
-    }
-    fgets(line_buf, sizeof(line_buf), fp); // title
-    while (fgets(line_buf, sizeof(line_buf), fp))
-    {
-        sscanf(line_buf, "%s %*s %*s %s", ip_buf, mac_buf);
-
-        if (strlen(mac_buf) < 17 || strlen(ip_buf) < MIN_INET_ADDR_LEN)
-        {
-            printf("invalid mac:%s or ip:%s\n", mac_buf, ip_buf);
-            continue;
-        }
-        if (0 == strcmp(mac_buf, "00:00:00:00:00:00"))
-            continue;
-        if (!check_same_network(lan_ip, lan_mask, ip_buf) || 0 == strcmp(lan_ip, ip_buf))
-        {
-            continue;
-        }
-        dev_node_t *node = find_dev_node(mac_buf);
-        if (!node)
-        {
-            node = add_dev_node(mac_buf);
-            if (!node)
-                continue;
-            strncpy(node->ip, ip_buf, sizeof(node->ip));
-        }
-    }
-    fclose(fp);
-}
 void update_dev_online_status(void)
 {
     update_dev_from_oaf();
-    //update_dev_from_arp();
 }
 
 #define DEV_OFFLINE_TIME (SECONDS_PER_DAY * 3)

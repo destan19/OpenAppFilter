@@ -414,31 +414,38 @@
                 function (x, data) {
                     const runStatusElement = document.getElementById('run_status');
                     const runDescElement = document.getElementById('run_desc');
+                    const engineStatusContainer = document.querySelector('.app_filter_status:first-child');
 
-
-                    if (data.data.config_enable == 0) {
-                        runStatusElement.textContent = '未配置';
-                        runStatusElement.style.color = 'red';
-                    } else {
-                        if (data.data.enable === 1) {
-                            runStatusElement.textContent = '运行中';
-                            runStatusElement.style.color = 'green'; 
-                            if (data.data.time_mode == 1 && data.data.filter == 1) {
-                                runDescElement.textContent = `(${data.data.remain_time}分钟后关闭)`;
-                            }
+                    if (data.data.engine_status === 1) {
+                        if (data.data.config_enable == 0) {
+                            runStatusElement.textContent = '未配置';
+                            runStatusElement.style.color = 'red';
                         } else {
-                            runStatusElement.textContent = '未运行';
-                            runStatusElement.style.color = 'red'; 
-                            if (data.data.time_mode == 1) {
-                                if (data.data.match_time == 0) {
-                                    runDescElement.textContent = `(当前时间不在时间范围内)`;
-                                } else {
-                                    runDescElement.textContent = `(${data.data.remain_time}分钟后开启)`;
+                            if (data.data.enable === 1) {
+                                runStatusElement.textContent = '运行中';
+                                runStatusElement.style.color = 'green'; 
+                                if (data.data.time_mode == 1 && data.data.filter == 1) {
+                                    runDescElement.textContent = `(${data.data.remain_time}分钟后关闭)`;
                                 }
                             } else {
-                                runDescElement.textContent = `(当前时间不在时间范围内)`;
+                                runStatusElement.textContent = '未运行';
+                                runStatusElement.style.color = 'red'; 
+                                if (data.data.time_mode == 1) {
+                                    if (data.data.match_time == 0) {
+                                        runDescElement.textContent = `(当前时间不在时间范围内)`;
+                                    } else {
+                                        runDescElement.textContent = `(${data.data.remain_time}分钟后开启)`;
+                                    }
+                                } else {
+                                    runDescElement.textContent = `(当前时间不在时间范围内)`;
+                                }
                             }
                         }
+                    }
+                    else{
+                        runStatusElement.textContent = '未运行';
+                        runStatusElement.style.color = 'red'; 
+                        runDescElement.textContent = `(oaf驱动未加载,请下载该固件对应内核版本的oaf.ko驱动文件进行安装，并开启自动加载，当前内核版本为${data.data.kernel_version})`;
                     }
                 }
             );
@@ -459,6 +466,7 @@
 
 <div class="cbi-section cbi-tblsection">
     <div style="max-width: 1000px; margin-left: 5px;padding: 5px;">
+
         <div class="app_filter_status">
             <label>运行状态:</label>
             <span id="run_status">运行中</span><span id="run_desc"></span>

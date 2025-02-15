@@ -62,6 +62,8 @@ enum AF_FEATURE_PARAM_INDEX{
 
 enum E_MSG_TYPE{
 	AF_MSG_INIT,
+	AF_MSG_ADD_FEATURE,
+	AF_MSG_CLEAN_FEATURE,
 	AF_MSG_MAX
 };
 enum AF_WORK_MODE {
@@ -69,10 +71,9 @@ enum AF_WORK_MODE {
 	AF_MODE_BYPASS,
 	AF_MODE_BRIDGE,
 };
-
+#define MAX_AF_MSG_DATA_LEN 800
 typedef struct af_msg{
 	int action;
-	void *data;
 }af_msg_t;
 
 struct af_msg_hdr{

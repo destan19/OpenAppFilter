@@ -8,6 +8,7 @@ extern int g_oaf_record_enable;
 extern int g_by_pass_accl;
 extern unsigned int af_lan_ip;
 extern unsigned int af_lan_mask;
+extern int g_feature_init;
 
 extern char g_lan_ifname[64];
 extern int g_tcp_rst;

@@ -57,8 +57,11 @@ load_mac_list()
     json_add_object "data"
     json_add_array "mac_list"
     
-    config_foreach add_mac_to_array_callback af_user
-    
+    local user_mode=`uci get appfilter.global.user_mode`
+    if [ x"1" == x"$user_mode" ];then
+        config_foreach add_mac_to_array_callback af_user
+    fi
+
     json_str=`json_dump`
     config_apply "$json_str"
     json_cleanup
@@ -74,6 +77,7 @@ reload_rule(){
 }
 
 reload_base_config(){  
+	! test -d /proc/sys/oaf && return
     config_load appfilter 
     config_get work_mode "global" "work_mode"
     config_get lan_ifname "global" "lan_ifname"

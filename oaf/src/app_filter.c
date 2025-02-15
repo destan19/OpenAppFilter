@@ -399,6 +399,7 @@ void load_feature_buf_from_file(char **config_buf)
 #endif
 	off_t size;
 	fp = filp_open(AF_FEATURE_CONFIG_FILE, O_RDONLY, 0);
+	
 
 	if (IS_ERR(fp))
 	{
@@ -464,6 +465,7 @@ int load_feature_config(void)
 			begin = p + 1;
 		}
 	}
+
 	if (p != begin)
 	{
 		if (p - begin < MIN_FEATURE_LINE_LEN || p - begin > MAX_FEATURE_LINE_LEN)
@@ -491,6 +493,17 @@ static void af_clean_feature_list(void)
 	feature_list_write_unlock();
 }
 
+void af_add_feature_msg_handle(char *data, int len)
+{
+	char feature[MAX_FEATURE_LINE_LEN] = {0};
+	if (len <= 0 || len >= MAX_FEATURE_LINE_LEN){
+		printk("warn, feature data len = %d\n", len);
+		return;
+	}
+	strncpy(feature, data, len);
+	AF_INFO("add feature %s\n", feature);
+	af_init_feature(feature);
+}
 // free by caller
 static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned int len)
 {
@@ -1463,6 +1476,7 @@ static void oaf_timer_func(unsigned long ptr)
 	}
 	count++;
 	af_conn_clean_timeout();
+
 	mod_timer(&oaf_timer, jiffies + OAF_TIMER_INTERVAL * HZ);
 }
 
@@ -1531,13 +1545,25 @@ fail:
 	return ret;
 }
 
-static void oaf_user_msg_handle(af_msg_t *msg)
+static void oaf_user_msg_handle(char *data, int len)
 {
+	char *msg_data = data + sizeof(af_msg_t);
+	if (len < sizeof(af_msg_t))
+		return;
+	af_msg_t *msg = (af_msg_t *)data;
+	AF_INFO("msg action = %d\n", msg->action);
 	switch (msg->action)
 	{
 	case AF_MSG_INIT:
 		af_client_list_reset_report_num();
 		report_flag = 1;
+		break;
+	case AF_MSG_ADD_FEATURE:
+		af_add_feature_msg_handle(msg_data, len - sizeof(af_msg_t));
+		break;
+	case AF_MSG_CLEAN_FEATURE:
+		AF_INFO("clean feature\n");
+		af_clean_feature_list();
 		break;
 	default:
 		break;
@@ -1561,7 +1587,7 @@ static void oaf_msg_rcv(struct sk_buff *skb)
 		udata = umsg + sizeof(struct af_msg_hdr);
 
 		if (udata)
-			oaf_user_msg_handle((af_msg_t *)udata);
+			oaf_user_msg_handle(udata, af_hdr->len);
 	}
 }
 
@@ -1583,10 +1609,6 @@ int netlink_oaf_init(void)
 static int __init app_filter_init(void)
 {
 	int err;
-	if (0 != load_feature_config())
-	{
-		return -1;
-	}
 	af_conn_init();
 	netlink_oaf_init();
 	af_log_init();

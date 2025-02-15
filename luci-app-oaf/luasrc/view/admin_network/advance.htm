@@ -136,9 +136,9 @@
         }
 
         function submitAppFilterAdv() {
-            const tcpRstSwitch = document.getElementById('tcpRstSwitch').checked;
             const lanIfname = document.getElementById('lan_ifname').value;
             const disableHnatSwitch = document.getElementById('disableHnatSwitch').checked;
+            const autoLoadEngineSwitch = document.getElementById('autoLoadEngineSwitch').checked;
 
             if (!validateLanIfname(lanIfname)) {
                 alert('LAN接口名称无效。请确保其长度不超过8，并且只包含字母、数字和-。');
@@ -149,6 +149,7 @@
                 data: {
                     lan_ifname: lanIfname,
                     disable_hnat: disableHnatSwitch ? 1 : 0,
+                    auto_load_engine: autoLoadEngineSwitch ? 1 : 0,
                 }
             };
             new XHR().post('<%=url('admin/network/set_app_filter_adv')%>', data,
@@ -180,6 +181,14 @@
                     } else {
                         document.getElementById('disableHnatSwitch').checked = false;
                     }
+                    if (data.data.auto_load_engine == 1) {
+                        document.getElementById('autoLoadEngineSwitch').checked = true;
+                    } else {
+                        document.getElementById('autoLoadEngineSwitch').checked = false;
+                    }
+
+
+                    
 
                 }
             );
@@ -200,8 +209,9 @@
 <div class="cbi-section cbi-tblsection">
     <div style="max-width: 1000px; margin-left: 10px;padding: 5px;">
 
+
         <div style="margin-top: 10px; display: flex; align-items: center;">
-            <label for="disableHnatSwitch" style="margin-right: 5px;width:150px">关闭NAT加速</label>
+            <label for="disableHnatSwitch" style="margin-right: 5px;width:150px">关闭软/硬件加速</label>
             <label class="switch">
                 <input type="checkbox" id="disableHnatSwitch" name="disableHnatSwitch" />
                 <span class="slider"></span>
@@ -211,6 +221,22 @@
         <div class="desc">
             <span>如果采用lede或者闭源驱动固件，会包含软硬件加速模块，这些模块会影响过滤功能，如果测试发现没有效果可以关闭后再测试，在防火墙或者网络加速菜单中可查看关闭状态，开启加速后需要重启设备生效。</span>
         </div>
+
+
+
+        
+        <div style="margin-top: 10px; display: flex; align-items: center;">
+            <label for="autoLoadEngineSwitch" style="margin-right: 5px;width:150px">自动加载oaf驱动</label>
+            <label class="switch">
+                <input type="checkbox" id="autoLoadEngineSwitch" name="autoLoadEngineSwitch" />
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="desc">
+            <span>如果oaf驱动无法手动卸载或者当前驱动不稳定，可以关闭开机自动加载，然后手动安装合适的驱动。</span>
+        </div>
+
 
         <div style="margin-top: 10px; display: flex; align-items: center;">
             <label for="lan_ifname" style="margin-right: 5px;width:150px">LAN接口</label>

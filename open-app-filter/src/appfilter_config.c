@@ -430,7 +430,7 @@ void init_app_name_table(void)
         printf("open file failed\n");
         return;
     }
-
+    g_app_count = 0;
     while (fgets(line_buf, sizeof(line_buf), fp))
     {
         if (strstr(line_buf, "#"))
@@ -464,6 +464,7 @@ void init_app_class_name_table(void)
         printf("open file failed\n");
         return;
     }
+    g_cur_class_num = 0;
     while (fgets(line_buf, sizeof(line_buf), fp))
     {
         sscanf(line_buf, "%d %*s %s", &class_id, class_name);

@@ -219,8 +219,8 @@ int appfilter_nl_init(void)
     fd = socket(AF_NETLINK, SOCK_RAW, OAF_NETLINK_ID);
     if (fd < 0)
     {
-        printf("Connect netlink %d failed %s", OAF_NETLINK_ID, strerror(errno));
-        exit(1);
+        LOG_DEBUG("Connect netlink %d failed %s\n", OAF_NETLINK_ID, strerror(errno));
+        return -1;
     }
     memset(&nls, 0, sizeof(struct sockaddr_nl));
     nls.nl_pid = DEFAULT_USR_NL_PID;
@@ -229,8 +229,8 @@ int appfilter_nl_init(void)
 
     if (bind(fd, (void *)&nls, sizeof(struct sockaddr_nl)))
     {
-        printf("Bind failed %s\n", strerror(errno));
-        exit(1);
+        LOG_DEBUG("Bind failed %s\n", strerror(errno));
+        return -1;
     }
 
     return fd;

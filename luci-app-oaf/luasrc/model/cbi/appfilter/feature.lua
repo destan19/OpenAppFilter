@@ -120,10 +120,7 @@ http.setfilehandler(function(meta, chunk, eof)
             cmd = "cp /tmp/upload/app_icons/* /www/luci-static/resources/app_icons/ -fr >/dev/null"
             os.execute(cmd)
             os.execute("chmod 666 " .. feature_file)
-            os.execute("rm /tmp/appfilter -fr")
-            os.execute("uci set appfilter.feature.update=1")
-            os.execute("uci commit appfilter")
-           luci.sys.exec("/etc/init.d/appfilter restart")
+            luci.sys.exec("killall -SIGUSR1 oafd")
             um.value = translate("Update the feature file successfully, please refresh the page")
         else
             um.value = translate("Failed to update feature file, format error")

@@ -67,3 +67,35 @@ int check_same_network(char *ip1, char *netmask, char *ip2) {
         return 0;
     }
 }
+
+
+int af_read_file_value(const char *file_path, char *value, int value_len) {
+    FILE *file = fopen(file_path, "r");
+    if (!file) {
+        perror("Failed to open file");
+        return -1;
+    }
+
+    if (fgets(value, value_len, file) == NULL) {
+        perror("Failed to read line from file");
+        fclose(file);
+        return -1;
+    }
+
+    size_t len = strlen(value);
+    if (len > 0 && value[len - 1] == '\n') {
+        value[len - 1] = '\0';
+    }
+
+    fclose(file);
+    return 0;
+}
+
+int af_read_file_int_value(const char *file_path, int *value) {
+    char line_buf[128] = {0};
+    if (af_read_file_value(file_path, line_buf, sizeof(line_buf)) < 0){
+        return -1;
+    }
+    *value = atoi(line_buf);
+    return 0;
+}

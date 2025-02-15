@@ -30,15 +30,23 @@ THE SOFTWARE.
 #include "appfilter_ubus.h"
 #include "appfilter_config.h"
 #include <time.h>
+#include <signal.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "appfilter.h"
+#include <stdio.h>
+
+#define CMD_GET_LAN_IP_FMT   "ifconfig %s | grep 'inet addr' | awk '{print $2}' | awk -F: '{print $2}'"
+#define CMD_GET_LAN_MASK_FMT "ifconfig %s | grep 'inet addr' | awk '{print $4}' | awk -F: '{print $2}'"
+
 
 int current_log_level = LOG_LEVEL_INFO;
 af_run_time_status_t g_af_status;
 int g_oaf_config_change = 1;
 af_config_t g_af_config;
 int g_hnat_init = 0;
+int g_feature_update = 0;
+void dev_list_timeout_handler(struct uloop_timeout *t);
 
 void af_init_time_status(void){
     g_af_status.filter = 0;
@@ -51,6 +59,13 @@ void af_init_time_status(void){
 void af_init_status(void){
     af_init_time_status();
 }
+struct uloop_timeout dev_tm = {
+    .cb = dev_list_timeout_handler};
+
+static struct uloop_fd appfilter_nl_fd = {
+    .cb = appfilter_nl_handler,
+};
+
 
 
 /** 
@@ -85,7 +100,7 @@ int af_load_time_config(af_time_config_t *t_config)
     af_uci_get_value(ctx, "appfilter.time.start_time", start_time_buf, sizeof(start_time_buf));
     af_uci_get_value(ctx, "appfilter.time.end_time", end_time_buf, sizeof(end_time_buf));
     af_uci_get_value(ctx, "appfilter.time.days", days_buf, sizeof(days_buf));
-    LOG_INFO("mode = %d, start_time: %s, end_time: %s, days: %s", t_config->time_mode, start_time_buf, end_time_buf, days_buf);
+    LOG_DEBUG("mode = %d, start_time: %s, end_time: %s, days: %s\n", t_config->time_mode, start_time_buf, end_time_buf, days_buf);
     sscanf(start_time_buf, "%d:%d", &t_config->seg_time.start_time.hour, &t_config->seg_time.start_time.min);
     sscanf(end_time_buf, "%d:%d", &t_config->seg_time.end_time.hour, &t_config->seg_time.end_time.min);
 
@@ -106,7 +121,7 @@ int af_load_time_config(af_time_config_t *t_config)
     {
         sscanf(p, "%d:%d-%d:%d", &t_config->time_list[t_config->time_num].start_time.hour,
              &t_config->time_list[t_config->time_num].start_time.min, &t_config->time_list[t_config->time_num].end_time.hour, &t_config->time_list[t_config->time_num].end_time.min);
-        LOG_INFO("time[%d] %d:%d-%d:%d\n", t_config->time_num, t_config->time_list[t_config->time_num].start_time.hour, t_config->time_list[t_config->time_num].start_time.min,
+        LOG_DEBUG("time[%d] %d:%d-%d:%d\n", t_config->time_num, t_config->time_list[t_config->time_num].start_time.hour, t_config->time_list[t_config->time_num].start_time.min,
                  t_config->time_list[t_config->time_num].end_time.hour, t_config->time_list[t_config->time_num].end_time.min);
         t_config->time_num++;
     } while (p = strtok(NULL, " "));
@@ -157,6 +172,13 @@ void af_load_global_config(af_global_config_t *config){
     else
         config->disable_hnat = ret;
 
+    ret = af_uci_get_int_value(ctx, "appfilter.global.auto_load_engine");
+    if (ret < 0)
+        config->auto_load_engine = 0;
+    else
+        config->auto_load_engine = ret;
+
+
     ret = af_uci_get_value(ctx, "appfilter.global.disable_hnat", lan_ifname, sizeof(lan_ifname));
 	if (ret < 0)
 		strncpy(config->lan_ifname, "br-lan", sizeof(config->lan_ifname) - 1);
@@ -174,6 +196,26 @@ void af_load_config(af_config_t *config){
 }
 
 
+void update_oaf_proc_value(char *key, char *value){
+    char cmd_buf[128] = {0};
+    char file_path[128] = {0};
+    char old_value[128] = {0};
+    sprintf(file_path, "/proc/sys/oaf/%s", key);
+
+    af_read_file_value(file_path, old_value, sizeof(old_value));    
+    if (strcmp(old_value, value) != 0){
+        sprintf(cmd_buf, "echo %s >/proc/sys/oaf/%s", value, key);
+        system(cmd_buf);
+        LOG_INFO("update %s %s-->%s\n", key, old_value, value);
+    }
+}
+
+void update_oaf_proc_u32_value(char *key, u_int32_t value){
+    char buf[32] = {0};
+    sprintf(buf, "%u", value);
+    update_oaf_proc_value(key, buf);
+}
+
 void update_lan_ip(void){
     char ip_str[32] = {0};
 	char mask_str[32] = {0};
@@ -182,28 +224,40 @@ void update_lan_ip(void){
     char cmd_buf[128] = {0};
     u_int32_t lan_ip = 0;
 	u_int32_t lan_mask = 0;
+    char lan_ifname[32] = {0};
+    char ip_cmd_buf[128] = {0};
+    char mask_cmd_buf[128] = {0};
+    struct uci_context *ctx = uci_alloc_context();
+    if (!ctx)
+        return;
 	
-    exec_with_result_line(CMD_GET_LAN_IP, ip_str, sizeof(ip_str));
+    int ret = af_uci_get_value(ctx, "appfilter.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
+    if (ret != 0){
+        strcpy(lan_ifname, "br-lan");
+    }
+    sprintf(ip_cmd_buf, CMD_GET_LAN_IP_FMT , lan_ifname);
+    sprintf(mask_cmd_buf, CMD_GET_LAN_MASK_FMT , lan_ifname);
+
+    exec_with_result_line(ip_cmd_buf, ip_str, sizeof(ip_str));
     if (strlen(ip_str) < MIN_INET_ADDR_LEN){
-        sprintf(cmd_buf, "echo 0 >/proc/sys/oaf/lan_ip");
+        update_oaf_proc_u32_value("lan_ip", 0);
     }
     else{
         inet_aton(ip_str, &addr);
         lan_ip = addr.s_addr;
-        sprintf(cmd_buf, "echo %u >/proc/sys/oaf/lan_ip", lan_ip);
+        update_oaf_proc_u32_value("lan_ip", lan_ip);
     }
-	system(cmd_buf);
-    exec_with_result_line(CMD_GET_LAN_MASK, mask_str, sizeof(mask_str));
+
+    exec_with_result_line(mask_cmd_buf, mask_str, sizeof(mask_str));
 
     if (strlen(mask_str) < MIN_INET_ADDR_LEN){
-        sprintf(cmd_buf, "echo 0 >/proc/sys/oaf/lan_mask");
+        update_oaf_proc_u32_value("lan_mask", 0);
     }
     else{
         inet_aton(mask_str, &mask_addr);
         lan_mask = mask_addr.s_addr;
-        sprintf(cmd_buf, "echo %u >/proc/sys/oaf/lan_mask", lan_mask);
+        update_oaf_proc_u32_value("lan_mask", lan_mask);
     }
-    system(cmd_buf);
 }
 
 
@@ -311,12 +365,84 @@ void update_oaf_record_status(void){
 }
 
 void af_hnat_init(void){
+    if (g_af_config.global.enable == 0){
+        return;
+    }
     if (g_hnat_init == 0){
+        LOG_INFO("disable hnat...\n");
         system("/usr/bin/hnat.sh");
         g_hnat_init = 1;
     }
 }
 
+
+int af_nl_clean_feature(void){
+    af_msg_t msg;
+    if (appfilter_nl_fd.fd < 0){
+        return -1;
+    }
+    msg.action = AF_MSG_CLEAN_FEATURE;
+  
+    send_msg_to_kernel(appfilter_nl_fd.fd,(void *)&msg, sizeof(msg));
+    return 0;
+}
+
+int af_nl_add_feature(char *feature){
+    char msg_buf[1024] = {0};
+    if (appfilter_nl_fd.fd < 0){
+        return -1;
+    }
+    char *p_data = msg_buf + sizeof(af_msg_t);
+    memset(msg_buf, 0, sizeof(msg_buf));
+
+    af_msg_t *hdr = (af_msg_t *)msg_buf;
+    hdr->action = AF_MSG_ADD_FEATURE;
+    strncpy(p_data, feature, strlen(feature));
+    send_msg_to_kernel(appfilter_nl_fd.fd,(void *)msg_buf, sizeof(af_msg_t) + strlen(feature) + 1);
+    return 0;
+}
+
+
+
+int af_load_feature_to_kernel(void){
+	char line_buf[MAX_FEATURE_LINE_LEN] = {0};
+	FILE *fp = fopen("/tmp/feature.cfg", "r");
+	if (!fp)
+	{
+		printf("open file failed\n");
+		return;
+	}
+	if (af_nl_clean_feature() < 0){
+        return -1;
+    }
+	while (fgets(line_buf, sizeof(line_buf), fp))
+	{
+		str_trim(line_buf);
+		if (strlen(line_buf) < 8)
+			continue;
+		if (strstr(line_buf, "#"))
+			continue;
+		
+		if (strlen(line_buf) >= MAX_FEATURE_LINE_LEN - 1){
+			continue;
+		}
+		af_nl_add_feature(line_buf);
+	}
+	fclose(fp);
+    return 0;
+}
+
+int reload_feature(void){
+    system("gen_class.sh /tmp/feature.cfg");
+    init_app_name_table();
+    init_app_class_name_table();
+    if (af_load_feature_to_kernel() < 0){
+        LOG_ERROR("Failed to load feature to kernel\n");
+        return -1;
+    }
+    LOG_WARN("reload feature success\n");
+    return 0;
+}
 
 void dev_list_timeout_handler(struct uloop_timeout *t)
 {
@@ -342,19 +468,50 @@ void dev_list_timeout_handler(struct uloop_timeout *t)
         update_oaf_record_status();
         g_oaf_config_change = 0;
     }
-    if (count > 60){ // delay init
+    if (count > 10){ // delay init
         af_hnat_init();
     }
+
+
+    if (appfilter_nl_fd.fd < 0){
+        appfilter_nl_fd.fd = appfilter_nl_init();
+        if (appfilter_nl_fd.fd > 0){
+            uloop_fd_add(&appfilter_nl_fd, ULOOP_READ);
+            system("oaf_rule reload &");
+            // /etc/init.d/appfilter reload
+            LOG_INFO("netlink connect success\n");
+        }
+    }
+
+    if (g_feature_update == 1 && appfilter_nl_fd.fd > 0){
+        if (0 == reload_feature()){
+            g_feature_update = 0;
+        }
+    }
+
     uloop_timeout_set(t, 1000);
 }
 
-struct uloop_timeout dev_tm = {
-    .cb = dev_list_timeout_handler};
+void af_load_engine(void){
+    if (g_af_config.global.auto_load_engine == 1){
+        if (access("/lib/modules/oaf.ko", F_OK) == 0) {
+            system("insmod /lib/modules/oaf.ko");
+            LOG_WARN("insmod /lib/modules/oaf.ko");
+        } else {
+            system("modprobe oaf");
+            LOG_WARN("modprobe oaf");
+        }
+    }
+    else{
+        LOG_WARN("auto load disabled, not load oaf.ko\n");
+    }
+}
 
-static struct uloop_fd appfilter_nl_fd = {
-    .cb = appfilter_nl_handler,
-};
 
+void handle_sigusr1(int sig) {
+    LOG_INFO("Received SIGUSR1 signal\n");
+    g_feature_update = 1;
+}
 
 
 
@@ -362,22 +519,20 @@ int main(int argc, char **argv)
 {
     int ret = 0;
     LOG_INFO("appfilter start");
+    g_feature_update = 1;
     af_load_config(&g_af_config);
+    af_load_engine();
     af_init_status();
     uloop_init();
+    signal(SIGUSR1, handle_sigusr1);
+    signal(SIGCHLD, SIG_IGN);
     init_dev_node_htable();
-    init_app_name_table();
-    init_app_class_name_table();
     if (appfilter_ubus_init() < 0)
     {
         LOG_ERROR("Failed to connect to ubus\n");
         return 1;
-    }   
-    appfilter_nl_fd.fd = appfilter_nl_init();
-    uloop_fd_add(&appfilter_nl_fd, ULOOP_READ);
-    af_msg_t msg;
-    msg.action = AF_MSG_INIT;
-    send_msg_to_kernel(appfilter_nl_fd.fd, (void *)&msg, sizeof(msg));
+    }  
+    appfilter_nl_fd.fd = -1;
     uloop_timeout_set(&dev_tm, 5000);
     uloop_timeout_add(&dev_tm);
     uloop_run();

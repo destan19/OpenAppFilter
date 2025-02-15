@@ -56,8 +56,7 @@ extern int current_log_level;
 #define LOG_WARN(format, ...)  af_log(LOG_LEVEL_WARN, format, ##__VA_ARGS__)
 #define LOG_ERROR(format, ...) af_log(LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
 
-#define CMD_GET_LAN_IP   "ifconfig br-lan | grep 'inet addr' | awk '{print $2}' | awk -F: '{print $2}'"
-#define CMD_GET_LAN_MASK "ifconfig br-lan | grep 'inet addr' | awk '{print $4}' | awk -F: '{print $2}'"
+
 
 #define MAX_TIME_LIST_LEN 1024
 #define MAX_TIME_LIST 64
@@ -73,6 +72,7 @@ typedef struct af_global_config_t{
     int work_mode;
     int record_enable;
 	int disable_hnat;
+    int auto_load_engine;
 	int tcp_rst;
 	char lan_ifname[16];
 }af_global_config_t;
