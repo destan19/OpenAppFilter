@@ -200,7 +200,7 @@ static int af_conn_seq_show(struct seq_file *s, void *v)
     {
         index = 0;
         seq_printf(s, "%-4s %-20s %-20s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", 
-        "Id", "src_ip", "dst_ip", "src_port", "dst_port", "protocol", "app_id", "drop", "inactive(s)", "total_pkts");
+        "Id", "src_ip", "dst_ip", "src_port", "dst_port", "protocol", "app_id", "drop", "inactive", "total_pkts");
         return 0;
     }
 
@@ -208,10 +208,9 @@ static int af_conn_seq_show(struct seq_file *s, void *v)
     sprintf(src_ip_str, "%pI4", &node->src_ip);
     sprintf(dst_ip_str, "%pI4", &node->dst_ip);
     u_int32_t inactive_time = jiffies - node->last_jiffies;
-    u_int32_t inactive_time_sec = do_div(inactive_time, HZ);
 
     seq_printf(s, "%-4d %-20s %-20s %-12d %-12d %-12d %-12d %-12d %-12d %-12d\n", index, src_ip_str, dst_ip_str,
-               node->src_port, node->dst_port, node->protocol, node->app_id, node->drop, inactive_time_sec, node->total_pkts);
+               node->src_port, node->dst_port, node->protocol, node->app_id, node->drop, inactive_time, node->total_pkts);
     return 0;
 }
 static const struct seq_operations af_conn_seq_ops = {
