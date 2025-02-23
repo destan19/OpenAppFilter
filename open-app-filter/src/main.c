@@ -346,13 +346,18 @@ int af_check_time(af_time_config_t *t_config) {
 void update_oaf_status(void){
     int ret = 0;
     int cur_enable = 0;
-    ret = af_check_time(&g_af_config.time);
-    if (ret == 1){
-        system("echo 1 >/proc/sys/oaf/enable");
-    }
-    else{
-        system("echo 0 >/proc/sys/oaf/enable");
-    }
+    if(g_af_config.global.enable == 1){
+		ret = af_check_time(&g_af_config.time);
+		if (ret == 1){
+			system("echo 1 >/proc/sys/oaf/enable");
+		}
+		else{
+			system("echo 0 >/proc/sys/oaf/enable");
+		}
+	}
+	else{
+		system("echo 0 >/proc/sys/oaf/enable");
+	}
 }
 
 void update_oaf_record_status(void){
