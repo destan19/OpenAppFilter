@@ -166,6 +166,7 @@ typedef struct flow_info{
 	u_int8_t drop;
 	u_int8_t dir;
 	u_int16_t total_len;
+	u_int8_t client_hello;
 	af_feature_node_t *feature;
 }flow_info_t;
 

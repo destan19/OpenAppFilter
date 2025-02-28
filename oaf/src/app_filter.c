@@ -632,13 +632,18 @@ int dpi_https_proto(flow_info_t *flow)
 	{
 		return -1;
 	}
-	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01))
+	if (!((p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01) || flow->client_hello))
 		return -1;
 
 	for (i = 0; i < data_len; i++)
 	{
 		if (i + HTTPS_URL_OFFSET >= data_len)
 		{
+			AF_LMT_INFO("match https host failed, data_len = %d, sport:%d, dport:%d\n", data_len, flow->sport,flow->dport);
+			if ((TEST_MODE())){
+ 				print_hex_ascii(flow->l4_data,  flow->l4_len);
+			}
+			flow->client_hello = 1;	
 			return -1;
 		}
 
@@ -660,6 +665,8 @@ int dpi_https_proto(flow_info_t *flow)
 				flow->https.match = AF_TRUE;
 				flow->https.url_pos = p + i + HTTPS_URL_OFFSET;
 				flow->https.url_len = ntohs(url_len);
+				AF_LMT_INFO("match https host ok, data_len = %d, client hello = %d\n", data_len, flow->client_hello);
+				flow->client_hello = 0;
 				return 0;
 			}
 		}
@@ -975,7 +982,7 @@ int match_feature(flow_info_t *flow)
 
 int match_app_filter_rule(int appid, af_client_info_t *client)
 {
-	if (is_user_match_enable() && !find_af_mac(client->mac))
+	if (g_user_mode && !find_af_mac(client->mac))
 	{
 		return AF_FALSE;
 	}
@@ -989,6 +996,8 @@ int match_app_filter_rule(int appid, af_client_info_t *client)
 
 
 #define NF_DROP_BIT 0x80000000
+#define NF_CLIENT_HELLO_BIT 0x40000000
+
 
 static int af_get_visit_index(af_client_info_t *node, int app_id)
 {
@@ -1163,13 +1172,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	}
 	#endif
 
+
 	if (skb_is_nonlinear(skb) && flow.l4_len < MAX_AF_SUPPORT_DATA_LEN)
 	{
 		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
 		if (!flow.l4_data)
 			return NF_ACCEPT;
+		AF_LMT_DEBUG("##match nonlinear skb, len = %d\n", flow.l4_len);
 		malloc_data = 1;
 	}
+	flow.client_hello = conn->client_hello;
 
 	if (conn->app_id != 0)
 	{
@@ -1177,8 +1189,8 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		flow.drop = conn->drop;
 	}
 	else{
-		if (0 != dpi_main(skb, &flow))
-			goto EXIT;
+		dpi_main(skb, &flow);
+		conn->client_hello = flow.client_hello;
 
 		if (!match_feature(&flow))
 			goto EXIT;
@@ -1266,12 +1278,12 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 
 	if (ct->mark != 0)
 	{
-		app_id = ct->mark & (~NF_DROP_BIT);
+		app_id = ct->mark & 0xffff;
 		if (app_id > 1000 && app_id < 9999)
 		{
-			if (g_oaf_filter_enable){
+			if (g_oaf_filter_enable) {
 				if (NF_DROP_BIT == (ct->mark & NF_DROP_BIT))
-					drop = 1;
+					drop = 1; 
 			}
 			if (g_oaf_record_enable){
 				AF_CLIENT_LOCK_W();
@@ -1282,6 +1294,13 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			if (drop)
 			{
 				return NF_DROP;
+			}
+		}
+		else {
+			AF_LMT_DEBUG("ct->mark = %x\n", ct->mark);
+			if (ct->mark & NF_CLIENT_HELLO_BIT) {
+				AF_LMT_INFO("match ct client hello...\n");
+				flow.client_hello = 1;
 			}
 		}
 	}
@@ -1300,8 +1319,14 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			return NF_ACCEPT;
 		malloc_data = 1;
 	}
-	if (0 != dpi_main(skb, &flow))
-		goto EXIT;
+	dpi_main(skb, &flow);
+
+	if (flow.client_hello) {
+		ct->mark |= NF_CLIENT_HELLO_BIT;
+	}
+	else {
+		ct->mark &= ~NF_CLIENT_HELLO_BIT;
+	}
 
 	if (!match_feature(&flow))
 		goto EXIT;
@@ -1316,7 +1341,9 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			}
 		}
 	}
-	ct->mark = flow.app_id;
+	ct->mark = (ct->mark & 0xFFFF0000) | (flow.app_id & 0xFFFF);
+
+	
 	if (g_oaf_filter_enable){
 		if (match_app_filter_rule(flow.app_id, client))
 		{

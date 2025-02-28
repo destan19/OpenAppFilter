@@ -1,4 +1,3 @@
-
 #include <linux/init.h>
 #include <linux/module.h>
 #include <net/tcp.h>
@@ -155,8 +154,7 @@ int hash_mac(unsigned char *mac)
 {
 	if (!mac)
 		return 0;
-	else
-		return mac[5] & (MAX_AF_MAC_HASH_SIZE - 1);
+	return ((mac[0] ^ mac[1]) + (mac[2] ^ mac[3]) + (mac[4] ^ mac[5])) % MAX_AF_MAC_HASH_SIZE;
 }
 
 af_mac_info_t *find_af_mac(unsigned char *mac)

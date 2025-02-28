@@ -22,6 +22,7 @@ typedef struct {
     u8  protocol;
     u32 total_pkts;
     u32 app_id;
+	u8 client_hello;
     u8  drop;
     af_conn_state_t state;      
     unsigned long last_jiffies;
