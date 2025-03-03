@@ -649,23 +649,26 @@ static int handle_get_class_list(struct ubus_context *ctx, struct ubus_object *o
 
     return 0;
 }
-
+#define MAX_APPFILTER_STR_LEN 8192
 static int handle_get_app_filter(struct ubus_context *ctx, struct ubus_object *obj,
                                  struct ubus_request_data *req, const char *method,
                                  struct blob_attr *msg) {
-    struct json_object *response = json_object_new_object();
-    struct json_object *app_list = json_object_new_array();
+
     int i;
     struct uci_context *uci_ctx = uci_alloc_context();
     if (!uci_ctx) {
         printf("Failed to allocate UCI context\n");
         return 0;
     }
-    char app_filter_str[1024] = {0};
-    app_filter_str[0] = '\0';
-    af_uci_get_list_value(uci_ctx, "appfilter.rule.app_list", app_filter_str, sizeof(app_filter_str), " ");
-    printf("app_filter_str: %s\n", app_filter_str);
-    char *app_id_str = strtok(app_filter_str, " ");
+    char *appfilter_buf = (char *)malloc(MAX_APPFILTER_STR_LEN);
+    if (!appfilter_buf){
+        return 0;
+    }
+    appfilter_buf[0] = '\0';
+    struct json_object *response = json_object_new_object();
+    struct json_object *app_list = json_object_new_array();
+    af_uci_get_list_value(uci_ctx, "appfilter.rule.app_list", appfilter_buf, MAX_APPFILTER_STR_LEN - 1, " ");
+    char *app_id_str = strtok(appfilter_buf, " ");
     while (app_id_str) {
         json_object_array_add(app_list, json_object_new_int(atoi(app_id_str)));
         app_id_str = strtok(NULL, " ");
@@ -677,6 +680,7 @@ static int handle_get_app_filter(struct ubus_context *ctx, struct ubus_object *o
     blobmsg_add_object(&b, response);
     ubus_send_reply(ctx, req, b.head);
     blob_buf_free(&b);
+    free(appfilter_buf);
     json_object_put(response);
     return 0;
 }
