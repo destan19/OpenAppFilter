@@ -115,13 +115,16 @@ static struct ctl_table oaf_table[] = {
 		.mode = 0666,
 		.proc_handler = proc_douintvec,
 	},
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
 	{
 	}
+#endif
 };
+#define OAF_SYS_PROC_DIR "oaf"
 
 static struct ctl_table oaf_root_table[] = {
 	{
-		.procname	= "oaf",
+		.procname	= OAF_SYS_PROC_DIR,
 		.mode		= 0555,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0))
 		.child		= oaf_table,
@@ -137,7 +140,7 @@ static int af_init_log_sysctl(void)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0))
 	oaf_table_header = register_sysctl_table(oaf_root_table);
 #else
-	oaf_table_header = register_sysctl(oaf_root_table->procname, oaf_table);
+	oaf_table_header = register_sysctl(OAF_SYS_PROC_DIR, oaf_table);
 #endif
 	if (oaf_table_header == NULL){
 		printk("init log sysctl...failed\n");
