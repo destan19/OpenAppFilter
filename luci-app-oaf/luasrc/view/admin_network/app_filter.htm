@@ -54,6 +54,7 @@
         border-radius: 3px; /* Add slight rounding */
         background-color: #fff; /* Set background color */
         vertical-align: middle; /* Align vertically in the middle */
+        appearance: none; /* Remove default styling */
         position: relative; /* Ensure relative positioning */
     }
 
@@ -335,11 +336,16 @@
                 selectedApps.push(parseInt(checkbox.value));
             });
 
-            console.log("app_filter_data is " + app_filter_data);
+            // 将数组转换为逗号分隔的字符串
+            const selectedAppsStr = selectedApps.join(',');
+
+            console.log("app_filter_data is " + selectedAppsStr);
             new XHR().post('<%=url('admin/network/set_app_filter')%>', {
-                app_list: selectedApps
+                app_list: selectedAppsStr  // 提交字符串而不是数组
             },
             function (x, data) {
+                console.log("set ok");
+                console.log("set_app_filter data is " + data);
                 init_data();
                 const modal = document.getElementById('modal');
                 modal.style.display = 'flex'; 
@@ -361,11 +367,23 @@
                     record_enable: recordSwitch ? 1 : 0
                 }
             };
-            new XHR().post('<%=url('admin/network/set_app_filter_base')%>', data,
+            console.log("submitAppFilterBase");
+            new XHR().post('<%=url('admin/network/set_app_filter_base')%>', {
+                
+                enable: filterSwitch ? 1 : 0, 
+                work_mode: workMode,
+                record_enable: recordSwitch ? 1 : 0
+                
+            },
+
+
             function (x, data) {
                 console.log("Base filter settings updated");
             }
             );
+
+
+
         }
  
 		function submitHandle() {
@@ -459,7 +477,7 @@
 
 <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
-        <p style="margin: 0;">设置成功</p>
+        <p style="margin: 0;color: white;">设置成功</p>
     </div>
 </div>
 
