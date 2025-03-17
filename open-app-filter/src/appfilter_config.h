@@ -60,5 +60,7 @@ int af_get_uci_list_num(struct uci_context * ctx, char *package, char *section);
 int af_uci_get_array_value(struct uci_context *ctx, char *key_fmt, int index, char *output, int out_len);
 int af_uci_get_int_value(struct uci_context *ctx, char *key);
 int af_uci_get_value(struct uci_context *ctx, char *key, char *output, int out_len);
+int af_uci_add_section(struct uci_context * ctx, char *package_name, char *section);
+int af_uci_commit(struct uci_context *ctx, const char * package);
 #endif
 

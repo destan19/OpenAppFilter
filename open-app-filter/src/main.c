@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include <arpa/inet.h>
 #include "appfilter.h"
 #include <stdio.h>
+#include "utils.h"
 
 #define CMD_GET_LAN_IP_FMT   "ifconfig %s | grep 'inet addr' | awk '{print $2}' | awk -F: '{print $2}'"
 #define CMD_GET_LAN_MASK_FMT "ifconfig %s | grep 'inet addr' | awk '{print $4}' | awk -F: '{print $2}'"
@@ -415,7 +416,7 @@ int af_load_feature_to_kernel(void){
 	if (!fp)
 	{
 		printf("open file failed\n");
-		return;
+		return -1;
 	}
 	if (af_nl_clean_feature() < 0){
         return -1;
