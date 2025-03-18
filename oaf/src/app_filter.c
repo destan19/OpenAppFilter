@@ -107,10 +107,13 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 		else
 			strcpy(pos, dict);
 
-		k_sscanf(pos, "%d:%x", &index, &value);
-		node->pos_info[node->pos_num].pos = index;
-		node->pos_info[node->pos_num].value = value;
-		node->pos_num++;
+		int ret = k_sscanf(pos, "%d:%x", &index, &value);
+		if (ret == 2){
+			node->pos_info[node->pos_num].pos = index;
+			node->pos_info[node->pos_num].value = value;
+			node->pos_num++;
+		}
+	
 		feature_list_write_lock();
 		list_add(&(node->head), &af_feature_head);
 		feature_list_write_unlock();
