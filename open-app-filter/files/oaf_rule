@@ -18,6 +18,8 @@ clean_rule()
     json_str=`json_dump`
     config_apply "$json_str"
     json_cleanup
+	
+    nft delete table inet oaf 2>/dev/null
 }
 
 load_rule()
@@ -35,7 +37,10 @@ load_rule()
     fi                            
     json_str=`json_dump`
     config_apply "$json_str"
-    json_cleanup               
+    json_cleanup 
+	
+    local nft_cmd="nft add rule inet fw4 forward oaf appid \"$appid\" drop"
+    echo "$nft_cmd" | sh	
 }
 
 
@@ -89,6 +94,9 @@ reload_base_config(){
     if [ x"" != x"$lan_ifname" ];then
         echo "$lan_ifname" >/proc/sys/oaf/lan_ifname
     fi                   
+    
+	local backend=$(uci get firewall.@defaults[0].backend)
+    echo "$backend" >/proc/sys/oaf/firewall_backend
 }       
 
 case $1 in
