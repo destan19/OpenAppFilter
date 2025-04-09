@@ -2,43 +2,112 @@
 . /lib/functions.sh
 
 
-config_apply()
-{
-    test -z "$1" && return 1
-	if [ -e "/dev/appfilter" ];then
-    	echo "$1" >/dev/appfilter
-	fi
+OAF_LOCK="/var/lock/oaf.lock"
+OAF_FALLBACK="/tmp/oaf.cache"
+
+# 增强型配置应用函数
+config_apply() {
+    local max_retry=3 retry=0
+    
+    [ -z "$1" ] && return 1
+
+    # 尝试多种通信方式
+    while [ $retry -lt $max_retry ]; do
+        if [ -e "/dev/appfilter" ]; then
+            if echo "$1" >/dev/appfilter; then
+                return 0
+            fi
+        elif [ -p "/tmp/oaf.fifo" ]; then
+            echo "$1" >/tmp/oaf.fifo && return 0
+        fi
+        
+        logger -t oaf "Retry $((retry+1)) failed for: ${1:0:50}..."
+        retry=$((retry+1))
+        sleep 1
+    done
+
+    # 最终回退方案
+    logger -t oaf "Using fallback storage"
+    echo "$1" > "$OAF_FALLBACK"
+    return 1
 }
 
-clean_rule()
-{
+# 安全清理规则
+clean_rule() {
+    # 使用文件锁防止并发冲突
+    lock "$OAF_LOCK"
+    
+    # 删除旧规则链
+    nft delete chain inet fw4 oaf_chain 2>/dev/null
+    
+    # 清理内核模块规则
     json_init
     json_add_int "op" 3
     json_add_object "data"
-    json_str=`json_dump`
+    json_str=$(json_dump)
     config_apply "$json_str"
     json_cleanup
+    
+    lock -u "$OAF_LOCK"
 }
 
-load_rule()
-{          
-    json_init
-    json_add_int "op" 1
-    json_add_object "data"
-    json_add_array "apps" 
+# 增强型规则加载
+load_rule() {
+    lock "$OAF_LOCK"
+    
+    # 确保fw4表存在
+    nft list table inet fw4 >/dev/null 2>&1 || {
+        logger -t oaf "Initializing fw4 table"
+        nft add table inet fw4
+        nft add chain inet fw4 forward {
+            type filter hook forward priority filter
+            policy drop
+        }
+    }
+
+    # 创建OAF专用链
+    nft add chain inet fw4 oaf_chain {
+        type filter hook forward priority -10
+        policy accept
+    }
+
+    # 动态生成nftables脚本
+    local nft_script=$(mktemp)
+    cat > "$nft_script" <<-EOF
+    table inet fw4 {
+        chain oaf_chain {
+            $(get_appfilter_rules)
+        }
+    }
+EOF
+
+    # 原子化规则加载
+    nft -f "$nft_script" && logger -t oaf "Rules loaded successfully" || {
+        logger -t oaf "Failed to load rules"
+        rm -f "$nft_script"
+        lock -u "$OAF_LOCK"
+        return 1
+    }
+    rm -f "$nft_script"
+
+    # 挂载到forward链
+    nft insert rule inet fw4 forward position 2 jump oaf_chain
+    
+    lock -u "$OAF_LOCK"
+    return 0
+}
+
+# 辅助函数：生成应用过滤规则
+get_appfilter_rules() {
+    config_load appfilter
     config_get appid_list rule app_list
-    if ! test -z "$appid_list";then    
-        for appid in $appid_list:  
-        do                         
-            json_add_int "" $appid
-        done                      
-    fi                            
-    json_str=`json_dump`
-    config_apply "$json_str"
-    json_cleanup               
+    
+    local rules=""
+    for appid in ${appid_list//:/ }; do
+        rules="${rules}oaf appid \"$appid\" drop comment \"AppID:$appid\"\n"
+    done
+    echo -e "$rules"
 }
-
-
 
 add_mac_to_array_callback() {
     local section="$1"
@@ -67,8 +136,6 @@ load_mac_list()
     json_cleanup
 }
 
-
-
 reload_rule(){
     config_load appfilter
     clean_rule
@@ -89,6 +156,9 @@ reload_base_config(){
     if [ x"" != x"$lan_ifname" ];then
         echo "$lan_ifname" >/proc/sys/oaf/lan_ifname
     fi                   
+    
+	  local backend=$(uci get firewall.@defaults[0].backend)
+    echo "$backend" >/proc/sys/oaf/firewall_backend
 }       
 
 case $1 in
