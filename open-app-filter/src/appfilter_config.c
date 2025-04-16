@@ -490,7 +490,7 @@ int config_get_appfilter_enable(void)
     int enable = 0;
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx)
-        return NULL;
+        return -1;
 	enable = af_uci_get_int_value(ctx, "appfilter.global.enable");
     if (enable < 0)
         enable = 0;

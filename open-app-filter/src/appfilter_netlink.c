@@ -37,6 +37,7 @@ THE SOFTWARE.
 #define MAX_NL_RCV_BUF_SIZE 4096
 
 #define REPORT_INTERVAL_SECS 60
+extern int hash_appid(int appid);
 void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
 {
     int ret;

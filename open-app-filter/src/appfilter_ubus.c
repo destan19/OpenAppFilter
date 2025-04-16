@@ -37,6 +37,7 @@ THE SOFTWARE.
 #include "appfilter_config.h"
 #include <uci.h>
 #include "appfilter.h"
+#include "utils.h"
 
 extern int g_oaf_config_change;
 

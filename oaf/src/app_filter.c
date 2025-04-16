@@ -107,10 +107,13 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 		else
 			strcpy(pos, dict);
 
-		k_sscanf(pos, "%d:%x", &index, &value);
-		node->pos_info[node->pos_num].pos = index;
-		node->pos_info[node->pos_num].value = value;
-		node->pos_num++;
+		int ret = k_sscanf(pos, "%d:%x", &index, &value);
+		if (ret == 2){
+			node->pos_info[node->pos_num].pos = index;
+			node->pos_info[node->pos_num].value = value;
+			node->pos_num++;
+		}
+	
 		feature_list_write_lock();
 		list_add(&(node->head), &af_feature_head);
 		feature_list_write_unlock();
@@ -831,7 +834,8 @@ int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
 		return AF_FALSE;
 	if (node->pos_num > 0)
 	{
-		for (i = 0; i < node->pos_num; i++)
+		
+		for (i = 0; i < node->pos_num && i < MAX_POS_INFO_PER_FEATURE; i++)
 		{
 			// -1
 			if (node->pos_info[i].pos < 0)
@@ -988,7 +992,7 @@ int match_app_filter_rule(int appid, af_client_info_t *client)
 	}
 	if (af_get_app_status(appid))
 	{
-		AF_LMT_INFO("drop appid = %d, feature = %s\n", appid);
+		AF_LMT_INFO("drop appid = %d\n", appid);
 		return AF_TRUE;
 	}
 	return AF_FALSE;
@@ -1260,8 +1264,12 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		return NF_ACCEPT;
 
 	ct = nf_ct_get(skb, &ctinfo);
-	if (ct == NULL || !nf_ct_is_confirmed(ct))
+	if (ct == NULL)
 		return NF_ACCEPT;
+
+	if (flow.l4_protocol == IPPROTO_TCP && !nf_ct_is_confirmed(ct)){
+		return NF_ACCEPT;
+	}
 
 	if (!flow.src)
 		af_get_smac(skb, smac);

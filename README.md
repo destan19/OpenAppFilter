@@ -1,4 +1,38 @@
 
+## 应用过滤(OAF)
+应用过滤是一款OpenWrt防沉迷插件，支持热门的游戏、视频、聊天等APP，比如抖音、斗鱼、王者荣耀等，目前支持了几百款APP，可访问[www.openappfilter.com](http://www.openappfilter.com)查看详细的介绍  
+
+## 如何编译  
+1. 准备一套OpenWrt源码并已经完成固件编译  
+OpenWrt源码编译可自行查找教程，不在这里讲解  
+2. 下载应用过滤源码  
+进入OpenWrt源码根目录执行以下命令下载源码  
+```
+git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter    
+```
+3. 开启应用过滤编译选项  
+应用过滤包括三个源码包，分别对应页面、服务和内核模块  
+编译前需要开启者三个包的编译选项，可以通过make  menuconfig图形界面选择luci-app-oaf，  
+也可以按照以下命令生成(在源码根目录执行):  
+```
+echo "CONFIG_PACKAGE_luci-app-oaf=y" >>.config  
+make defconfig  
+```
+这样就会自动开启三个模块的编译选项  
+
+4. 开始编译插件  
+如果之前的openwrt源码已经编译成功只需要编译单个插件即可  
+```
+     make package/luci-app-oaf/compile V=s  
+     make package/open-app-filter/compile V=s
+     make package/oaf/compile V=s
+```
+也可以重新编译整个固件，这样插件会集成到固件中
+```
+make V=s
+```
+
+
 ## OAF(Open App Filter)  
 OAF is a parental control plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, such as Tiktok, Youtube, Telegram,etc.,and support self-defined app rules, you can lean more and download firmware by visiting [www.openappfilter.com](http://www.openappfilter.com) .
 
@@ -35,23 +69,6 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 ```
      make V=s  
 ```
-### How to install OAF  
-If you can't compile it yourself, you can install it directly into the released OpenWrt version  
-1. Install an officially released version of openwrt  
-Note that it must be the official release version,may cause failure if other versions are used, because OAF depend on the kernel version.  
-It is best to download through the following official address  
-https://downloads.openwrt.org/releases   
-2. Download OAF zip file  
-Find the corresponding OAF zip file on the release page and download it, note that the plug-in version and the system version must be consistent.  
-3. Install OAF ipks  
-Unzip thie OAF package and then install ipks in order  
-- kmod-oaf  
-- appfilter   
-- luci-compat(if the luci version is 2.0, openwrt 19.07+)   
-- luci-app-oaf    
-- luci-i18n-oaf-zh-cn(Chinese Language Pack, optional)  
 
-### Notice
-If there is no version you need, you need to compile and generate it yourself, and I will release more architecture ipks later. 
 
 
