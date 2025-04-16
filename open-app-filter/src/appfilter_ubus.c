@@ -569,7 +569,7 @@ static int parse_feature_cfg(struct json_object *class_list) {
         return -1;
     }
 
-    char line[256];
+	char line[1024];
     char app_buf[128];
     struct json_object *current_class = NULL;
     struct json_object *app_list = NULL;
