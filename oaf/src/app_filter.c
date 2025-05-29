@@ -1112,7 +1112,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		return NF_ACCEPT;
 	if (0 == af_lan_ip || 0 == af_lan_mask)
 		return NF_ACCEPT;
-	if (strstr(dev->name, "docker"))
+	if (!strncmp(dev->name, "docker", 6))
 		return NF_ACCEPT;
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
@@ -1256,7 +1256,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	u_int8_t drop = 0;
 	u_int8_t malloc_data = 0;
 
-	if (!strstr(dev->name, g_lan_ifname))
+	if (strncmp(dev->name, g_lan_ifname, 15))
 		return NF_ACCEPT;
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
