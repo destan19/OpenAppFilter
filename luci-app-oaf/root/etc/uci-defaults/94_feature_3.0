@@ -1,5 +1,7 @@
 #!/bin/sh
 
+[ "$(uci -q get appfilter.feature.format)" = "v3.0" ] && exit 0
+
 uci -q batch <<-EOF >/dev/null
         set appfilter.feature.format='v3.0'
         set appfilter.rule='rule'
@@ -9,3 +11,5 @@ uci -q batch <<-EOF >/dev/null
         set appfilter.global.auto_load_engine='1'
         commit appfilter
 EOF
+
+exit 0
