@@ -134,7 +134,6 @@ EXIT:
 
 void af_load_global_config(af_global_config_t *config){
     int ret = 0;
-	char lan_ifname[32] = {0};
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx)
         return;
@@ -180,11 +179,9 @@ void af_load_global_config(af_global_config_t *config){
         config->auto_load_engine = ret;
 
 
-    ret = af_uci_get_value(ctx, "appfilter.global.disable_hnat", lan_ifname, sizeof(lan_ifname));
-	if (ret < 0)
-		strncpy(config->lan_ifname, "br-lan", sizeof(config->lan_ifname) - 1);
-	else
-		strncpy(config->lan_ifname, lan_ifname, sizeof(config->lan_ifname) - 1);
+    ret = af_uci_get_value(ctx, "appfilter.global.lan_ifname", config->lan_ifname, 16);
+	if (ret != 0)
+		strcpy(config->lan_ifname, "br-lan");
 
     uci_free_context(ctx);
     LOG_INFO("enable=%d, user_mode=%d, work_mode=%d", config->enable, config->user_mode, config->work_mode);
