@@ -840,7 +840,7 @@ static int handle_get_app_filter_adv(struct ubus_context *ctx, struct ubus_objec
     char lan_ifname[16];
 
     int tcp_rst = af_uci_get_int_value(uci_ctx, "appfilter.global.tcp_rst");
-    af_uci_get_value(uci_ctx, "appfilter.global.lan_ifname", lan_ifname, sizeof(lan_ifname));
+    af_uci_get_value(uci_ctx, "appfilter.global.lan_ifname", lan_ifname, 16);
     int disable_hnat = af_uci_get_int_value(uci_ctx, "appfilter.global.disable_hnat");
     int auto_load_engine = af_uci_get_int_value(uci_ctx, "appfilter.global.auto_load_engine");
 
