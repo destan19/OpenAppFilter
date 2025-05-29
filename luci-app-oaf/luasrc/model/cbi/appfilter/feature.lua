@@ -63,8 +63,7 @@ um = s:option(DummyValue, "rule_data")
 um.template = "cbi/oaf_dvalue"
 
 local dir, fd
-dir = "/tmp/upload/"
-nixio.fs.mkdir(dir)
+dir = "/tmp/upload/oaf"
 http.setfilehandler(function(meta, chunk, eof)
     local feature_file = "/etc/appfilter/feature.cfg"
     local f_format="v3.0"
@@ -73,7 +72,8 @@ http.setfilehandler(function(meta, chunk, eof)
             return
         end
         if meta and chunk then
-            fd = nixio.open(dir .. meta.file, "w")
+            nixio.fs.mkdirr(dir)
+            fd = nixio.open(dir .. "/feature.tgz", "w")
         end
         if not fd then
             return
@@ -85,7 +85,7 @@ http.setfilehandler(function(meta, chunk, eof)
     if eof and fd then
         fd:close()
         -- Extract the tar.gz file
-        local tar_cmd = "tar -zxvf /tmp/upload/" .. meta.file .. " -C /tmp/upload/ >/dev/null"
+        local tar_cmd = "tar -zxvf " .. dir .. "/feature.tgz -C " .. dir .. " >/dev/null"
         local success = os.execute(tar_cmd)
         if success ~= 0 then
             um.value = translate("Failed to update feature file, format error")
@@ -94,11 +94,10 @@ http.setfilehandler(function(meta, chunk, eof)
             um.value = translate("Update the feature file successfully, please refresh the page")
         end
 
-        local feature_dir="/tmp/upload/feature"
-        local fd2 = io.open("/tmp/upload/feature.cfg")
+        local fd2 = io.open(dir .. "/feature.cfg")
         if not fd2 then
             um.value = translate("Failed to extract feature file, file not found")
-            os.execute("rm /tmp/upload/* -fr")
+            os.execute("rm -rf " .. dir)
             return
         end
         local version_line = fd2:read("*l")
@@ -111,13 +110,13 @@ http.setfilehandler(function(meta, chunk, eof)
             end
             if not string.match(f_format, format) then
                 um.value = translate("Failed to update feature file, format error"..",feature format:"..f_format)
-                os.execute("rm /tmp/upload/* -fr")
+                os.execute("rm -rf " .. dir)
                 return
             end
-            local cmd = "cp /tmp/upload/feature.cfg " .. feature_file
+            local cmd = "cp " .. dir .. "/feature.cfg " .. feature_file
             os.execute(cmd)
             os.execute("rm /www/luci-static/resources/app_icons/* -fr");
-            cmd = "cp /tmp/upload/app_icons/* /www/luci-static/resources/app_icons/ -fr >/dev/null"
+            cmd = "cp ".. dir .."/app_icons/* /www/luci-static/resources/app_icons/ -fr >/dev/null"
             os.execute(cmd)
             os.execute("chmod 666 " .. feature_file)
             luci.sys.exec("killall -SIGUSR1 oafd")
@@ -125,7 +124,7 @@ http.setfilehandler(function(meta, chunk, eof)
         else
             um.value = translate("Failed to update feature file, format error")
         end
-        os.execute("rm /tmp/upload/* -fr")
+        os.execute("rm -rf " .. dir)
     end
 
 end)
