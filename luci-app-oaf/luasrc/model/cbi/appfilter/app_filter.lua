@@ -16,5 +16,5 @@ m = Map("appfilter", translate(""), translate(""))
 
 local v
 v = m:section(SimpleSection)
-v.template = "admin_network/app_filter"
+v.template = "oaf/app_filter"
 return m

@@ -14,6 +14,6 @@ local m, s
 
 m = Map("appfilter", translate(""), translate(""))
 
-m:section(SimpleSection).template = "admin_network/user_status"
+m:section(SimpleSection).template = "oaf/user_status"
 
 return m
