@@ -899,7 +899,7 @@ static int handle_set_app_filter_adv(struct ubus_context *ctx, struct ubus_objec
     af_uci_commit(uci_ctx, "appfilter");
     g_oaf_config_change = 1;
     reload_oaf_rule();
-    system("/usr/bin/hnat.sh &");
+    system("/usr/libexec/oaf/hnat.sh &");
     uci_free_context(uci_ctx);
     struct blob_buf b = {};
     blob_buf_init(&b, 0);
