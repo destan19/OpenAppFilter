@@ -1,14 +1,14 @@
 #ifndef APP_FILTER_H
 #define APP_FILTER_H
 
-#define AF_VERSION "5.1"
+#define AF_VERSION "5.2"
 #define AF_FEATURE_CONFIG_FILE "/tmp/feature.cfg"
 
 #define MAX_DPI_PKT_NUM 64
 #define MIN_HTTP_DATA_LEN 16
 #define MAX_APP_NAME_LEN 64
 #define MAX_FEATURE_NUM_PER_APP 16 
-#define MIN_FEATURE_STR_LEN 16
+#define MIN_FEATURE_STR_LEN 8
 #define MAX_FEATURE_STR_LEN 128
 #define MAX_HOST_URL_LEN 128
 #define MAX_REQUEST_URL_LEN 128
@@ -152,8 +152,8 @@ typedef struct flow_info{
 	struct nf_conn *ct;
 	u_int32_t src; 
 	u_int32_t dst;
-	u_int8_t *src6;
-	u_int8_t *dst6;
+	struct in6_addr *src6;
+	struct in6_addr *dst6;
 	int l4_protocol;
 	u_int16_t sport;
 	u_int16_t dport;

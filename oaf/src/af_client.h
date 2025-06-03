@@ -30,7 +30,21 @@ enum NFC_PKT_DIR
 
 #define MAX_VISIT_HISTORY_TIME 24
 #define MAX_RECORD_APP_NUM 64
+typedef struct flow_stat
+{
+	long long up_bytes;
+	long long down_bytes;
+	long long up_pkts;
+	long long down_pkts;
+} flow_stat_t;
 
+typedef struct flow_rate
+{
+	unsigned int up_rate;
+	unsigned int down_rate;
+	unsigned int pkt_up_rate;
+	unsigned int pkt_down_rate;
+}flow_rate_t;
 typedef struct app_visit_info
 {
 	unsigned int app_id;
@@ -38,10 +52,6 @@ typedef struct app_visit_info
 	unsigned int drop_num;
 	unsigned long latest_time;
 	unsigned int latest_action;
-	unsigned int total_down_bytes;
-	unsigned int total_up_bytes;
-	unsigned long history_time[MAX_VISIT_HISTORY_TIME];
-	unsigned int action[MAX_VISIT_HISTORY_TIME];
 } app_visit_info_t;
 
 typedef struct af_client_info
@@ -49,9 +59,18 @@ typedef struct af_client_info
 	struct list_head hlist;
 	unsigned char mac[MAC_ADDR_LEN];
 	unsigned int ip;
+	struct in6_addr ipv6;
 	unsigned long create_jiffies;
 	unsigned long update_jiffies;
+	flow_stat_t flow;
+	flow_stat_t last_flow;
+	flow_stat_t period_flow; 
+	flow_rate_t rate;
+	struct timer_list client_timer;
 	unsigned int visit_app_num;
+	int active_time;
+	int inactive_time;
+	int active;
 	int report_count;
 	app_visit_info_t visit_info[MAX_RECORD_APP_NUM];
 } af_client_info_t;
@@ -60,6 +79,8 @@ int af_client_init(void);
 
 void af_client_exit(void);
 af_client_info_t *find_af_client_by_ip(unsigned int ip);
+af_client_info_t *find_af_client_by_ipv6(struct in6_addr *addr);
+
 af_client_info_t *find_af_client(unsigned char *mac);
 
 void check_client_expire(void);

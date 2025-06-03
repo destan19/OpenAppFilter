@@ -22,6 +22,7 @@
 #include "cJSON.h"
 #include "af_log.h"
 #include "af_client.h"
+extern char *ipv6_to_str(const struct in6_addr *addr, char *str);
 
 extern struct list_head af_client_list_table[MAX_AF_CLIENT_HASH_SIZE];
 struct af_client_iter_state
@@ -110,18 +111,22 @@ static int af_client_seq_show(struct seq_file *s, void *v)
 {
     unsigned char mac_str[32] = {0};
     unsigned char ip_str[32] = {0};
+	unsigned char ipv6_str[128];
+
     static int index = 0;
     af_client_info_t *node = (af_client_info_t *)v;
     if (v == SEQ_START_TOKEN)
     {
         index = 0;
-        seq_printf(s, "%-4s %-20s %-20s\n", "Id", "Mac", "Ip");
+        seq_printf(s, "%-4s %-20s %-20s %-32s  %-16s %-16s\n", "Id", "Mac", "IP", "IPv6", "UpRate", "DownRate");
         return 0;
     }
     index++;
     sprintf(mac_str, MAC_FMT, MAC_ARRAY(node->mac));
     sprintf(ip_str, "%pI4", &node->ip);
-    seq_printf(s, "%-4d %-20s %-20s\n", index, mac_str, ip_str);
+	ipv6_to_str(&node->ipv6, ipv6_str);
+
+    seq_printf(s, "%-4d %-20s %-20s %-32s %-16d %-16d\n", index, mac_str, ip_str, ipv6_str, node->rate.up_rate, node->rate.down_rate);
     return 0;
 }
 

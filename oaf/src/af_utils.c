@@ -6,6 +6,8 @@
 #include <linux/string.h>
 #include <linux/version.h>
 #include "af_utils.h"
+#define MAX_DUMP_STR_LEN 256
+
 u_int32_t af_get_timestamp_sec(void)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,17,0)
@@ -73,7 +75,6 @@ int check_local_network_ip(unsigned int ip)
 
 void dump_str(char *name, unsigned char *p, int len)
 {
-	#define MAX_DUMP_STR_LEN 64
 	char buf[MAX_DUMP_STR_LEN] = {0};
 	if (len > MAX_DUMP_STR_LEN) {
 		len = MAX_DUMP_STR_LEN - 1;
@@ -120,7 +121,6 @@ void print_hex_ascii(const unsigned char *data, size_t size) {
 
 void dump_hex(char *name, unsigned char *p, int len)
 {
-	#define MAX_DUMP_STR_LEN 64
 	int i;
 	if (len > MAX_DUMP_STR_LEN) {
 		len = MAX_DUMP_STR_LEN - 1;

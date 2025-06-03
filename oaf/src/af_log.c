@@ -146,7 +146,6 @@ static int af_init_log_sysctl(void)
 		printk("init log sysctl...failed\n");
 		return -ENOMEM;
 	}
-	printk("init oaf sysctl...ok\n");
 	return 0;
 }
 
