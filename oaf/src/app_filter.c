@@ -20,6 +20,10 @@
 #include <linux/tcp.h>
 #include <linux/ip.h>
 #include <linux/netfilter_ipv4.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
+#include <net/netfilter/ipv4/nf_reject.h>
+#include <net/netfilter/ipv6/nf_reject.h>
+#endif
 #include "app_filter.h"
 #include "af_utils.h"
 #include "af_log.h"
@@ -47,14 +51,6 @@ DEFINE_RWLOCK(af_feature_lock);
 #define MAX_AF_SUPPORT_DATA_LEN 3000
 #define MAX_HOST_LEN 64
 #define MIN_HOST_LEN 4
-
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
-extern void nf_send_reset(struct net *net, struct sock *sk, struct sk_buff *oldskb, int hook);
-#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
-extern void nf_send_reset(struct net *net,  struct sk_buff *oldskb, int hook);
-#else
-extern void nf_send_reset(sk_buff *oldskb, int hook);
-#endif
 
 int __add_app_feature(char *feature, int appid, char *name, int proto, int src_port,
 					  port_info_t dport_info, char *host_url, char *request_url, char *dict, char *search_str, int ignore)
@@ -1099,6 +1095,29 @@ int af_check_bcast_ip(flow_info_t *f)
 
 	return 0;
 }
+
+static void af_send_reset(flow_info_t *flow, struct sk_buff *skb) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
+	if (flow->l4_protocol == IPPROTO_TCP && g_tcp_rst) {
+		if (flow->src6) {
+		#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
+			nf_send_reset6(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
+		#else
+			nf_send_reset6(&init_net, skb, NF_INET_PRE_ROUTING);
+		#endif
+		} else {
+		#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
+			nf_send_reset(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
+		#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
+			nf_send_reset(&init_net, skb, NF_INET_PRE_ROUTING);
+		#else
+			nf_send_reset(skb, NF_INET_PRE_ROUTING);
+		#endif
+		}
+	}
+#endif
+}
+
 u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
 {
 	flow_info_t flow;
@@ -1204,15 +1223,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 			if (match_app_filter_rule(flow.app_id, client)){
 				flow.drop = 1;
 				AF_LMT_INFO("##Drop appid %d\n",flow.app_id);
-				if (skb->protocol == htons(ETH_P_IP) && g_tcp_rst){
-				#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
-					nf_send_reset(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
-				#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
-					nf_send_reset(&init_net, skb, NF_INET_PRE_ROUTING);
-				#else
-					nf_send_reset(skb, NF_INET_PRE_ROUTING);
-				#endif
-				}
+				af_send_reset(&flow, skb);
 
 			}
 		}
@@ -1358,15 +1369,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			ct->mark |= NF_DROP_BIT;
 			flow.drop = 1;
 			AF_LMT_INFO("##Drop app %s flow, appid is %d\n", flow.app_name, flow.app_id);
-			if (skb->protocol == htons(ETH_P_IP) && g_tcp_rst){
-			#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
-				nf_send_reset(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
-			#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
-				nf_send_reset(&init_net, skb, NF_INET_PRE_ROUTING);
-			#else
-				nf_send_reset(skb, NF_INET_PRE_ROUTING);
-			#endif
-			}
+			af_send_reset(&flow, skb);
 			ret = NF_DROP;
 		}
 	}
