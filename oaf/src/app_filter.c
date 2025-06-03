@@ -509,13 +509,9 @@ static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned 
 	struct skb_seq_state state;
 	unsigned char *msg_buf = NULL;
 	unsigned int consumed = 0;
-#if 0
-	if (from <= 0 || from > 1500)
-		return NULL;
 
-	if (len <= 0 || from+len > 1500)
+	if (len <= 0)
 		return NULL;
-#endif
 
 	msg_buf = kmalloc(len, GFP_KERNEL);
 	if (!msg_buf)
