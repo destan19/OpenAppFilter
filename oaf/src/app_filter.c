@@ -1303,6 +1303,11 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			if (g_oaf_filter_enable) {
 				if (NF_DROP_BIT == (ct->mark & NF_DROP_BIT))
 					drop = 1; 
+				else if (match_app_filter_rule(app_id, client)) {
+					ct->mark |= NF_DROP_BIT;
+					af_send_reset(&flow, skb);
+					drop = 1;
+				}
 			}
 			if (g_oaf_record_enable){
 				AF_CLIENT_LOCK_W();
@@ -1313,6 +1318,8 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			if (drop)
 			{
 				return NF_DROP;
+			} else {
+				return NF_ACCEPT;
 			}
 		}
 		else {
