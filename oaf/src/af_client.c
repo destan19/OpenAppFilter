@@ -540,20 +540,8 @@ static struct nf_hook_ops af_client_ops[] = {
 		.priority = NF_IP_PRI_FIRST + 1,
 	},
 	{
-		.hook = af_client_hook,
-		.pf = NFPROTO_IPV6,
-		.hooknum = NF_INET_FORWARD,
-		.priority = NF_IP_PRI_FIRST + 1,
-	},
-	{
 		.hook = af_client_hook2,
-		.pf = PF_INET,
-		.hooknum = NF_INET_FORWARD,
-		.priority = NF_IP_PRI_LAST - 1,
-	},
-	{
-		.hook = af_client_hook2,
-		.pf = NFPROTO_IPV6,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_LAST - 1,
 	},
