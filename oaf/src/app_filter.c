@@ -522,6 +522,44 @@ void af_add_feature_msg_handle(char *data, int len)
 	AF_INFO("add feature %s\n", feature);
 	af_init_feature(feature);
 }
+// free by caller
+static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned int len)
+{
+	struct skb_seq_state state;
+	unsigned char *msg_buf = NULL;
+	unsigned int consumed = 0;
+#if 0
+	if (from <= 0 || from > 1500)
+		return NULL;
+
+	if (len <= 0 || from+len > 1500)
+		return NULL;
+#endif
+
+	msg_buf = kmalloc(len, GFP_KERNEL);
+	if (!msg_buf)
+		return NULL;
+
+	skb_prepare_seq_read(skb, from, from + len, &state);
+	while (1)
+	{
+		unsigned int avail;
+		const u8 *ptr;
+		avail = skb_seq_read(consumed, &ptr, &state);
+		if (avail == 0)
+		{
+			break;
+		}
+		memcpy(msg_buf + consumed, ptr, avail);
+		consumed += avail;
+		if (consumed >= len)
+		{
+			skb_abort_seq_read(&state);
+			break;
+		}
+	}
+	return msg_buf;
+}
 
 int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
@@ -1084,6 +1122,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	u_int8_t smac[ETH_ALEN];
 	af_client_info_t *client = NULL;
 	u_int32_t ret = NF_ACCEPT;
+	u_int8_t malloc_data = 0;
 
 	if (!skb || !dev)
 		return NF_ACCEPT;
@@ -1144,6 +1183,14 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		}
 	}
 
+	if (skb_is_nonlinear(skb) && flow.l4_len < MAX_AF_SUPPORT_DATA_LEN)
+	{
+		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+		if (!flow.l4_data)
+			return NF_ACCEPT;
+		AF_LMT_DEBUG("##match nonlinear skb, len = %d\n", flow.l4_len);
+		malloc_data = 1;
+	}
 	flow.client_hello = conn->client_hello;
 
 	if (conn->app_id != 0)
@@ -1163,18 +1210,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 			if (match_app_filter_rule(flow.app_id, client)){
 				flow.drop = 1;
 				AF_INFO("##Drop appid %d\n",flow.app_id);
-			// 5.4 kernel panic
-			#if 0
 				if (skb->protocol == htons(ETH_P_IP) && g_tcp_rst){
 				#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
 					nf_send_reset(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
 				#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
-					nf_send_reset(&init_net, skb, NF_INET_PRE_ROUTING);
+				// 5.4 kernel panic
+			//		nf_send_reset(&init_net, skb, NF_INET_PRE_ROUTING);
 				#else
 					nf_send_reset(skb, NF_INET_PRE_ROUTING);
 				#endif
 				}
-			#endif
 
 			}
 		}
@@ -1194,7 +1239,13 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	}
 
 EXIT:
-
+	if (malloc_data)
+	{
+		if (flow.l4_data)
+		{
+			kfree(flow.l4_data);
+		}
+	}
 	return ret;
 }
 
@@ -1210,6 +1261,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	u_int32_t ret = NF_ACCEPT;
 	u_int32_t app_id = 0;
 	u_int8_t drop = 0;
+	u_int8_t malloc_data = 0;
 
 	if (!strstr(dev->name, g_lan_ifname))
 		return NF_ACCEPT;
@@ -1278,6 +1330,13 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (total_packets > MAX_DPI_PKT_NUM)
 		return NF_ACCEPT;
 
+	if (skb_is_nonlinear(skb) && flow.l4_len < MAX_AF_SUPPORT_DATA_LEN)
+	{
+		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+		if (!flow.l4_data)
+			return NF_ACCEPT;
+		malloc_data = 1;
+	}
 	dpi_main(skb, &flow);
 
 	if (flow.client_hello) {
@@ -1332,6 +1391,13 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	}
 	
 EXIT:
+	if (malloc_data)
+	{
+		if (flow.l4_data)
+		{
+			kfree(flow.l4_data);
+		}
+	}
 	return ret;
 }
 
