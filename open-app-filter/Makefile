@@ -38,6 +38,10 @@ define Package/appfilter/description
   openappfilter app
 endef
 
+define Package/appfilter/conffiles
+/etc/config/appfilter
+/etc/config/user_info
+endef
 
 define Package/appfilter/install
 	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/init.d
