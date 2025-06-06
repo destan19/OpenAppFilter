@@ -318,7 +318,7 @@ int __af_visit_info_report(af_client_info_t *node)
 
 static inline int get_packet_dir(struct net_device *in)
 {
-	if (strstr(in->name, g_lan_ifname))
+	if (!strncmp(in->name, g_lan_ifname, 15))
 	{
 		return PKT_DIR_UP;
 	}
