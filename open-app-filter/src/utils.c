@@ -73,14 +73,14 @@ int check_same_network(char *ip1, char *netmask, char *ip2) {
 int af_read_file_value(const char *file_path, char *value, int value_len) {
     FILE *file = fopen(file_path, "r");
     if (!file) {
-        perror("Failed to open file");
+        //perror("Failed to open file");
         return -1;
     }
 
     if (fgets(value, value_len, file) == NULL) {
         perror("Failed to read line from file");
         fclose(file);
-        return -1;
+        return -2;
     }
 
     size_t len = strlen(value);
