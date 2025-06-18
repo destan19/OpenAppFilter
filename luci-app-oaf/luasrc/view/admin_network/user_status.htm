@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="<%=resource%>/css/common.css">
 <% local dsp=require "luci.dispatcher" -%>
 
 <script type="text/javascript" src="<%=resource%>/echarts.min.js?v=5.0"></script>
@@ -126,12 +127,23 @@
 						return `<img src="<%=resource%>/app_icons/${app.id}.png" alt="${app.name}" title="${app.name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 8px;">`;
 					}).join("") || "--";
 					tr.insertCell(-1).innerHTML = app_list_str;
+					// 正在访问APP列
+					var current_app = user_list[i].app || "--";
+					tr.insertCell(-1).innerHTML = current_app;
+					// 正在访问URL列
+					var current_url = user_list[i].url || "--";
+					var display_url = current_url;
+					// 处理URL显示长度，超过22个字符时进行截断
+					if (current_url !== "--" && current_url.length > 20) {
+						display_url = current_url.substring(0, 10) + "..." + current_url.substring(current_url.length - 10);
+					}
+					tr.insertCell(-1).innerHTML = `<span title="${current_url}">${display_url}</span>`;
 					tr.insertCell(-1).innerHTML = user_list[i].online == 1 
 						? `<span style="color: green;"><%:Online%></span>` 
 						: "<%:Offline%>";
 					tr.insertCell(-1).innerHTML = `
-						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}')" style="margin-right: 5px;">查看详情</button>
-						<button type="button" class="cbi-button cbi-button-add" onclick="showModifyNickname('${user_list[i].mac}')">修改备注</button>
+						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}')" style="margin-right: 5px;">详情</button>
+						<button type="button" class="cbi-button cbi-button-add" onclick="showModifyNickname('${user_list[i].mac}')">备注</button>
 					`;
 
 					
@@ -159,7 +171,7 @@
 					// Add app icon before app name with fixed height for alignment
 					tr.insertCell(-1).innerHTML = `
 						<div style="height: 24px; display: flex; align-items: center;">
-							<img src="<%=resource%>/app_icons/${visit_list[i].id}.png" alt="${visit_list[i].name}" title="${visit_list[i].name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 8px;">
+							<img src="<%=resource%>/app_icons/${visit_list[i].id}.png" alt="${visit_list[i].name}" title="${visit_list[i].name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 4px;">
 							<span>${visit_list[i].name}</span>
 						</div>
 					`;
@@ -446,28 +458,34 @@
 
 	<div class="cbi-section cbi-tblsection">
 
-		<div style="max-width: 1000px; margin-left: 5px;padding: 5px;">
+		<div>
 
-		<table class="table cbi-section-table" id="user_status_table">
-			<tr class="tr table-titles">
-				<th class="th">
+		<table class="table cbi-section-table" id="user_status_table" style="table-layout: fixed; width: 100%;">
+			<tr class="tr">
+				<th class="th" style="width: 85px;">
 					<%:设备信息%>
 				</th>
-				<th class="th">
-					<%:Ip%>
+				<th class="th" style="width: 80px;">
+					<%:IP地址%>
 				</th>
-				<th class="th">
+				<th class="th" style="width: 110px;">
 					<%:Common App(TOP5)%>
 				</th>
-				<th class="th">
+				<th class="th" style="width: 65px;">
+					<%:活跃APP%>
+				</th>
+				<th class="th" style="width: 110px;">
+					<%:正在访问URL%>
+				</th>
+				<th class="th" style="width: 55px;">
 					<%:Online Status%>
 				</th>
-				<th class="th">
+				<th class="th" style="width: 120px;">
 					<%:Actions%>
 				</th>
 			</tr>
 			<tr class="tr">
-				<td class="td" colspan="8"><em><br />
+				<td class="td" colspan="9"><em><br />
 						<%:Collecting data...%>
 					</em></td>
 			</tr>
@@ -638,8 +656,20 @@
 		margin-bottom: 20px;
 	}
 
-	#user_status_table .td, #visit_list_table .td {
-        padding: 2px !important; /* Remove padding from table cells */
-    }
+	#user_status_table .td {
+		padding-left: 10px !important; /* 5px margin-left + 2px original padding */
+	}
+
+	#visit_list_table .td {
+		padding: 4px 8px !important; /* 调整访问记录表格的行高 */
+		height: 28px !important; /* 设置固定行高 */
+		vertical-align: middle !important; /* 垂直居中对齐 */
+	}
+
+	#visit_list_table .th {
+		padding: 6px 8px !important; /* 调整表头行高 */
+		height: 32px !important; /* 设置固定表头行高 */
+		vertical-align: middle !important; /* 垂直居中对齐 */
+	}
 
 </style>

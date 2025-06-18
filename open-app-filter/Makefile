@@ -2,7 +2,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=appfilter
-PKG_VERSION:=6.1.3
+PKG_VERSION:=6.1.4
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
@@ -12,8 +12,8 @@ TARGET_CFLAGS +=-Werror=implicit-function-declaration
 define Package/appfilter
   SECTION:=TT Apps
   CATEGORY:=TT Apps
-  DEPENDS:=+libubox +libubus  +libuci +libpthread +libjson-c +libblobmsg-json
-  TITLE:=App filter userspace module
+  DEPENDS:=+libubox +libubus +libuci +libpthread +libjson-c +libblobmsg-json
+  TITLE:=OAF client and config service
 endef
 
 define Build/Prepare

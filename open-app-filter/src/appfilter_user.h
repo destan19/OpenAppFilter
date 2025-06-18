@@ -38,7 +38,7 @@ THE SOFTWARE.
 #define MAX_SUPPORT_DEV_NUM 64
 #define SECONDS_PER_DAY (24 * 3600)
 #define MAX_NICKNAME_SIZE 64
-
+#define MAX_REPORT_URL_LEN 64
 
 //extern dev_node_t *dev_hash_table[MAX_DEV_NODE_HASH_SIZE];
 
@@ -89,6 +89,8 @@ typedef struct dev_node
     u_int32_t online_time;
     visit_info_t *visit_htable[MAX_VISIT_HASH_SIZE];
     visit_stat_t stat[MAX_APP_TYPE][MAX_APP_ID_NUM];
+    char visiting_url[MAX_REPORT_URL_LEN];
+    int visiting_app;
     struct dev_node *next;
 
 } dev_node_t;
@@ -123,4 +125,6 @@ void flush_dev_expire_node(void);
 void flush_expire_visit_info(void);
 void update_dev_list(void);
 void update_dev_nickname(void);
+void update_dev_visiting_info(void);
+
 #endif

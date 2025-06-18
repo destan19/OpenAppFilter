@@ -369,6 +369,36 @@ void flush_dev_expire_node(void)
     }
 }
 
+void update_dev_visiting_info(void){
+    char line_buf[256] = {0};
+    char mac_buf[32] = {0};
+    char url_buf[32] = {0};
+    char app_buf[32] = {0};
+    char time_buf[32] = {0};
+
+    FILE *fp = fopen("/proc/net/af_visit", "r");    
+    if (!fp)
+    {
+        printf("open af_visit file....failed\n");
+        return;
+    }
+    fgets(line_buf, sizeof(line_buf), fp); // title
+    while (fgets(line_buf, sizeof(line_buf), fp))   
+    {
+        sscanf(line_buf, "%s %s %s", mac_buf, app_buf, url_buf);
+        dev_node_t *node = find_dev_node(mac_buf);
+        if (!node)
+            continue;
+        if (strcmp(url_buf, "none") == 0) {
+            node->visiting_url[0] = '\0';
+        }
+        else {
+            strncpy(node->visiting_url, url_buf, sizeof(node->visiting_url));
+        }
+        node->visiting_app = atoi(app_buf);
+    }
+    fclose(fp);
+}
 
 void update_dev_list(void)
 {
@@ -376,6 +406,7 @@ void update_dev_list(void)
     update_dev_hostname();
     update_dev_nickname();
     update_dev_online_status();
+    update_dev_visiting_info();
 }
 
 

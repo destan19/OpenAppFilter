@@ -1,7 +1,7 @@
 #ifndef APP_FILTER_H
 #define APP_FILTER_H
 
-#define AF_VERSION "5.2"
+#define AF_VERSION "5.3"
 #define AF_FEATURE_CONFIG_FILE "/tmp/feature.cfg"
 
 #define MAX_DPI_PKT_NUM 64

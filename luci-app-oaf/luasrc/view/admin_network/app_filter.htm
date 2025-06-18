@@ -1,26 +1,28 @@
+<link rel="stylesheet" href="<%=resource%>/css/common.css">
+
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-    }
-    h1, h2 {
-        color: #333;
-    }
+ 
     #appContainer {
         display: flex;
         flex-wrap: wrap;
         margin-top: 20px;
     }
+    
 
-    .button-check {
-        padding: 3px 8px;
-        background-color: transparent; /* Set background color to transparent */
-        color: green; /* Set font color to black */
-        border: 1px solid green; /* Set border color to green */
-        border-radius: 3px;
-        cursor: pointer;
-        font-size: 12px; /* Reduce font size */
-    }
+.arrow {
+    width: 12px; 
+    height: 12px; 
+    background-image: url('<%=resource%>/icons/arrow.png'); 
+    background-size: contain; 
+    background-repeat: no-repeat; 
+    transition: transform 0.3s ease; 
+    display: inline-block; 
+    transform: rotate(0deg); 
+}
+.arrow.expanded {
+    transform: rotate(90deg); 
+}
+
     .category {
         width: 100%;
         margin-bottom: 20px;
@@ -29,7 +31,8 @@
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-start;
-        margin-top: 10px;
+        margin-top: 5px;
+        flex-direction: column;
     }
     .app-item {
         width: 140px; /* 固定宽度 */
@@ -38,24 +41,16 @@
         display: flex;
         align-items: center; 
     }
+    .app-items-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
     .app-item label {
         display: flex;
         align-items: center; 
         width: 100%; 
         text-align: left; 
-    }
-    input[type="checkbox"],
-    input[type="radio"] {
-        margin: 0; /* Reset all margins */
-        padding: 0; /* Reset padding */
-        width: 16px; /* Set a specific width */
-        height: 16px; /* Set a specific height */
-        border: 1px solid #ccc; /* Add a border */
-        border-radius: 3px; /* Add slight rounding */
-        background-color: #fff; /* Set background color */
-        vertical-align: middle; /* Align vertically in the middle */
-        appearance: none; /* Remove default styling */
-        position: relative; /* Ensure relative positioning */
     }
 
     h2 {
@@ -73,23 +68,48 @@
         font-size: 14px; 
         font-weight: normal;
     }
-    .arrow {
-        width: 12px; 
-        height: 12px; 
-    
 
-		background-image: url('<%=resource%>/icons/arrow.png'); 
-        background-size: contain; 
-        background-repeat: no-repeat; 
-        transition: transform 0.3s ease; 
-        display: inline-block; 
-        transform: rotate(0deg); 
-    }
-    .arrow.expanded {
-        transform: rotate(90deg); 
-    }
     .category-title div {
         gap: 6px; 
+    }
+
+    .select-all-btn {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 10px;
+    }
+
+    .select-all-btn:hover {
+        background-color: #45a049;
+    }
+
+    .select-all-btn.selected {
+        background-color: #f44336;
+    }
+
+    .select-all-btn.selected:hover {
+        background-color: #da190b;
+    }
+
+    .select-all-container {
+        display: flex;
+        align-items: center;
+        margin: 5px 0;
+        padding: 3px 0;
+        border-bottom: 1px solid #eee;
+        width: 100%;
+    }
+
+    .select-all-label {
+        font-size: 12px;
+        color: #666;
+        margin-left: 5px;
+        cursor: pointer;
     }
 
     @media (max-width: 600px) {
@@ -98,70 +118,6 @@
         }
     }
 
-    .button-container {
-        display: flex;
-        justify-content: right; 
-        margin-top: 5px; 
-    }
-
-    .submit-button {
-        margin-top: 30px;
-        width: 150px; 
-        height: 30px; 
-        background-color: #2885e8;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    .submit-button:hover {
-        background-color: #0f77e6;
-    }
-
-    .switch {
-        position: relative;
-        display: inline-block;
-        width: 40px;
-        height: 20px;
-    }
-
-    .switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #ccc;
-        transition: .4s;
-        border-radius: 20px;
-    }
-
-    .slider:before {
-        position: absolute;
-        content: "";
-        height: 16px;
-        width: 16px;
-        left: 2px;
-        bottom: 2px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-    }
-
-    input:checked + .slider {
-        background-color: #2196F3;
-    }
-
-    input:checked + .slider:before {
-        transform: translateX(20px);
-    }
 
 </style>
 
@@ -216,8 +172,9 @@
 			return new Promise((resolve, reject) => {
 				new XHR().get('<%=url('admin/network/get_app_filter')%>', null,
 					function (x, data) {
-							if (Array.isArray(data.app_list))
-						app_filter_data = data.app_list;
+						if (Array.isArray(data.app_list)) {
+							app_filter_data = data.app_list;
+						}
 						resolve(); 
 					}
 				);
@@ -275,7 +232,30 @@
                     appList.style.display = 'none';
                 }
 
-                categoryTitle.onclick = function() {
+                // 添加全选容器到应用列表内部
+                const selectAllContainer = document.createElement('div');
+                selectAllContainer.className = 'select-all-container';
+
+                // 添加全选复选框
+                const selectAllCheckbox = document.createElement('input');
+                selectAllCheckbox.type = 'checkbox';
+                selectAllCheckbox.checked = selectedCount === category.app_list.length;
+                selectAllCheckbox.title = selectedCount === category.app_list.length ? '取消全选' : '全选';
+
+                // 添加全选标签
+                const selectAllLabel = document.createElement('span');
+                selectAllLabel.className = 'select-all-label';
+                selectAllLabel.textContent = '全选';
+
+                selectAllContainer.appendChild(selectAllCheckbox);
+                selectAllContainer.appendChild(selectAllLabel);
+                appList.appendChild(selectAllContainer);
+
+                // 创建应用项目行容器
+                const appItemsRow = document.createElement('div');
+                appItemsRow.className = 'app-items-row';
+
+                categoryTitle.onclick = function(e) {
                     if (appList.style.display === 'none') {
                         appList.style.display = 'flex';
                         arrow.classList.add('expanded');
@@ -283,6 +263,19 @@
                         appList.style.display = 'none';
                         arrow.classList.remove('expanded');
                     }
+                };
+
+                // 为全选复选框添加change事件
+                selectAllCheckbox.onchange = function(e) {
+                    e.stopPropagation(); // 阻止事件冒泡
+                    toggleSelectAll(category, selectAllCheckbox, appCount);
+                };
+
+                // 为全选标签添加点击事件
+                selectAllLabel.onclick = function(e) {
+                    e.stopPropagation(); // 阻止事件冒泡
+                    selectAllCheckbox.checked = !selectAllCheckbox.checked;
+                    toggleSelectAll(category, selectAllCheckbox, appCount);
                 };
 
                 category.app_list.forEach(app => {
@@ -304,6 +297,10 @@
                         checkbox.checked = true;
                     }
 
+                    checkbox.onchange = function() {
+                        updateCategorySelection(category, selectAllCheckbox, appCount);
+                    };
+
                     const appDetails = app.split(',');
                     const appId = appDetails[0];
                     const appName = appDetails[1];
@@ -323,10 +320,44 @@
 
                     label.appendChild(containerDiv);
                     appItem.appendChild(label);
-                    appList.appendChild(appItem);
+                    appItemsRow.appendChild(appItem);
                 });
+                
+                appList.appendChild(appItemsRow);
                 container.appendChild(appList);
             });
+        }
+
+        function toggleSelectAll(category, selectAllCheckbox, appCount) {
+            const checkboxes = document.querySelectorAll(`input[name="app"]`);
+            const categoryAppIds = category.app_list.map(app => parseInt(app.split(',')[0]));
+            const isAllSelected = selectAllCheckbox.checked;
+            
+            checkboxes.forEach(checkbox => {
+                const appId = parseInt(checkbox.value);
+                if (categoryAppIds.includes(appId)) {
+                    checkbox.checked = isAllSelected;
+                }
+            });
+            
+            updateCategorySelection(category, selectAllCheckbox, appCount);
+        }
+
+        function updateCategorySelection(category, selectAllCheckbox, appCount) {
+            const checkboxes = document.querySelectorAll(`input[name="app"]`);
+            const categoryAppIds = category.app_list.map(app => parseInt(app.split(',')[0]));
+            let selectedCount = 0;
+            
+            checkboxes.forEach(checkbox => {
+                const appId = parseInt(checkbox.value);
+                if (categoryAppIds.includes(appId) && checkbox.checked) {
+                    selectedCount++;
+                }
+            });
+            
+            appCount.textContent = `已选${selectedCount}个`;
+            
+            selectAllCheckbox.checked = selectedCount === category.app_list.length;
         }
 
         function submitAppSelection() {

@@ -1048,6 +1048,10 @@ int af_update_client_app_info(af_client_info_t *node, int app_id, int drop)
 	node->visit_info[index].app_id = app_id;
 	node->visit_info[index].latest_time = af_get_timestamp_sec();
 	node->visit_info[index].latest_action = drop;
+	if (app_id > 0){
+		node->visiting.app_time = af_get_timestamp_sec();
+		node->visiting.visiting_app = app_id;
+	}
 	return 0;
 }
 
@@ -1071,6 +1075,32 @@ int af_match_local_packet(flow_info_t *f)
 	}
 	return 0;
 }
+
+int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
+{
+	char *host = NULL;
+	unsigned int len = 0;
+    if (!client || !flow)
+        return -1;
+	
+	if (flow->https.match){
+		host = flow->https.url_pos;
+
+		len = flow->https.url_len;
+	}
+	else if (flow->http.match){
+		host = flow->http.host_pos;
+		len = flow->http.host_len;
+	}
+    if (!host || len < MIN_REPORT_URL_LEN || len >= MAX_REPORT_URL_LEN)
+        return -1;
+
+    memcpy(client->visiting.visiting_url, host, len);
+    client->visiting.visiting_url[len] = 0x0; 
+    client->visiting.url_time = af_get_timestamp_sec();
+    return 0;
+}
+
 
 int dpi_main(struct sk_buff *skb, flow_info_t *flow)
 {
@@ -1201,6 +1231,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	else{
 		dpi_main(skb, &flow);
 		conn->client_hello = flow.client_hello;
+			update_url_visiting_info(client, &flow);
 
 		if (!match_feature(&flow))
 			goto EXIT;
@@ -1339,6 +1370,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	}
 	dpi_main(skb, &flow);
 
+	update_url_visiting_info(client, &flow);
 	if (flow.client_hello) {
 		ct->mark |= NF_CLIENT_HELLO_BIT;
 	}
@@ -1372,7 +1404,8 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
 				nf_send_reset(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
 			#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
-				nf_send_reset(&init_net, skb, NF_INET_PRE_ROUTING);
+				//5.4 kernel panic
+				//nf_send_reset(&init_net, skb, NF_INET_PRE_ROUTING);
 			#else
 				nf_send_reset(skb, NF_INET_PRE_ROUTING);
 			#endif

@@ -1,11 +1,6 @@
+<link rel="stylesheet" href="<%=resource%>/css/common.css">
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-    }
-    h1, h2 {
-        color: #333;
-    }
+
     .desc {
         margin-top: 10px;
         width: 650px;
@@ -15,100 +10,6 @@
         margin-top:5px;
         font-size:13px;
         color:gray;
-    }
-
-    .button-check {
-        padding: 3px 8px;
-        background-color: transparent; /* Set background color to transparent */
-        color: green; /* Set font color to black */
-        border: 1px solid green; /* Set border color to green */
-        border-radius: 3px;
-        cursor: pointer;
-        font-size: 12px; /* Reduce font size */
-    }
-
-
-    input[type="checkbox"],
-    input[type="radio"] {
-        margin: 0; /* Reset all margins */
-        padding: 0; /* Reset padding */
-        width: 16px; /* Set a specific width */
-        height: 16px; /* Set a specific height */
-        border: 1px solid #ccc; /* Add a border */
-        border-radius: 3px; /* Add slight rounding */
-        background-color: #fff; /* Set background color */
-        vertical-align: middle; /* Align vertically in the middle */
-        appearance: none; /* Remove default styling */
-        position: relative; /* Ensure relative positioning */
-    }
-
-    h2 {
-        margin-bottom: 10px; 
-    }
-
-    .button-container {
-        display: flex;
-        justify-content: right; 
-        margin-top: 5px; 
-    }
-
-    .submit-button {
-        margin-top: 30px;
-        width: 150px; 
-        height: 30px; 
-        background-color: #2885e8;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    .submit-button:hover {
-        background-color: #0f77e6;
-    }
-
-    .switch {
-        position: relative;
-        display: inline-block;
-        width: 40px;
-        height: 20px;
-    }
-
-    .switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #ccc;
-        transition: .4s;
-        border-radius: 20px;
-    }
-
-    .slider:before {
-        position: absolute;
-        content: "";
-        height: 16px;
-        width: 16px;
-        left: 2px;
-        bottom: 2px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-    }
-
-    input:checked + .slider {
-        background-color: #2196F3;
-    }
-
-    input:checked + .slider:before {
-        transform: translateX(20px);
     }
 
 </style>
@@ -218,11 +119,8 @@
         </div>
 
         <div class="desc">
-            <span>如果采用lede或者闭源驱动固件，会包含软硬件加速模块，这些模块会影响过滤功能，如果测试发现没有效果可以关闭后再测试，在防火墙或者网络加速菜单中可查看关闭状态，开启加速后需要重启设备生效。</span>
+            <span>软硬件加速、NAT offload等模块会影响过滤或统计功能，在该界面只是尝试关闭，不一定能够完全成功，请在防火墙或者网络加速菜单中查看关闭状态，重新开启加速需要重启设备生效。</span>
         </div>
-
-
-
         
         <div style="margin-top: 10px; display: flex; align-items: center;">
             <label for="autoLoadEngineSwitch" style="margin-right: 5px;width:150px">自动加载oaf驱动</label>
@@ -233,7 +131,7 @@
         </div>
 
         <div class="desc">
-            <span>如果oaf驱动无法手动卸载或者当前驱动不稳定，可以关闭开机自动加载，然后手动安装合适的驱动。</span>
+            <span>如果oaf驱动无法手动卸载或者当前驱动不稳定，可以关闭开机自动加载，然后手动安装合适的驱动，建议用openwrt官方稳定版固件。</span>
         </div>
 
 
