@@ -1080,8 +1080,8 @@ int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
 {
 	char *host = NULL;
 	unsigned int len = 0;
-    if (!client || !flow)
-        return -1;
+	if (!client || !flow)
+		return -1;
 	
 	if (flow->https.match){
 		host = flow->https.url_pos;
@@ -1092,13 +1092,13 @@ int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
 		host = flow->http.host_pos;
 		len = flow->http.host_len;
 	}
-    if (!host || len < MIN_REPORT_URL_LEN || len >= MAX_REPORT_URL_LEN)
-        return -1;
+	if (!host || len < MIN_REPORT_URL_LEN || len >= MAX_REPORT_URL_LEN)
+		return -1;
 
-    memcpy(client->visiting.visiting_url, host, len);
-    client->visiting.visiting_url[len] = 0x0; 
-    client->visiting.url_time = af_get_timestamp_sec();
-    return 0;
+	memcpy(client->visiting.visiting_url, host, len);
+	client->visiting.visiting_url[len] = 0x0; 
+	client->visiting.url_time = af_get_timestamp_sec();
+	return 0;
 }
 
 
