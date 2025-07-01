@@ -1,6 +1,4 @@
 #!/bin/sh /etc/rc.common
-. /usr/share/libubox/jshn.sh
-. /lib/functions.sh
 
 START=96
 USE_PROCD=1
