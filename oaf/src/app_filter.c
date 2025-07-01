@@ -1083,15 +1083,14 @@ int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
     if (!client || !flow)
         return -1;
 	
-	if (flow->https.match){
-		host = flow->https.url_pos;
-
-		len = flow->https.url_len;
-	}
-	else if (flow->http.match){
-		host = flow->http.host_pos;
-		len = flow->http.host_len;
-	}
+    if (flow->https.match){
+        host = flow->https.url_pos;
+        len = flow->https.url_len;
+    }
+    else if (flow->http.match){
+        host = flow->http.host_pos;
+        len = flow->http.host_len;
+    }
     if (!host || len < MIN_REPORT_URL_LEN || len >= MAX_REPORT_URL_LEN)
         return -1;
 
