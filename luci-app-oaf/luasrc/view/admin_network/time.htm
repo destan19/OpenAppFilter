@@ -138,13 +138,13 @@
 			if (mode === "0") {
 				if (!time_data.time_list || time_data.time_list.length === 0) {
 					const errorContainer = document.getElementById('errorContainer');
-					errorContainer.innerHTML = '至少添加一个时间段';
+					errorContainer.innerHTML = '<%:Please add at least one time period%>';
 					return;
 				}
 
 				if (time_data.time_list.length > maxEntries) {
 					const errorContainer = document.getElementById('errorContainer');
-					errorContainer.innerHTML = '时间段不能超过64条';
+					errorContainer.innerHTML = '<%:Time periods cannot exceed 64 entries%>';
 					return; 
 				}
 			}
@@ -198,7 +198,7 @@
             row.innerHTML = `
                 <td><input type="time" class="start-time" required></td>
                 <td><input type="time" class="end-time" required></td>
-                <td><button type="button" class="delete-time-btn" onclick="deleteTimeRow(this)">删除</button></td>
+                <td><button type="button" class="delete-time-btn" onclick="deleteTimeRow(this)"><%:Delete%></button></td>
             `;
             tbody.appendChild(row);
 
@@ -288,9 +288,9 @@
             let errorMessage = '';
 
             if (!isValidTimeFormat(startTime) || !isValidTimeFormat(endTime)) {
-                errorMessage = '时间格式不合法，请输入有效的时间格式 (HH:MM)';
+                errorMessage = '<%:Invalid time format, please enter a valid time format (HH:MM)%>';
             } else if (startTime >= endTime) {
-                errorMessage = '结束时间必须大于开始时间';
+                errorMessage = '<%:End time must be greater than start time%>';
             }
 
             if (errorMessage) {
@@ -333,7 +333,7 @@
                     row.innerHTML = `
                         <td><input type="time" class="start-time" value="${timeRange.start}" required></td>
                         <td><input type="time" class="end-time" value="${timeRange.end}" required></td>
-                        <td><button type="button" class="delete-time-btn" onclick="deleteTimeRow(this)">删除</button></td>
+                        <td><button type="button" class="delete-time-btn" onclick="deleteTimeRow(this)"><%:Delete%></button></td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -373,9 +373,9 @@
             let errorMessage = '';
 
             if (!isValidTimeFormat(startTime) || !isValidTimeFormat(endTime)) {
-                errorMessage = '时间格式不合法，请输入有效的时间格式 (HH:MM)';
+                errorMessage = '<%:Invalid time format, please enter a valid time format (HH:MM)%>';
             } else if (startTime >= endTime) {
-                errorMessage = '结束时间必须大于开始时间';
+                errorMessage = '<%:End time must be greater than start time%>';
             }
 
             if (errorMessage) {
@@ -398,7 +398,7 @@
 
 <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
-        <p style="margin: 0;color: white;">设置成功</p>
+        <p style="margin: 0;color: white;"><%:Settings saved successfully%></p>
     </div>
 </div>
 
@@ -411,26 +411,26 @@
 
     <!-- Add Time Rules Section -->
     <div class="time-rules">
-        <h3>时间规则</h3>
+        <h3><%:Time Rules%></h3>
         
         <div class="mode-selector" style="margin-bottom: 15px;">
-            <label>模式选择：</label>
+            <label><%:Mode Selection%>：</label>
             <select id="timeMode" onchange="toggleModeContent()">
-                <option value="0">固定时间</option>
-                <option value="1">动态时间</option>
+                <option value="0"><%:Fixed Time%></option>
+                <option value="1"><%:Dynamic Time%></option>
             </select>
         </div>
 
         <!-- 星期选择器移到这里作为固定时间模式的部分 -->
         <div id="staticWeekdaySelector" class="weekday-selector">
-            <label>星期选择：</label>
-            <div class="weekday-item"><input type="checkbox" name="weekday" value="1"> 周一</div>
-            <div class="weekday-item"><input type="checkbox" name="weekday" value="2"> 周二</div>
-            <div class="weekday-item"><input type="checkbox" name="weekday" value="3"> 周三</div>
-            <div class="weekday-item"><input type="checkbox" name="weekday" value="4"> 周四</div>
-            <div class="weekday-item"><input type="checkbox" name="weekday" value="5"> 周五</div>
-            <div class="weekday-item"><input type="checkbox" name="weekday" value="6"> 周六</div>
-            <div class="weekday-item"><input type="checkbox" name="weekday" value="0"> 周日</div>
+            <label><%:Weekday Selection%>：</label>
+            <div class="weekday-item"><input type="checkbox" name="weekday" value="1"> <%:Mon%></div>
+            <div class="weekday-item"><input type="checkbox" name="weekday" value="2"> <%:Tue%></div>
+            <div class="weekday-item"><input type="checkbox" name="weekday" value="3"> <%:Wed%></div>
+            <div class="weekday-item"><input type="checkbox" name="weekday" value="4"> <%:Thur%></div>
+            <div class="weekday-item"><input type="checkbox" name="weekday" value="5"> <%:Fri%></div>
+            <div class="weekday-item"><input type="checkbox" name="weekday" value="6"> <%:Sat%></div>
+            <div class="weekday-item"><input type="checkbox" name="weekday" value="0"> <%:Sun%></div>
         </div>
      
         <!-- 固定时间模式内容 -->
@@ -438,9 +438,9 @@
             <table class="time-table">
                 <thead>
                     <tr>
-                        <th>开始时间</th>
-                        <th>结束时间</th>
-                        <th>操作</th>
+                        <th><%:Start Time%></th>
+                        <th><%:End Time%></th>
+                        <th><%:Actions%></th>
                     </tr>
                 </thead>
                 <tbody id="timeTableBody">
@@ -449,53 +449,53 @@
                
             </table>
             <div id="errorContainer" style="color: red; font-size: 12px; margin-top: 10px;"></div>
-            <button class="add-time-btn" onclick="addTimeRow()">添加时间段</button>
+            <button class="add-time-btn" onclick="addTimeRow()"><%:Add Time Period%></button>
         </div>
 
         <!-- 动态时间模式内容 -->
         <div id="dynamicTimeContent" style="display: none;">
             <div style="color: #666; font-size: 13px; margin-bottom: 15px;">
-                动态时间模式是指动态调整应用过滤开关，比如小孩学习1个小时后奖励20分钟玩游戏，超过娱乐时间后自动开启过滤，反复循环。
+                <%:Dynamic time mode refers to dynamically adjusting app filter switches, such as allowing children to play games for 20 minutes after studying for 1 hour, automatically enabling filtering after exceeding entertainment time, and repeating the cycle.%>
             </div>
             
             <div class="dynamic-time-settings">
                 <div class="setting-item">
-                    <label>每次启用时长(学习时间):</label>
+                    <label><%:Enable Duration Each Time (Study Time)%>:</label>
                     <input type="number" id="denyTime" min="1" value="60">
-                    <span>分钟</span>
+                    <span><%:minutes%></span>
                 </div>
                 <div class="setting-item" style="margin-bottom: 15px;">
-                    <label>每次关闭时长(课余时间):</label>
+                    <label><%:Disable Duration Each Time (Break Time)%>:</label>
                     <input type="number" id="allowTime" min="1" value="10">
-                    <span>分钟</span>
+                    <span><%:minutes%></span>
                 </div>
           
                 <div class="advanced-settings">
                     <div class="advanced-toggle" onclick="toggleAdvanced(this)">
                         <span class="arrow"></span>
-                        <span>高级设置</span>
+                        <span><%:Advanced Settings%></span>
                     </div>
                     <div class="advanced-content">
                         <!-- 星期选择器只在高级设置中显示 -->
                         <div class="weekday-selector" style="margin-bottom: 15px;">
-                            <label>星期选择：</label>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="1"> 周一</div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="2"> 周二</div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="3"> 周三</div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="4"> 周四</div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="5"> 周五</div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="6"> 周六</div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="0"> 周日</div>
+                            <label><%:Weekday Selection%>：</label>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="1"> <%:Mon%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="2"> <%:Tue%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="3"> <%:Wed%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="4"> <%:Thur%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="5"> <%:Fri%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="6"> <%:Sat%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="0"> <%:Sun%></div>
                         </div>
                         
                         <div class="setting-item">
-                            <label>每天学习时间范围：</label>
+                            <label><%:Daily Study Time Range%>：</label>
                             <input type="time" id="startTime" required style="margin-right: 5px;" onchange="validateDynamicTime()">
                             <span>-</span>
                             <input type="time" id="endTime" required style="margin-left: 5px;" onchange="validateDynamicTime()">
                         </div>
                         <div class="setting-item" style="color: #666; font-size: 12px; margin-top: 5px;">
-                            <span>该时间范围表示每天上学的时间段，是一段连续时间，在该时间段内实行过滤规则动态开启关闭，时间范围外默认关闭过滤</span>
+                            <span><%:This time range represents the daily school time period, which is a continuous time period. During this time period, filtering rules are dynamically enabled and disabled. Outside the time range, filtering is disabled by default.%></span>
                         </div>
                     </div>
                 </div>
@@ -505,7 +505,7 @@
     </div>
 
     <div class="button-container">
-        <button type="button" class="submit-button" onclick="submitHandle()">保存</button>
+        <button type="button" class="submit-button" onclick="submitHandle()"><%:Save%></button>
     </div>
 
     </div>

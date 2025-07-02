@@ -17,12 +17,12 @@ function index()
 
 	-- entry({"admin", "services", "appfilter", "base_setting"}, cbi("appfilter/base_setting"), _("Basic Settings"), 22).leaf=true
 	-- entry({"admin", "services", "appfilter", "user_setting"}, cbi("appfilter/user_setting"), _("Effective User"), 23).leaf=true
-	entry({"admin", "services", "appfilter", "time"}, cbi("appfilter/time", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("时间配置"), 25).leaf=true
-	entry({"admin", "services", "appfilter", "app_filter"}, cbi("appfilter/app_filter", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("应用过滤"), 21).leaf=true
+	entry({"admin", "services", "appfilter", "time"}, cbi("appfilter/time", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("Time Configuration"), 25).leaf=true
+	entry({"admin", "services", "appfilter", "app_filter"}, cbi("appfilter/app_filter", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Filter"), 21).leaf=true
 	entry({"admin", "services", "appfilter", "feature"}, cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Feature"), 26).leaf=true
 
-	entry({"admin", "services", "appfilter", "user"}, cbi("appfilter/user", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("用户配置"), 24).leaf=true
-	entry({"admin", "services", "appfilter", "advance"}, cbi("appfilter/advance", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("高级设置"), 27).leaf=true
+	entry({"admin", "services", "appfilter", "user"}, cbi("appfilter/user", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("User Configuration"), 24).leaf=true
+	entry({"admin", "services", "appfilter", "advance"}, cbi("appfilter/advance", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("Advanced Settings"), 27).leaf=true
 	entry({"admin", "network", "user_status"}, call("user_status"), nil).leaf = true
 	entry({"admin", "network", "get_user_list"}, call("get_user_list"), nil).leaf = true
 	entry({"admin", "network", "dev_visit_list"}, call("get_dev_visit_list"), nil).leaf = true

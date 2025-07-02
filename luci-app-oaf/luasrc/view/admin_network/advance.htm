@@ -19,7 +19,7 @@
 		function init_data() {
 			getAppFilterAdvData(); 
 		}
-        function showSuccessMessage(message = '设置成功') {
+        function showSuccessMessage(message = '<%:Settings saved successfully%>') {
 			const modal = document.getElementById('modal');
 			const messageElement = modal.querySelector('p');
 			messageElement.textContent = message;
@@ -42,7 +42,7 @@
             const autoLoadEngineSwitch = document.getElementById('autoLoadEngineSwitch').checked;
 
             if (!validateLanIfname(lanIfname)) {
-                alert('LAN接口名称无效。请确保其长度不超过8，并且只包含字母、数字和-。');
+                alert('<%:Invalid LAN interface name. Please ensure it is no more than 8 characters long and contains only letters, numbers, and -.%>');
                 return;
             }
 
@@ -102,7 +102,7 @@
 
 <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
-        <p style="margin: 0;color: white;">设置成功</p>
+        <p style="margin: 0;color: white;"><%:Settings saved successfully%></p>
     </div>
 </div>
 
@@ -111,7 +111,7 @@
 
 
         <div style="margin-top: 10px; display: flex; align-items: center;">
-            <label for="disableHnatSwitch" style="margin-right: 5px;width:150px">关闭软/硬件加速</label>
+            <label for="disableHnatSwitch" style="margin-right: 5px;width:150px"><%:Disable Software/Hardware Acceleration%></label>
             <label class="switch">
                 <input type="checkbox" id="disableHnatSwitch" name="disableHnatSwitch" />
                 <span class="slider"></span>
@@ -119,11 +119,11 @@
         </div>
 
         <div class="desc">
-            <span>软硬件加速、NAT offload等模块会影响过滤或统计功能，在该界面只是尝试关闭，不一定能够完全成功，请在防火墙或者网络加速菜单中查看关闭状态，重新开启加速需要重启设备生效。</span>
+            <span><%:Software and hardware acceleration, NAT offload and other modules may affect filtering or statistics functions. This interface only attempts to turn them off, but may not be completely successful. Please check the status in the firewall or network acceleration menu. Re-enabling acceleration requires a device restart to take effect.%></span>
         </div>
         
         <div style="margin-top: 10px; display: flex; align-items: center;">
-            <label for="autoLoadEngineSwitch" style="margin-right: 5px;width:150px">自动加载oaf驱动</label>
+            <label for="autoLoadEngineSwitch" style="margin-right: 5px;width:150px"><%:Auto-load oaf driver%></label>
             <label class="switch">
                 <input type="checkbox" id="autoLoadEngineSwitch" name="autoLoadEngineSwitch" />
                 <span class="slider"></span>
@@ -131,22 +131,22 @@
         </div>
 
         <div class="desc">
-            <span>如果oaf驱动无法手动卸载或者当前驱动不稳定，可以关闭开机自动加载，然后手动安装合适的驱动，建议用openwrt官方稳定版固件。</span>
+            <span><%:If the oaf driver cannot be manually unloaded or the current driver is unstable, you can turn off auto-loading at startup and manually install a suitable driver. It is recommended to use the official stable OpenWrt firmware.%></span>
         </div>
 
 
         <div style="margin-top: 10px; display: flex; align-items: center;">
-            <label for="lan_ifname" style="margin-right: 5px;width:150px">LAN接口</label>
+            <label for="lan_ifname" style="margin-right: 5px;width:150px"><%:LAN Interface%></label>
             <input type="text" id="lan_ifname" style="padding: 5px; background-color: white;width: 200px">
         </div>
 
         <div class="desc">
-            <span>LAN接口的名称，用于探测终端信息，系统默认都是桥接口(br-lan)，如果将lan口修改成了物理接口，请修改为对应的名称，比如eth0。</span>
+            <span><%:The name of the LAN interface, used for detecting terminal information. The system default is bridge interface (br-lan). If the LAN port has been modified to a physical interface, please modify it to the corresponding name, such as eth0.%></span>
         </div>
 
 
         <div class="button-container">
-            <button type="button" class="submit-button" onclick="submitHandle()">保存</button>
+            <button type="button" class="submit-button" onclick="submitHandle()"><%:Save%></button>
         </div>
     </div>
 </div>

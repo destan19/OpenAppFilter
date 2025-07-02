@@ -38,7 +38,7 @@
 			}, 3000);
 		}
 
-		function showSuccessMessage(message = '设置成功') {
+		function showSuccessMessage(message = '<%:Settings saved successfully%>') {
 			const modal = document.getElementById('modal');
 			const messageElement = modal.querySelector('p');
 			messageElement.textContent = message;
@@ -142,8 +142,8 @@
 						? `<span style="color: green;"><%:Online%></span>` 
 						: "<%:Offline%>";
 					tr.insertCell(-1).innerHTML = `
-						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}')" style="margin-right: 5px;">详情</button>
-						<button type="button" class="cbi-button cbi-button-add" onclick="showModifyNickname('${user_list[i].mac}')">备注</button>
+						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}')" style="margin-right: 5px;"><%:Details%></button>
+						<button type="button" class="cbi-button cbi-button-add" onclick="showModifyNickname('${user_list[i].mac}')"><%:Remark%></button>
 					`;
 
 					
@@ -204,36 +204,17 @@
 							total_time_str = min + "<%:m%>"
 						}
 					}
-
 					tr.insertCell(-1).innerHTML = total_time_str;
 					tr.insertCell(-1).innerHTML = action_status;
+
+					
 					var childs = tr.childNodes;
 					Array.prototype.forEach.call(childs, function (child) {
 						child.className = 'td';
-
 					});
-
 				}
 			}
 		}
-        // new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: 0},
-        //     function (x, data) {
-        //    		user_list_data = data.data
-		// 		render_user_list(user_list_data);
-        //     }
-        // );
-    
-
-
-
-		// XHR.poll(3, '<%=url('admin/network/get_all_users')%>', {flag: 3, page: 0},
-		// 	function (x, data) {
-		// 		user_list_data = data.data;
-		// 		render_user_list(user_list_data);
-		// 	}
-		// );
-	
-
 
 		function showDetails(mac) {
 			var modal = document.getElementById('detailsModal');
@@ -274,7 +255,7 @@
 			var nickname = document.getElementById('nicknameInput').value;
 
 			if (!validateNickname(nickname)) {
-				alert('请输入合法的备注');
+				alert('<%:Please enter a valid remark%>');
 				return;
 			}
 
@@ -283,7 +264,7 @@
 			function(x, data) {
 				console.log('Nickname updated successfully');
 				closeModal('nicknameModal');
-				showSuccessMessage('设置成功');
+				showSuccessMessage('<%:Settings saved successfully%>');
 				// Optionally, refresh the user list to reflect changes
 				getAllUsersData(cur_page);
 			});
@@ -463,19 +444,19 @@
 		<table class="table cbi-section-table" id="user_status_table" style="table-layout: fixed; width: 100%;">
 			<tr class="tr">
 				<th class="th" style="width: 85px;">
-					<%:设备信息%>
+					<%:Device Info%>
 				</th>
 				<th class="th" style="width: 80px;">
-					<%:IP地址%>
+					<%:IP Address%>
 				</th>
 				<th class="th" style="width: 110px;">
 					<%:Common App(TOP5)%>
 				</th>
 				<th class="th" style="width: 65px;">
-					<%:活跃APP%>
+					<%:Active App%>
 				</th>
 				<th class="th" style="width: 110px;">
-					<%:正在访问URL%>
+					<%:Current URL%>
 				</th>
 				<th class="th" style="width: 55px;">
 					<%:Online Status%>
@@ -498,13 +479,13 @@
 <div id="detailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 750px; height: 500px; display: flex; flex-direction: column; position: relative;">
         <button type="button" onclick="closeModal('detailsModal')" style="position: absolute; top: 10px; right: 10px; background-color: transparent; border: none; font-size: 24px; color: #333; cursor: pointer; width: 30px; height: 30px;">&times;</button>
-        <h4 style="margin-top:2px">设备详情</h4>
+        <h4 style="margin-top:2px"><%:Device Details%></h4>
         
         <!-- Tab List -->
         <ul class="tab-list">
             <!-- <li class="tab-item onclick="showTabContent('tab1')">基本信息</li> -->
-            <li class="tab-item active" onclick="showTabContent('tab2')">APP统计</li>
-			<li class="tab-item" onclick="showTabContent('tab3')">访问记录</li>
+            <li class="tab-item active" onclick="showTabContent('tab2')"><%:App Statistics%></li>
+			<li class="tab-item" onclick="showTabContent('tab3')"><%:Access Records%></li>
         </ul>
 
         <!-- <div id="tab1" class="tab-body" >
@@ -537,21 +518,21 @@
 				<table class="table cbi-section-table" id="visit_list_table">
 					<tr class="tr table-titles">
 						<th class="th">
-							<%:APP名称%>
+							<%:App Name%>
 						</th>
 			
 						<th class="th">
-							<%:开始访问时间%>
+							<%:Start Time%>
 						</th>
 
 						<th class="th">
-							<%:最后访问时间%>
+							<%:Last Time%>
 						</th>
 						<th class="th">
-							<%:访问时长%>
+							<%:Duration%>
 						</th>
 						<th class="th">
-							<%:过滤状态%>
+							<%:Filter Status%>
 						</th>
 					</tr>
 					<tr class="tr">
@@ -570,20 +551,20 @@
 <div id="nicknameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 400px; display: flex; flex-direction: column; position: relative;">
         <button type="button" onclick="closeModal('nicknameModal')" style="position: absolute; top: 10px; right: 10px; background-color: transparent; border: none; font-size: 24px; color: #333; cursor: pointer; width: 30px; height: 30px;">&times;</button>
-        <h4 style="margin-top:2px">修改备注</h4>
-        <p style="margin-bottom: 10px;"><span class="field-label">MAC地址:</span> <span id="nicknameMacDisplay">--</span></p>
+        <h4 style="margin-top:2px"><%:Modify Remark%></h4>
+        <p style="margin-bottom: 10px;"><span class="field-label"><%:MAC Address%>:</span> <span id="nicknameMacDisplay">--</span></p>
         <input type="hidden" id="nicknameMac" value="">
-        <p style="margin-bottom: 10px;"><span class="field-label">备注:</span> <input type="text" id="nicknameInput" style="padding: 5px; background-color: white;width: 200px"></p>
+        <p style="margin-bottom: 10px;"><span class="field-label"><%:Remark%>:</span> <input type="text" id="nicknameInput" style="padding: 5px; background-color: white;width: 200px"></p>
         <div style="display: flex; justify-content: flex-end;">
-			<button type="button" class="cbi-button cbi-button-add" onclick="closeModal('nicknameModal')">取消</button>
-            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()" style="margin-right: 10px;">确定</button>
+			<button type="button" class="cbi-button cbi-button-add" onclick="closeModal('nicknameModal')"><%:Cancel%></button>
+            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()" style="margin-right: 10px;"><%:OK%></button>
         </div>
     </div>
 </div>
 
 <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
 	<div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
-		<p style="margin: 0;color:white;">设置成功</p>
+		<p style="margin: 0;color:white;"><%:Settings saved successfully%></p>
 	</div>
 </div>
 <style>
