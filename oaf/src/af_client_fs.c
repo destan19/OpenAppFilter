@@ -277,6 +277,13 @@ int init_af_client_procfs(void)
         AF_ERROR("nf_client proc file created error\n");
         return -1;
     }
+    pde = proc_create(AF_VISIT_INFO, 0440, net->proc_net, &af_visiting_fops);
+
+    if (!pde)
+    {
+        AF_ERROR("client visiting proc file created error\n");
+        return -1;
+    }
     return 0;
 }
 
