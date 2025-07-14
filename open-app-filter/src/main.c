@@ -467,7 +467,7 @@ void dev_list_timeout_handler(struct uloop_timeout *t)
     }
 
 
-    if (appfilter_nl_fd.fd < 0){
+    if (appfilter_nl_fd.fd < 0 && access("/proc/sys/oaf", F_OK) == 0){
         appfilter_nl_fd.fd = appfilter_nl_init();
         if (appfilter_nl_fd.fd > 0){
             uloop_fd_add(&appfilter_nl_fd, ULOOP_READ);
