@@ -52,6 +52,25 @@
         width: 100%; 
         text-align: left; 
     }
+    
+
+    .app-item input[type="checkbox"] {
+        margin: 0;
+        vertical-align: middle;
+        position: relative;
+        top: 0;
+    }
+    
+    .app-item img {
+        vertical-align: middle;
+        display: inline-block;
+    }
+    
+    .app-item label div {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
 
     h2 {
         margin-bottom: 10px; 
@@ -103,12 +122,19 @@
         padding: 3px 0;
         border-bottom: 1px solid #eee;
         width: 100%;
+        gap: 5px;
+    }
+    
+    .select-all-container input[type="checkbox"] {
+        margin: 0;
+        vertical-align: middle;
+        position: relative;
+        top: 0;
     }
 
     .select-all-label {
         font-size: 12px;
         color: #666;
-        margin-left: 5px;
         cursor: pointer;
     }
 
@@ -287,6 +313,7 @@
                     const containerDiv = document.createElement('div');
                     containerDiv.style.display = 'flex'; 
                     containerDiv.style.alignItems = 'center';
+                    containerDiv.style.gap = '5px';
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
@@ -311,9 +338,8 @@
                     icon.alt = `Icon for ${appName}`;
                     icon.style.width = '20px'; 
                     icon.style.height = '20px'; 
-                    icon.style.marginRight = '5px'; 
-                    icon.style.marginLeft = '5px'; 
                     icon.style.borderRadius = '7px';
+                    icon.style.verticalAlign = 'middle';
                     containerDiv.appendChild(checkbox);
                     containerDiv.appendChild(icon);
                     containerDiv.appendChild(document.createTextNode(appName));
