@@ -1,7 +1,7 @@
 #ifndef APP_FILTER_H
 #define APP_FILTER_H
 
-#define AF_VERSION "5.3"
+#define AF_VERSION "5.3.1"
 #define AF_FEATURE_CONFIG_FILE "/tmp/feature.cfg"
 
 #define MAX_DPI_PKT_NUM 64
@@ -164,6 +164,7 @@ typedef struct flow_info{
 	u_int32_t app_id;
 	u_int8_t app_name[MAX_APP_NAME_LEN];
 	u_int8_t drop;
+	u_int8_t ignore;
 	u_int8_t dir;
 	u_int16_t total_len;
 	u_int8_t client_hello;

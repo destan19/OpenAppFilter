@@ -40,6 +40,8 @@ struct list_head af_feature_head = LIST_HEAD_INIT(af_feature_head);
 
 DEFINE_RWLOCK(af_feature_lock);
 
+u_int32_t g_update_jiffies = 0;
+
 #define feature_list_read_lock() read_lock_bh(&af_feature_lock);
 #define feature_list_read_unlock() read_unlock_bh(&af_feature_lock);
 #define feature_list_write_lock() write_lock_bh(&af_feature_lock);
@@ -51,6 +53,7 @@ DEFINE_RWLOCK(af_feature_lock);
 #define MAX_AF_SUPPORT_DATA_LEN 3000
 #define MAX_HOST_LEN 64
 #define MIN_HOST_LEN 4
+
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
 extern void nf_send_reset(struct net *net, struct sock *sk, struct sk_buff *oldskb, int hook);
@@ -73,7 +76,7 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 	af_feature_node_t *node = NULL;
 	char *p = dict;
 	char *begin = dict;
-	char pos[32] = {0};
+	char pos[64] = {0};
 	int index = 0;
 	int value = 0;
 	node = kzalloc(sizeof(af_feature_node_t), GFP_ATOMIC);
@@ -94,6 +97,9 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 		strcpy(node->search_str, search_str);
 		node->ignore = ignore;
 		strcpy(node->feature, feature);
+		if (ignore)
+			AF_DEBUG("add feature %s, ignore = %d\n", feature, ignore);
+
 		// 00:0a-01:11
 		p = dict;
 		begin = dict;
@@ -110,6 +116,8 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 				node->pos_info[node->pos_num].pos = index;
 				node->pos_info[node->pos_num].value = value;
 				node->pos_num++;
+				if (node->pos_num >= MAX_POS_INFO_PER_FEATURE - 1)
+					break;
 			}
 		}
 
@@ -646,11 +654,11 @@ int dpi_https_proto(flow_info_t *flow)
 		AF_ERROR("flow is NULL\n");
 		return -1;
 	}
-	if (NULL == p || data_len == 0)
+	if (NULL == p || data_len < 16)
 	{
 		return -1;
 	}
-	if (!((p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01) || flow->client_hello))
+	if (!((p[0] == 0x16 && p[1] == 0x03 && p[5] == 0x01) || flow->client_hello))
 		return -1;
 
 	for (i = 0; i < data_len; i++)
@@ -684,7 +692,6 @@ int dpi_https_proto(flow_info_t *flow)
 				flow->https.match = AF_TRUE;
 				flow->https.url_pos = p + i + HTTPS_URL_OFFSET;
 				flow->https.url_len = ntohs(url_len);
-				AF_INFO("match https host ok, data_len = %d, client hello = %d\n", data_len, flow->client_hello);
 				flow->client_hello = 0;
 				return 0;
 			}
@@ -1008,15 +1015,18 @@ int match_app_filter_rule(int appid, af_client_info_t *client)
 	}
 	if (af_get_app_status(appid))
 	{
-		AF_LMT_INFO("drop appid = %d\n", appid);
 		return AF_TRUE;
 	}
 	return AF_FALSE;
 }
 
 
+/*1000 0000 0000 0000 0000 0000 0000 0000*/
 #define NF_DROP_BIT 0x80000000
+/*0100 0000 0000 0000 0000 0000 0000 0000*/
 #define NF_CLIENT_HELLO_BIT 0x40000000
+/*0010 0000 0000 0000 0000 0000 0000 0000*/
+#define NF_IGNORE_BIT 0x20000000
 
 
 static int af_get_visit_index(af_client_info_t *node, int app_id)
@@ -1144,6 +1154,33 @@ int af_check_bcast_ip(flow_info_t *f)
 
 	return 0;
 }
+
+/*
+	action: 0: accept, 1: drop
+	return: 0: no change, 1: change
+*/
+u_int32_t check_app_action_changed(int action, u_int32_t app_id, af_client_info_t *client)
+{
+	u_int8_t drop = 0;
+	int changed = 0;
+	u_int32_t max_jiffies = 30 * HZ;
+	u_int32_t interval_jiffies = jiffies - g_update_jiffies;
+	// config changed, update app action
+	if (interval_jiffies < max_jiffies){     
+		AF_LMT_DEBUG("config changed, update app action\n");
+		if (match_app_filter_rule(app_id, client)){
+			AF_LMT_DEBUG("match appid = %d, action = %d\n", app_id, action);
+			if (!action) // accept --> drop
+				changed = 1;
+		}    
+		else{
+			if (action) // drop --> accept
+				changed = 1;
+		}    
+	} 
+	return changed;
+}
+
 u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
 {
 	flow_info_t flow;
@@ -1206,31 +1243,36 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	conn->last_jiffies = jiffies;
 	conn->total_pkts++;
     spin_unlock(&af_conn_lock);
-	if (g_by_pass_accl) {
-		if (conn->total_pkts > 256)	{
-			return NF_ACCEPT;
-		}
-	}
-
-	if (skb_is_nonlinear(skb) && flow.l4_len < MAX_AF_SUPPORT_DATA_LEN)
-	{
-		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
-		if (!flow.l4_data)
-			return NF_ACCEPT;
-		AF_LMT_DEBUG("##match nonlinear skb, len = %d\n", flow.l4_len);
-		malloc_data = 1;
-	}
-	flow.client_hello = conn->client_hello;
 
 	if (conn->app_id != 0)
 	{
 		flow.app_id = conn->app_id;
 		flow.drop = conn->drop;
+
+		if (check_app_action_changed(flow.drop, flow.app_id, client)){
+			flow.drop = !flow.drop;
+			AF_LMT_DEBUG("update appid %d action, new action = %s\n", flow.app_id, flow.drop ? "drop" : "accept");
+		}
 	}
 	else{
+		if (g_by_pass_accl) {
+			if (conn->total_pkts > 256)	{
+				return NF_ACCEPT;
+			}
+		}
+		if (skb_is_nonlinear(skb) && flow.l4_len < MAX_AF_SUPPORT_DATA_LEN)
+		{
+			flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+			if (!flow.l4_data)
+				return NF_ACCEPT;
+			AF_LMT_DEBUG("##match nonlinear skb, len = %d\n", flow.l4_len);
+			malloc_data = 1;
+		}
+		flow.client_hello = conn->client_hello;
+
 		dpi_main(skb, &flow);
 		conn->client_hello = flow.client_hello;
-			update_url_visiting_info(client, &flow);
+		update_url_visiting_info(client, &flow);
 
 		if (!match_feature(&flow))
 			goto EXIT;
@@ -1253,13 +1295,26 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 
 			}
 		}
-		conn->drop = flow.drop;
 		conn->app_id = flow.app_id;
+		conn->drop = flow.drop;
+		if (flow.feature && flow.feature->ignore){
+			AF_LMT_DEBUG("match ignore feature, feature = %s, appid = %d\n", flow.feature->feature ,flow.app_id);
+			conn->ignore = 1;
+		}
+		else{
+			conn->ignore = 0;
+		}
 		conn->state = AF_CONN_DPI_FINISHED;
 	}
 
 	if (g_oaf_record_enable	){
-		af_update_client_app_info(client, flow.app_id, flow.drop);
+		if (!conn->ignore){
+			af_update_client_app_info(client, flow.app_id, flow.drop);
+		}
+		else{
+			AF_LMT_DEBUG("update ignore appid = %d, drop = %d\n", flow.app_id, flow.drop);
+		}
+	
 	}
 
 	if (flow.drop)
@@ -1278,6 +1333,7 @@ EXIT:
 	}
 	return ret;
 }
+
 
 u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 {
@@ -1324,24 +1380,48 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	client->update_jiffies = jiffies;
 	AF_CLIENT_UNLOCK_R();
 
+
 	if (ct->mark != 0)
 	{
 		app_id = ct->mark & 0xffff;
-		if (app_id > 1000 && app_id < 9999)
+		u_int32_t orig_mark = ct->mark;
+		// 1: drop , 0: accept
+		int ct_action = (NF_DROP_BIT == (ct->mark & NF_DROP_BIT)) ? 1 : 0;
+		flow.ignore = (NF_IGNORE_BIT == (ct->mark & NF_IGNORE_BIT)) ? 1 : 0;
+		if (flow.ignore){
+			AF_LMT_DEBUG("match ignore appid = %d, drop = %d\n", app_id, ct_action);
+		}
+	
+		if (app_id > 1000 && app_id < 32000)
 		{
-			if (g_oaf_filter_enable) {
-				if (NF_DROP_BIT == (ct->mark & NF_DROP_BIT))
-					drop = 1; 
-			}
-			if (g_oaf_record_enable){
-				AF_CLIENT_LOCK_W();
-				af_update_client_app_info(client, app_id, drop);
-				AF_CLIENT_UNLOCK_W();
+			AF_LMT_DEBUG("appid = %d, ct_action = %d\n", app_id, ct_action);
+			if (check_app_action_changed(ct_action, app_id, client)){
+				if (ct_action) // drop --> accept
+					ct->mark &= ~NF_DROP_BIT;
+				else
+					ct->mark |= NF_DROP_BIT;
+				ct_action = !ct_action;
+				AF_LMT_DEBUG("update appid %d action to %s, mark = %x-->%x\n",
+					 app_id, ct_action ? "drop" : "accept", orig_mark, ct->mark);
 			}
 
-			if (drop)
-			{
+			if (g_oaf_record_enable){
+				AF_CLIENT_LOCK_W();
+				if (!flow.ignore){
+					af_update_client_app_info(client, app_id, ct_action);
+				}
+				else{
+					AF_LMT_DEBUG(" ignore appid = %d, drop = %d, not update status\n", app_id, ct_action);
+				}
+				AF_CLIENT_UNLOCK_W();
+			}
+			if (g_oaf_filter_enable && ct_action) {
+				AF_LMT_DEBUG("drop appid = %d, ct_action = %d\n", app_id, ct_action);
 				return NF_DROP;
+			}
+			else{
+				AF_LMT_DEBUG("accept appid = %d, ct_action = %d\n", app_id, ct_action);
+				return NF_ACCEPT;
 			}
 		}
 		else {
@@ -1352,6 +1432,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			}
 		}
 	}
+
 	acct = nf_conn_acct_find(ct);
 	if (!acct)
 		return NF_ACCEPT;
@@ -1390,8 +1471,14 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			}
 		}
 	}
-	ct->mark = (ct->mark & 0xFFFF0000) | (flow.app_id & 0xFFFF);
 
+
+	ct->mark = (ct->mark & 0xFFFF0000) | (flow.app_id & 0xFFFF);
+	if (flow.feature && flow.feature->ignore){
+		ct->mark |= NF_IGNORE_BIT;
+		flow.ignore = 1;
+		AF_LMT_DEBUG("gateway set ignore bit, ct->mark = %x\n", ct->mark);
+	}
 	
 	if (g_oaf_filter_enable){
 		if (match_app_filter_rule(flow.app_id, client))
@@ -1413,10 +1500,12 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		}
 	}
 
-
 	if (g_oaf_record_enable){
 		AF_CLIENT_LOCK_W();
-		af_update_client_app_info(client, flow.app_id, flow.drop);
+		if (!flow.ignore){
+			af_update_client_app_info(client, flow.app_id, flow.drop);
+		}
+
 		AF_CLIENT_UNLOCK_W();
 		AF_LMT_INFO("match %s %pI4(%d)--> %pI4(%d) len = %d, %d\n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
 					&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id);

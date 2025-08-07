@@ -17,7 +17,7 @@
 #include "af_utils.h"
 #include "af_log.h"
 #define AF_MAX_APP_TYPE_NUM 16
-#define AF_MAX_APP_NUM 256
+#define AF_MAX_APP_NUM 512
 #define AF_DEV_NAME "appfilter"
 
 DEFINE_RWLOCK(af_rule_lock);
@@ -26,6 +26,8 @@ DEFINE_RWLOCK(af_rule_lock);
 #define af_rule_read_unlock() read_unlock_bh(&af_rule_lock);
 #define af_rule_write_lock() write_lock_bh(&af_rule_lock);
 #define af_rule_write_unlock() write_unlock_bh(&af_rule_lock);
+
+extern u_int32_t g_update_jiffies;
 
 static struct mutex af_cdev_mutex;
 struct af_config_dev
@@ -340,6 +342,7 @@ int af_config_handle(char *config, unsigned int len)
 		AF_ERROR("invalid cmd %d\n", cmd_obj->valueint);
 		return -1;
 	}
+	g_update_jiffies = jiffies;
 	af_show_app_status();
 	return 0;
 }

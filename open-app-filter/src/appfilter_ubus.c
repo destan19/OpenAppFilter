@@ -1536,7 +1536,18 @@ static int handle_get_oaf_status(struct ubus_context *ctx, struct ubus_object *o
     }
  
     json_object_object_add(data_obj, "enable", json_object_new_int(enable));
+    json_object_object_add(data_obj, "version", json_object_new_string(OAF_VERSION));
+
     json_object_object_add(data_obj, "engine_status", json_object_new_int(engine_status));
+
+    ret = exec_with_result_line("cat /proc/sys/oaf/version", kernel_version, sizeof(kernel_version));
+    if (ret >= 0){
+        json_object_object_add(data_obj, "engine_version", json_object_new_string(kernel_version));
+    }
+    else{
+        json_object_object_add(data_obj, "engine_version", json_object_new_string(""));
+    }
+
     ret = exec_with_result_line("uname -r", kernel_version, sizeof(kernel_version));
     if (ret >= 0){
         json_object_object_add(data_obj, "kernel_version", json_object_new_string(kernel_version));
@@ -1544,6 +1555,7 @@ static int handle_get_oaf_status(struct ubus_context *ctx, struct ubus_object *o
     else{
         json_object_object_add(data_obj, "kernel_version", json_object_new_string(""));
     }
+
 
     json_object_object_add(data_obj, "config_enable", json_object_new_int(g_af_config.global.enable));
     json_object_object_add(data_obj, "time_mode", json_object_new_int(g_af_config.time.time_mode));
