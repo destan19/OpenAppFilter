@@ -1524,9 +1524,9 @@ static int handle_get_oaf_status(struct ubus_context *ctx, struct ubus_object *o
     int enable = 0;
     int ret = 0;
     int engine_status = 0;
-    
-    ret = exec_with_result_line("cat /proc/sys/oaf/enable", result, sizeof(result));
-    if (strlen(result) == 0){
+
+    ret = af_read_file_value("/proc/sys/oaf/enable", result, sizeof(result));
+    if (ret !=0 || strlen(result) == 0){
         engine_status = 0;
         enable = 0;
     }
