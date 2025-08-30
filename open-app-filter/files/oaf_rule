@@ -37,7 +37,22 @@ load_rule()
     config_apply "$json_str"
     json_cleanup               
 }
-
+              
+load_whitelist_mac()                          
+{                                             
+    json_init                          
+    config_load appfilter            
+    json_add_int "op" 5                             
+    json_add_object "data"
+    json_add_array "mac_list"
+                      
+    config_foreach add_mac_to_array_callback whitelist
+             
+    json_str=`json_dump`
+    config_apply "$json_str"             
+    json_cleanup         
+}                                            
+       
 
 
 add_mac_to_array_callback() {
@@ -74,6 +89,7 @@ reload_rule(){
     clean_rule
     load_rule
     load_mac_list
+	load_whitelist_mac
 }
 
 reload_base_config(){

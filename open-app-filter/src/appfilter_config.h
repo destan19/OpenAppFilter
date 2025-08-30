@@ -62,5 +62,7 @@ int af_uci_get_int_value(struct uci_context *ctx, char *key);
 int af_uci_get_value(struct uci_context *ctx, char *key, char *output, int out_len);
 int af_uci_add_section(struct uci_context * ctx, char *package_name, char *section);
 int af_uci_commit(struct uci_context *ctx, const char * package);
+char *get_app_name_by_id(int id);
+
 #endif
 

@@ -1,0 +1,19 @@
+{
+    "luci-app-oaf": {
+        "description": "Grant access to OpenAppFilter configuration",
+        "read": {
+            "uci": [ "appfilter", "user_info" ],
+  			"ubus": {
+                "appfilter": [ "get_all_users", "get_oaf_status", "get_app_filter", "set_app_filter", "class_list", "dev_list", "app_class_visit_time", "dev_visit_time", "dev_visit_list", "set_app_filter_base", "get_app_filter_base", "set_app_filter_adv", "get_app_filter_adv", "set_app_filter_time", "get_app_filter_time", "get_app_filter_user", "set_app_filter_user", "del_app_filter_user", "add_app_filter_user", "set_nickname", "get_whitelist_user", "add_whitelist_user", "del_whitelist_user"]
+             }
+
+        },  
+        "write": {
+            "cgi-io": [ "upload" ],
+            "file": {
+                "/etc/appfilter/*": [ "write" ]
+            },  
+            "uci": [ "appfilter" ]
+        }   
+    }   
+}

@@ -31,6 +31,10 @@
 #include "af_client_fs.h"
 #include "cJSON.h"
 #include "af_conntrack.h"
+#include "af_config.h"
+#include "af_rule_config.h"
+#include "af_user_config.h"
+#include "af_whitelist_config.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("destan19@126.com");
@@ -68,7 +72,12 @@ char *ipv6_to_str(const struct in6_addr *addr, char *str)
     sprintf(str, "%pI6c", addr);
     return str;
 }
-
+int hash_mac(unsigned char *mac)
+{
+	if (!mac)
+		return 0;
+	return ((mac[0] ^ mac[1]) + (mac[2] ^ mac[3]) + (mac[4] ^ mac[5])) % MAX_AF_MAC_HASH_SIZE;
+}
 
 int __add_app_feature(char *feature, int appid, char *name, int proto, int src_port,
 					  port_info_t dport_info, char *host_url, char *request_url, char *dict, char *search_str, int ignore)
@@ -506,15 +515,18 @@ int load_feature_config(void)
 	return 0;
 }
 
+
 static void af_clean_feature_list(void)
 {
 	af_feature_node_t *node;
+	int count = 0;
 	feature_list_write_lock();
 	while (!list_empty(&af_feature_head))
 	{
 		node = list_first_entry(&af_feature_head, af_feature_node_t, head);
 		list_del(&(node->head));
 		kfree(node);
+		count++;
 	}
 	feature_list_write_unlock();
 }
@@ -1009,9 +1021,19 @@ int match_feature(flow_info_t *flow)
 
 int match_app_filter_rule(int appid, af_client_info_t *client)
 {
-	if (g_user_mode && !find_af_mac(client->mac))
-	{
-		return AF_FALSE;
+	if (!g_user_mode){ // auto mode
+		if (af_whitelist_mac_find(client->mac)){
+			AF_LMT_DEBUG("match whitelist mac = " MAC_FMT "\n", MAC_ARRAY(client->mac));
+			return AF_FALSE;
+		}
+	}
+	else{ // manual mode
+		if (!af_mac_find(client->mac))
+			return AF_FALSE;
+	}
+
+	if (g_user_mode){
+		AF_LMT_DEBUG("match user mac = " MAC_FMT "\n", MAC_ARRAY(client->mac));
 	}
 	if (af_get_app_status(appid))
 	{
@@ -1276,7 +1298,6 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 
 		if (!match_feature(&flow))
 			goto EXIT;
-		
 		
 		if (g_oaf_filter_enable){
 			if (match_app_filter_rule(flow.app_id, client)){
@@ -1724,6 +1745,7 @@ static void oaf_user_msg_handle(char *data, int len)
 		break;
 	case AF_MSG_CLEAN_FEATURE:
 		AF_INFO("clean feature\n");
+		printk("clean feature list\n");
 		af_clean_feature_list();
 		break;
 	default:
@@ -1775,6 +1797,8 @@ static int __init app_filter_init(void)
 	af_log_init();
 	af_register_dev();
 	af_mac_list_init();
+	af_whitelist_mac_init();
+
 	af_init_app_status();
 	init_af_client_procfs();
 	af_client_init();
@@ -1804,7 +1828,8 @@ static void app_filter_fini(void)
 #endif
 	finit_af_client_procfs();
 	af_clean_feature_list();
-	af_mac_list_clear();
+	af_mac_list_flush();
+	af_whitelist_mac_flush();
 	af_unregister_dev();
 	af_log_exit();
 	af_client_exit();

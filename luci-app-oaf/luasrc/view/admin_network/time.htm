@@ -134,6 +134,17 @@
 			const maxEntries = 64;
 			const mode = document.getElementById('timeMode').value;
 
+			if (!time_data.weekday_list || time_data.weekday_list.length === 0) {
+				if (mode === "0") {
+					const errorContainer = document.getElementById('errorContainer');
+					errorContainer.innerHTML = '<%:Please select at least one weekday%>';
+				} else {
+					const dynamicWeekdayErrorContainer = document.getElementById('dynamicWeekdayErrorContainer');
+					dynamicWeekdayErrorContainer.innerHTML = '<%:Please select at least one weekday%>';
+					dynamicWeekdayErrorContainer.style.display = 'block';
+				}
+				return;
+			}
 
 			if (mode === "0") {
 				if (!time_data.time_list || time_data.time_list.length === 0) {
@@ -146,6 +157,18 @@
 					const errorContainer = document.getElementById('errorContainer');
 					errorContainer.innerHTML = '<%:Time periods cannot exceed 64 entries%>';
 					return; 
+				}
+			} else {
+				if (!time_data.start_time || !time_data.end_time) {
+					const dynamicErrorContainer = document.getElementById('dynamicErrorContainer');
+					dynamicErrorContainer.innerHTML = '<%:Please set start and end time%>';
+					return;
+				}
+				
+				if (time_data.start_time >= time_data.end_time) {
+					const dynamicErrorContainer = document.getElementById('dynamicErrorContainer');
+					dynamicErrorContainer.innerHTML = '<%:End time must be greater than start time%>';
+					return;
 				}
 			}
 
@@ -236,7 +259,6 @@
 
         function getTimeFormData() {
             const mode = document.getElementById('timeMode').value;
-            // Select weekday checkboxes based on mode
             const selector = mode === "0" ? '#staticWeekdaySelector' : '.advanced-content';
             const weekdays = Array.from(document.querySelectorAll(`${selector} input[name="weekday"]:checked`))
                 .map(cb => parseInt(cb.value));
@@ -266,6 +288,14 @@
         function toggleAdvanced(element) {
             element.classList.toggle('expanded');
             element.nextElementSibling.classList.toggle('expanded');
+        }
+
+        function clearDynamicWeekdayError() {
+            const dynamicWeekdayErrorContainer = document.getElementById('dynamicWeekdayErrorContainer');
+            if (dynamicWeekdayErrorContainer) {
+                dynamicWeekdayErrorContainer.style.display = 'none';
+                dynamicWeekdayErrorContainer.innerHTML = '';
+            }
         }
 
         function addTimeValidation() {
@@ -309,14 +339,11 @@
         }
 
         function renderTimeData() {
-            // Set mode
             const timeMode = document.getElementById('timeMode');
             timeMode.value = time_data.mode;
 
-            // Clear previous selections
             document.querySelectorAll('input[name="weekday"]').forEach(cb => cb.checked = false);
 
-            // Set weekday checkboxes for both modes
             time_data.weekday_list.forEach(day => {
                 const staticCheckbox = document.querySelector(`#staticWeekdaySelector input[name="weekday"][value="${day}"]`);
                 const dynamicCheckbox = document.querySelector(`.advanced-content input[name="weekday"][value="${day}"]`);
@@ -324,7 +351,6 @@
                 if (dynamicCheckbox) dynamicCheckbox.checked = true;
             });
 
-            // Render static mode data
             const tbody = document.getElementById('timeTableBody');
             tbody.innerHTML = '';
             if (time_data.time_list) {
@@ -352,21 +378,15 @@
             if (time_data.deny_time) {
                 document.getElementById('denyTime').value = time_data.deny_time;
             }
-
-            // Ensure the correct content is displayed based on the mode
             toggleModeContent();
-
-            // Add validation to time inputs
             addTimeValidation();
-
-
         }
 
         function validateDynamicTime() {
             const startTimeInput = document.getElementById('startTime');
             const endTimeInput = document.getElementById('endTime');
             const dynamicErrorContainer = document.getElementById('dynamicErrorContainer');
-            dynamicErrorContainer.innerHTML = ''; // 清空之前的错误信息
+            dynamicErrorContainer.innerHTML = ''; 
 
             const startTime = startTimeInput.value;
             const endTime = endTimeInput.value;
@@ -409,7 +429,6 @@
 
     <div style="max-width: 1000px; margin-left: 5px;padding: 5px;">
 
-    <!-- Add Time Rules Section -->
     <div class="time-rules">
         <h3><%:Time Rules%></h3>
         
@@ -421,7 +440,6 @@
             </select>
         </div>
 
-        <!-- 星期选择器移到这里作为固定时间模式的部分 -->
         <div id="staticWeekdaySelector" class="weekday-selector">
             <label><%:Weekday Selection%>：</label>
             <div class="weekday-item"><input type="checkbox" name="weekday" value="1"> <%:Mon%></div>
@@ -433,7 +451,6 @@
             <div class="weekday-item"><input type="checkbox" name="weekday" value="0"> <%:Sun%></div>
         </div>
      
-        <!-- 固定时间模式内容 -->
         <div id="staticTimeContent">
             <table class="time-table">
                 <thead>
@@ -452,7 +469,6 @@
             <button class="add-time-btn" onclick="addTimeRow()"><%:Add Time Period%></button>
         </div>
 
-        <!-- 动态时间模式内容 -->
         <div id="dynamicTimeContent" style="display: none;">
             <div style="color: #666; font-size: 13px; margin-bottom: 15px;">
                 <%:Dynamic time mode refers to dynamically adjusting app filter switches, such as allowing children to play games for 20 minutes after studying for 1 hour, automatically enabling filtering after exceeding entertainment time, and repeating the cycle.%>
@@ -476,17 +492,17 @@
                         <span><%:Advanced Settings%></span>
                     </div>
                     <div class="advanced-content">
-                        <!-- 星期选择器只在高级设置中显示 -->
                         <div class="weekday-selector" style="margin-bottom: 15px;">
                             <label><%:Weekday Selection%>：</label>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="1"> <%:Mon%></div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="2"> <%:Tue%></div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="3"> <%:Wed%></div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="4"> <%:Thur%></div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="5"> <%:Fri%></div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="6"> <%:Sat%></div>
-                            <div class="weekday-item"><input type="checkbox" name="weekday" value="0"> <%:Sun%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="1" onchange="clearDynamicWeekdayError()"> <%:Mon%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="2" onchange="clearDynamicWeekdayError()"> <%:Tue%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="3" onchange="clearDynamicWeekdayError()"> <%:Wed%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="4" onchange="clearDynamicWeekdayError()"> <%:Thur%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="5" onchange="clearDynamicWeekdayError()"> <%:Fri%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="6" onchange="clearDynamicWeekdayError()"> <%:Sat%></div>
+                            <div class="weekday-item"><input type="checkbox" name="weekday" value="0" onchange="clearDynamicWeekdayError()"> <%:Sun%></div>
                         </div>
+                        <div id="dynamicWeekdayErrorContainer" style="color: red; font-size: 12px; margin-top: 5px; display: none;"></div>
                         
                         <div class="setting-item">
                             <label><%:Daily Study Time Range%>：</label>

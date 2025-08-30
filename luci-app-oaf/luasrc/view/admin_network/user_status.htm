@@ -4,14 +4,13 @@
 <script type="text/javascript" src="<%=resource%>/echarts.min.js?v=5.0"></script>
 
 	<script type="text/javascript">//<![CDATA[
-		let visit_time_data = []; // Use mock data for chart display
+		let visit_time_data = []; 
 		let user_list_data = {
-			total_num: 0,
 			list: [
 				
 			]
 		}
-		let cur_page = 1;
+		let cur_page = 0;
 
 		function getAllUsersData(page) {
 			new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: page},
@@ -23,18 +22,11 @@
 		}
 
 		window.onload = function() {
-			cur_page = 1;
+			cur_page = 0; // default fetch all
 			getAllUsersData(cur_page);
 
 			setInterval(function() {
-				console.log("get user data");
 				getAllUsersData(cur_page);
-				// new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: 0},
-				// 	function (x, data) {
-				// 		user_list_data = data.data
-				// 		render_user_list(user_list_data);
-				// 	}
-				// );
 			}, 3000);
 		}
 
@@ -48,55 +40,9 @@
 			}, 1000);
 		}
 
-		
-
-		function generateMockData() {
-			return [
-				{ app_id: "App1", visit_time: 3600 },
-				{ app_id: "App2", visit_time: 1800 },
-				{ app_id: "App3", visit_time: 2400 },
-				{ app_id: "App4", visit_time: 1200 },
-				{ app_id: "App5", visit_time: 3000 }
-			];
-		}
-
-		function generateUserListData() {
-			return {
-				total_num: 5,
-				list: [
-					{
-						hostname: "Device1",
-						mac: "00:11:22:33:44:55",
-						ip: "192.168.1.2",
-						applist: [{ name: "App1" }, { name: "App2" }],
-						online: 1
-					}
-				]
-			};
-		}
-
-		function generateVisitListData() {
-			return {
-				list: [
-					{
-						appname: "App1",
-						hostname: "Device1",
-						mac: "00:11:22:33:44:55",
-						first_time: "2023-10-01 10:00:00",
-						total_time: 3600,
-						latest_action: 0
-					}
-			
-				]
-			};
-		}
-
 		function render_user_list(data) {
 			var tb = document.getElementById('user_status_table');
-			var total_num = data.total_num
 			var user_list = data.list;
-			console.log("total_num = " + total_num);
-			// table
 			if (user_list && tb) {
 				while (tb.rows.length > 1)
 					tb.deleteRow(1);
@@ -108,7 +54,7 @@
 					var tr = tb.insertRow(-1);
 					tr.className = 'tr';
 					if (user_list[i].online != 1) {
-						tr.style.color = '#A9A9A9'; // 设置离线行的字体颜色为浅灰色
+						tr.style.color = '#A9A9A9'; 
 					}
 					tr.insertCell(-1).innerHTML = `
 						<div style="display: flex; align-items: center;">
@@ -123,17 +69,14 @@
 				     if (!Array.isArray(user_list[i].applist))           
                          user_list[i].applist = [] 
 					var app_list_str = user_list[i].applist.map(app => {
-						// Assuming app.name corresponds to the app's icon filename
-						return `<img src="<%=resource%>/app_icons/${app.id}.png" alt="${app.name}" title="${app.name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 8px;">`;
+						var iconSrc = app.icon === 0 ? '<%=resource%>/app_icons/default.png' : `<%=resource%>/app_icons/${app.id}.png`;
+						return `<img src="${iconSrc}" alt="${app.name}" title="${app.name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 8px;">`;
 					}).join("") || "--";
 					tr.insertCell(-1).innerHTML = app_list_str;
-					// 正在访问APP列
 					var current_app = user_list[i].app || "--";
 					tr.insertCell(-1).innerHTML = current_app;
-					// 正在访问URL列
 					var current_url = user_list[i].url || "--";
 					var display_url = current_url;
-					// 处理URL显示长度，超过22个字符时进行截断
 					if (current_url !== "--" && current_url.length > 20) {
 						display_url = current_url.substring(0, 10) + "..." + current_url.substring(current_url.length - 10);
 					}
@@ -159,33 +102,30 @@
 			var tb = document.getElementById('visit_list_table');
 			var visit_list = data.list;
 			if (visit_list && tb) {
-				/* clear all rows */
 				while (tb.rows.length > 1)
 					tb.deleteRow(1);
 				for (var i = 0; i < visit_list.length; i++) {
-					var action_status = visit_list[i].act == 1 ? "<%:Filtered%>" : "<%:Unfiltered%>";
+					var action_status = visit_list[i].act == 1 ? 
+						'<span style="color: red;"><%:Filtered%></span>' : 
+						'<span style="color: green;"><%:Unfiltered%></span>';
 					var hostname = visit_list[i].hostname == "" || visit_list[i].hostname == "*" ? "--" : visit_list[i].hostname;
 					var tr = tb.insertRow(-1);
 					tr.className = 'tr';
 
-					// Add app icon before app name with fixed height for alignment
+					var iconSrc = visit_list[i].icon === 0 ? '<%=resource%>/app_icons/default.png' : `<%=resource%>/app_icons/${visit_list[i].id}.png`;
 					tr.insertCell(-1).innerHTML = `
 						<div style="height: 24px; display: flex; align-items: center;">
-							<img src="<%=resource%>/app_icons/${visit_list[i].id}.png" alt="${visit_list[i].name}" title="${visit_list[i].name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 4px;">
+							<img src="${iconSrc}" alt="${visit_list[i].name}" title="${visit_list[i].name}" style="width: 20px; height: 20px; border-radius: 5px; margin-right: 4px;">
 							<span>${visit_list[i].name}</span>
 						</div>
 					`;
 
 
-					// Convert timestamp to readable date string
-					var first_time_date = new Date(visit_list[i].ft * 1000); // Assuming first_time is in seconds
-					var first_time_str = first_time_date.toLocaleString(); // Convert to local date string
+					var first_time_date = new Date(visit_list[i].ft * 1000);
+					var first_time_str = first_time_date.toLocaleString(); 
 
-					var latest_time_date = new Date(visit_list[i].lt * 1000); // Assuming first_time is in seconds
-					var latest_time_str = latest_time_date.toLocaleString(); // Convert to local date string
-
-
-
+					var latest_time_date = new Date(visit_list[i].lt * 1000); 
+					var latest_time_str = latest_time_date.toLocaleString(); 
 
 					tr.insertCell(-1).innerHTML = first_time_str;
 					tr.insertCell(-1).innerHTML = latest_time_str;
@@ -207,7 +147,6 @@
 					tr.insertCell(-1).innerHTML = total_time_str;
 					tr.insertCell(-1).innerHTML = action_status;
 
-					
 					var childs = tr.childNodes;
 					Array.prototype.forEach.call(childs, function (child) {
 						child.className = 'td';
@@ -219,11 +158,11 @@
 		function showDetails(mac) {
 			var modal = document.getElementById('detailsModal');
 			modal.style.display = 'flex';
+			updateDeviceInfoTitle(mac);
 
 			new XHR().get('<%=url('admin/network/dev_visit_time')%>/' + mac, null,
 				function (x, st) {
 					visit_time_data = st;
-					console.log("visit_time_data = " + visit_time_data);
 					display_app_visit_view(visit_time_data);
 				}
 			);
@@ -231,10 +170,29 @@
 			new XHR().get('<%=url('admin/network/dev_visit_list')%>/' + mac, null,
 				function (x, st) {
 					visit_list_data = st;
-					console.log("visit_list_data = " + visit_list_data);
 					render_visit_list_table(visit_list_data);
 				}
 			);
+		}
+
+		function updateDeviceInfoTitle(mac) {
+			var deviceInfo = '(' + mac + ')';
+			
+			if (user_list_data && user_list_data.list) {
+				var device = user_list_data.list.find(function(user) {
+					return user.mac === mac;
+				});
+				
+				if (device) {
+					if (device.nickname && device.nickname.trim() !== '') {
+						deviceInfo = '(' + device.nickname + ')';
+					} else if (device.hostname && device.hostname.trim() !== '') {
+						deviceInfo = '(' + device.hostname + ')';
+					}
+				}
+			}
+			
+			document.getElementById('deviceInfo').textContent = deviceInfo;
 		}
 
 		function showModifyNickname(mac) {
@@ -265,7 +223,6 @@
 				console.log('Nickname updated successfully');
 				closeModal('nicknameModal');
 				showSuccessMessage('<%:Settings saved successfully%>');
-				// Optionally, refresh the user list to reflect changes
 				getAllUsersData(cur_page);
 			});
 		}
@@ -324,7 +281,7 @@
 		var app_stat_array = new Array();
 		if (data.length == 0){
 			var app_obj ={}
-			app_obj.name = "未知APP"
+			app_obj.name = "<%:Unknown App%>"
 			app_obj.value = 0
 			app_obj.legendname = app_obj.name
 			app_stat_array.push(app_obj)
@@ -340,7 +297,6 @@
 				app_stat_array.push(app_obj);
 			}
 		}
-		console.log("hello")
         var total_time_str = get_display_time(total_time);
         var option = {
 			grid:{
@@ -396,7 +352,7 @@
                     name: "<%:Visit Time%>",
                     type: 'pie',
                     radius: ['58%', '70%'],
-                    center: ['35%', '50%'], // 饼图的中心位置,调整离开左侧的距离
+                    center: ['35%', '50%'], 
                     clockwise: false,
                     avoidLabelOverlap: true,
                     itemStyle: {
@@ -429,9 +385,6 @@
 
         myChart.setOption(option);
     }
-
-// user_list_data = generateUserListData();
-// visit_list_data = generateVisitListData();
 
 //]]></script>
 
@@ -477,9 +430,9 @@
 </div>
 <!-- Details Modal -->
 <div id="detailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 750px; height: 500px; display: flex; flex-direction: column; position: relative;">
-        <button type="button" onclick="closeModal('detailsModal')" style="position: absolute; top: 10px; right: 10px; background-color: transparent; border: none; font-size: 24px; color: #333; cursor: pointer; width: 30px; height: 30px;">&times;</button>
-        <h4 style="margin-top:2px"><%:Device Details%></h4>
+    <div style="background-color: white; padding: 30px; border-radius: 8px; text-align: left; width: 800px; height: 550px; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);">
+        <button type="button" onclick="closeModal('detailsModal')" style="position: absolute; top: 15px; right: 15px; background-color: transparent; border: none; font-size: 24px; color: #666; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; transition: background-color 0.2s;">&times;</button>
+        <h4 style="margin: 0 0 25px 0; color: #333; font-size: 18px;"><%:Device Details%> <span id="deviceInfo" style="color: #666; font-size: 14px; font-weight: normal;"></span></h4>
         
         <!-- Tab List -->
         <ul class="tab-list">
@@ -549,15 +502,25 @@
 
 <!-- Nickname Modal -->
 <div id="nicknameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 400px; display: flex; flex-direction: column; position: relative;">
-        <button type="button" onclick="closeModal('nicknameModal')" style="position: absolute; top: 10px; right: 10px; background-color: transparent; border: none; font-size: 24px; color: #333; cursor: pointer; width: 30px; height: 30px;">&times;</button>
-        <h4 style="margin-top:2px"><%:Modify Remark%></h4>
-        <p style="margin-bottom: 10px;"><span class="field-label"><%:MAC Address%>:</span> <span id="nicknameMacDisplay">--</span></p>
+    <div style="background-color: white; padding: 30px; border-radius: 8px; text-align: left; width: 450px; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);">
+        <button type="button" onclick="closeModal('nicknameModal')" style="position: absolute; top: 15px; right: 15px; background-color: transparent; border: none; font-size: 24px; color: #666; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; transition: background-color 0.2s;">&times;</button>
+        
+        <h4 style="margin: 0 0 25px 0; color: #333; font-size: 18px;"><%:Modify Remark%></h4>
+        
+        <div style="margin-bottom: 20px;">
+            <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;"><span class="field-label"><%:MAC Address%>:</span> <span id="nicknameMacDisplay" style="color: #333; font-weight: 500;">--</span></p>
+        </div>
+        
         <input type="hidden" id="nicknameMac" value="">
-        <p style="margin-bottom: 10px;"><span class="field-label"><%:Remark%>:</span> <input type="text" id="nicknameInput" style="padding: 5px; background-color: white;width: 200px"></p>
-        <div style="display: flex; justify-content: flex-end;">
-			<button type="button" class="cbi-button cbi-button-add" onclick="closeModal('nicknameModal')"><%:Cancel%></button>
-            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()" style="margin-right: 10px;"><%:OK%></button>
+        
+        <div style="margin-bottom: 30px;">
+            <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;"><span class="field-label"><%:Remark%>:</span></p>
+            <input type="text" id="nicknameInput" style="padding: 10px; background-color: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; width: 100%; font-size: 14px; transition: border-color 0.2s;" placeholder="请输入备注信息">
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 10px;">
+            <button type="button" class="cbi-button cbi-button-add" onclick="closeModal('nicknameModal')"><%:Cancel%></button>
+            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()"><%:OK%></button>
         </div>
     </div>
 </div>
@@ -569,32 +532,40 @@
 </div>
 <style>
     .tab-container {
-        margin-top: 20px;
+        margin-top: 10px;
     }
     .tab-list {
         display: flex;
         list-style-type: none;
-        padding: 0;
-        margin: 0;
-        border-bottom: 1px solid #ccc;
+        padding: 0 0 0 10px;
+        margin: 0 0 10px 0;
+        border-bottom: 1px solid #e0e0e0;
     }
     .tab-item {
-        padding: 3px 16px;
+        padding: 4px 12px;
         cursor: pointer;
-        border: 1px solid #ccc;
+        border: 1px solid #e0e0e0;
         border-bottom: none;
-        background-color: #f9f9f9;
-        border-radius: 5px 5px 0 0;
-        margin-right: 6px;
-        transition: background-color 0.3s ease;
+        background-color: #f0f0f0;
+        border-radius: 6px 6px 0 0;
+        margin-right: 8px;
+        transition: all 0.2s ease;
+        color: #333;
+        font-size: 13px;
     }
     .tab-item.active {
-        font-weight: bold;
-		background-color: #ccc;
-        color: rgb(80, 80, 140); /* Change text color to blue */
+        background-color: white;
+        color: rgb(133, 133, 203);
+        border-color: #e0e0e0;
+        border-bottom: 1px solid white;
+        margin-bottom: -1px;
+		font-size: 13px;
+        z-index: 1;
+        position: relative;
     }
     .tab-item:hover {
-        background-color: #d0d0d0;
+        background-color: #e0e0e0;
+        border-color: #d0d0d0;
     }
 
 	.tab-body {
@@ -614,8 +585,8 @@
 	.field-label {
 		font-weight: bold;
 		color: #333;
-		width: 75px; /* Set a fixed width for all labels */
-		display: inline-block; /* Ensure the width is applied */
+		width: 75px; 
+		display: inline-block; 
 	}
 	.field-value {
 		color: #4CAF50;
@@ -642,15 +613,15 @@
 	}
 
 	#visit_list_table .td {
-		padding: 4px 8px !important; /* 调整访问记录表格的行高 */
-		height: 28px !important; /* 设置固定行高 */
-		vertical-align: middle !important; /* 垂直居中对齐 */
+		padding: 4px 8px !important; 
+		height: 28px !important; 
+		vertical-align: middle !important; 
 	}
 
 	#visit_list_table .th {
-		padding: 6px 8px !important; /* 调整表头行高 */
-		height: 32px !important; /* 设置固定表头行高 */
-		vertical-align: middle !important; /* 垂直居中对齐 */
+		padding: 6px 8px !important; 
+		height: 32px !important; 
+		vertical-align: middle !important;
 	}
 
 </style>

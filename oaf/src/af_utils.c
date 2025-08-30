@@ -381,3 +381,22 @@ int k_sscanf(const char *buf, const char *fmt, ...)
 }
 
 
+int mac_to_hex(u8 *mac, u8 *mac_hex)
+{
+	u32 mac_tmp[6];
+	int ret = 0, i = 0;
+	ret = sscanf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
+				 (unsigned int *)&mac_tmp[0],
+				 (unsigned int *)&mac_tmp[1],
+				 (unsigned int *)&mac_tmp[2],
+				 (unsigned int *)&mac_tmp[3],
+				 (unsigned int *)&mac_tmp[4],
+				 (unsigned int *)&mac_tmp[5]);
+	if (6 != ret)
+		return -1;
+	for (i = 0; i < 6; i++)
+	{
+		mac_hex[i] = mac_tmp[i];
+	}
+	return 0;
+}

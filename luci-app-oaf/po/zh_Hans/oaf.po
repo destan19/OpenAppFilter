@@ -205,14 +205,14 @@ msgstr "黑名单模式"
 msgid "Whitelist mode"
 msgstr "白名单模式"
 
-msgid "The feature library is used to describe app features, app filtering effect and number-dependent feature library"
-msgstr "特征库用于描述app特征，app过滤效果和个数依赖特征库"
+msgid "The feature library is used to describe App features, App filtering effect and number-dependent feature library"
+msgstr "特征库用于描述App特征，App过滤效果和个数依赖特征库"
 
 msgid "User List"
 msgstr "用户列表"
 
-msgid "If there is no app you want, you can add the app by updating the app feature file"
-msgstr "如果没有你想要的APP，可以通过升级特征库增加APP"
+msgid "If there is no App you want, you can add the App by updating the App feature file"
+msgstr "如果没有你想要的App，可以通过升级特征库增加App"
 
 msgid "Feature format"
 msgstr "特征码格式"
@@ -238,8 +238,8 @@ msgstr "如果oaf驱动无法手动卸载或者当前驱动不稳定，可以关
 msgid "LAN Interface"
 msgstr "LAN接口"
 
-msgid "The name of the LAN interface, used for detecting terminal information. The system default is bridge interface (br-lan). If the LAN port has been modified to a physical interface, please modify it to the corresponding name, such as eth0."
-msgstr "LAN接口的名称，用于探测终端信息，系统默认都是桥接口(br-lan)，如果将lan口修改成了物理接口，请修改为对应的名称，比如eth0。"
+msgid "The name of the LAN interface, used for detecting terminal information. The system default is bridge interface (br-lan). If the LAN port has been modified to a physical interface, please modify it to the corresponding name, such as eth0, support fuzzy matching, For example, you can setup lan to match br-lan and br-lan2."
+msgstr "LAN接口的名称，用于探测终端信息，系统默认都是桥接口(br-lan)，如果将lan口修改成了物理接口，请修改为对应的名称，比如eth0，支持模糊匹配，比如可以设置lan用来匹配br-lan和br-lan2"
 
 msgid "Save"
 msgstr "保存"
@@ -454,5 +454,41 @@ msgstr "正在更新，请稍后..."
 msgid "Feature library files can be downloaded from the official website. After downloading, upload to upgrade. Note the feature code format version, which needs to be consistent with the current feature code format!"
 msgstr "特征库文件可以通过官网下载，下载后上传升级，注意特征码格式版本，需要和当前特征码格式一致！"
 
-msgid "If the APP you want is not in the list, you can upgrade the feature library of the official website or customize the APP"
-msgstr "如果列表中没有你想要的APP，可以通过升级官网的特征库或者自定义APP"
+msgid "If the App you want is not in the list, you can upgrade the feature library of the official website or customize the App"
+msgstr "如果列表中没有你想要的App，可以通过升级官网的特征库或者自定义App"
+
+msgid "Effective Users"
+msgstr "生效的用户"
+
+msgid "No Users Available"
+msgstr "暂无用户"
+
+msgid "Users in whitelist are not controlled"
+msgstr "白名单中的用户不受管控"
+
+msgid "Whitelist Users"
+msgstr "白名单用户"
+
+msgid "Add to Whitelist"
+msgstr "添加到白名单"
+
+msgid "Add to whitelist successful"
+msgstr "添加到白名单成功"
+
+msgid "Remove from whitelist successful"
+msgstr "从白名单移除成功"
+
+msgid "Please select at least one weekday"
+msgstr "请至少选择一个星期"
+
+msgid "Please set start and end time"
+msgstr "请设置开始和结束时间"
+
+msgid "Unknown App"
+msgstr "未知App"
+
+msgid "OAF Version"
+msgstr "OAF版本"
+
+msgid "OAF Driver Version"
+msgstr "OAF驱动版本"

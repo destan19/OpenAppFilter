@@ -1,7 +1,7 @@
 #ifndef APP_FILTER_H
 #define APP_FILTER_H
 
-#define AF_VERSION "5.3.1"
+#define AF_VERSION "5.3.2"
 #define AF_FEATURE_CONFIG_FILE "/tmp/feature.cfg"
 
 #define MAX_DPI_PKT_NUM 64
@@ -18,8 +18,7 @@
 #define MIN_FEATURE_LINE_LEN 16
 #define MAX_URL_MATCH_LEN 64
 #define MAX_BYPASS_DPI_PKT_LEN 600
-
-//#define CONFIG_KERNEL_FUNC_TEST 1
+#define MAX_AF_MAC_HASH_SIZE 64
 
 #define HTTP_GET_METHOD_STR "GET"
 #define HTTP_POST_METHOD_STR "POST"
@@ -143,10 +142,8 @@ typedef struct af_feature_node{
 	af_pos_info_t pos_info[MAX_POS_INFO_PER_FEATURE];
 }af_feature_node_t;
 
-typedef struct af_mac_info {
-    struct list_head   hlist;
-    unsigned char      mac[MAC_ADDR_LEN];
-}af_mac_info_t;
+
+
 
 typedef struct flow_info{
 	struct nf_conn *ct;
@@ -171,14 +168,9 @@ typedef struct flow_info{
 	af_feature_node_t *feature;
 }flow_info_t;
 
-int af_register_dev(void);
-void af_unregister_dev(void);
-void af_init_app_status(void);
-int af_get_app_status(int appid);
+
+
 int regexp_match(char *reg, char *text);
-void af_mac_list_init(void);
-void af_mac_list_clear(void);
-af_mac_info_t * find_af_mac(unsigned char *mac);
-int is_user_match_enable(void);
+int hash_mac(unsigned char *mac);
 
 #endif

@@ -41,6 +41,9 @@ function index()
 	entry({"admin", "network", "set_app_filter_user"}, call("set_app_filter_user"), nil).leaf = true
 	entry({"admin", "network", "del_app_filter_user"}, call("del_app_filter_user"), nil).leaf = true
 	entry({"admin", "network", "add_app_filter_user"}, call("add_app_filter_user"), nil).leaf = true
+	entry({"admin", "network", "get_whitelist_user"}, call("get_whitelist_user"), nil).leaf = true
+	entry({"admin", "network", "add_whitelist_user"}, call("add_whitelist_user"), nil).leaf = true
+	entry({"admin", "network", "del_whitelist_user"}, call("del_whitelist_user"), nil).leaf = true
 	entry({"admin", "network", "upload_file"}, call("handle_file_upload"), nil).leaf = true
 	entry({"admin", "network", "set_nickname"}, call("set_nickname"), nil).leaf = true
 	entry({"admin", "network", "get_oaf_status"}, call("get_oaf_status"), nil).leaf = true
@@ -198,6 +201,34 @@ function add_app_filter_user()
 	req_obj = json.parse(data_str)
 
 	local resp_obj=utl.ubus("appfilter", "add_app_filter_user", req_obj);
+	luci.http.write_json(resp_obj);
+end
+
+function get_whitelist_user()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local resp_obj=utl.ubus("appfilter", "get_whitelist_user", {});
+	luci.http.write_json(resp_obj);
+end
+
+function add_whitelist_user()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	local data_str = luci.http.formvalue("data")
+	req_obj = json.parse(data_str)
+
+	local resp_obj=utl.ubus("appfilter", "add_whitelist_user", req_obj);
+	luci.http.write_json(resp_obj);
+end
+
+function del_whitelist_user()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local req_obj = {}
+	req_obj.mac = luci.http.formvalue("mac")
+	llog("del whitelist user "..req_obj.mac);
+	local resp_obj=utl.ubus("appfilter", "del_whitelist_user", req_obj);
 	luci.http.write_json(resp_obj);
 end
 

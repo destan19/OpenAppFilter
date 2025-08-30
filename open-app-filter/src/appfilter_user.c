@@ -43,12 +43,6 @@ unsigned int hash_mac(unsigned char *mac)
     else
         return mac[0] & (MAX_DEV_NODE_HASH_SIZE - 1);
 }
-int get_timestamp(void)
-{
-    struct timeval cur_time;
-    gettimeofday(&cur_time, NULL);
-    return cur_time.tv_sec;
-}
 
 int hash_appid(int appid)
 {
@@ -221,6 +215,38 @@ void update_dev_nickname(void)
         strncpy(node->nickname, nickname_buf, sizeof(node->nickname));
     }   
     printf("update dev nickname ok\n");
+    uci_free_context(uci_ctx);
+}
+
+
+void clean_dev_whitelist_flag_iter(void *arg, dev_node_t *node)
+{
+    node->is_whitelist = 0;
+}
+
+void clean_dev_whitelist_flag(void)
+{
+    dev_foreach(NULL, clean_dev_whitelist_flag_iter);
+}
+
+
+void update_dev_whitelist_flag(void)
+{
+    clean_dev_whitelist_flag();
+    dev_node_t *node = NULL;
+    struct uci_context *uci_ctx = uci_alloc_context();
+    if (!uci_ctx) {
+        return;
+    }
+    char mac_str[128] = {0};
+    int num = af_get_uci_list_num(uci_ctx, "appfilter", "whitelist");
+    for (int i = 0; i < num; i++) {
+        af_uci_get_array_value(uci_ctx, "appfilter.@whitelist[%d].mac", i, mac_str, sizeof(mac_str));
+        node = find_dev_node(mac_str);
+        if (node) {
+            node->is_whitelist = 1;
+        }
+    }
     uci_free_context(uci_ctx);
 }
 
@@ -536,9 +562,11 @@ void flush_expire_visit_info(void)
                 {
                     if (p_info->expire)
                     {
+                        LOG_WARN("check expire,flush expire visit info: %s, appid=%d\n", node->mac, p_info->appid);
                         if (NULL == prev)
                         {
                             node->visit_htable[j] = p_info->next;
+                            LOG_WARN("flush expire visit info: %s, appid=%d\n", node->mac, p_info->appid);
                             free(p_info);
                             p_info = node->visit_htable[j];
                             prev = NULL;
@@ -546,6 +574,7 @@ void flush_expire_visit_info(void)
                         else
                         {
                             prev->next = p_info->next;
+                            LOG_WARN("flush expire visit info: %s, appid=%d\n", node->mac, p_info->appid);
                             free(p_info);
                             p_info = prev->next;
                         }
@@ -605,4 +634,56 @@ void dump_dev_visit_list(void)
     }
 EXIT:
     fclose(fp);
+}
+
+void clean_invalid_app_records(void)
+{
+    int i, j;
+    int invalid_count = 0;
+    int total_count = 0;
+    
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
+    {
+        dev_node_t *node = dev_hash_table[i];
+        while (node)
+        {
+            for (j = 0; j < MAX_VISIT_HASH_SIZE; j++)
+            {
+                visit_info_t *p_info = node->visit_htable[j];
+                while (p_info)
+                {
+                    total_count++;
+                    char *app_name = get_app_name_by_id(p_info->appid);
+                    if (app_name && strlen(app_name) == 0)
+                    {
+                        p_info->expire = 1;
+                        invalid_count++;
+                        LOG_WARN("clean: MAC=%s, AppID=%d\n", node->mac, p_info->appid);
+                    }
+                    p_info = p_info->next;
+                }
+            }
+            node = node->next;
+        }
+    }
+    if (invalid_count > 0)
+    {
+        flush_expire_visit_info();
+    }
+}
+
+void clear_device_app_statistics(void)
+{
+    int i;
+    
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
+    {
+        dev_node_t *node = dev_hash_table[i];
+        while (node)
+        {
+            memset(node->stat, 0, sizeof(node->stat));
+            node = node->next;
+        }
+    }
+    
 }

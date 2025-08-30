@@ -86,10 +86,15 @@
                     } else {
                         document.getElementById('autoLoadEngineSwitch').checked = false;
                     }
-
-
-                    
-
+                }
+            );
+            
+            new XHR().get('<%=url('admin/network/get_oaf_status')%>', null,
+                function (x, data) {
+                    if (data && data.data) {
+                        document.getElementById('oafVersion').textContent = data.data.version || '--';
+                        document.getElementById('engineVersion').textContent = data.data.engine_version || '--';
+                    }
                 }
             );
         }
@@ -109,6 +114,17 @@
 <div class="cbi-section cbi-tblsection">
     <div style="max-width: 1000px; margin-left: 10px;padding: 5px;">
 
+        <!-- Version Information -->
+        <div style="margin-top: 10px; display: flex; align-items: center;">
+            <label style="margin-right: 5px;width:150px"><%:OAF Version%></label>
+            <span id="oafVersion">--</span>
+        </div>
+        
+        <div style="margin-top: 10px; display: flex; align-items: center;">
+            <label style="margin-right: 5px;width:150px"><%:OAF Driver Version%></label>
+            <span id="engineVersion">--</span>
+        </div>
+        
 
         <div style="margin-top: 10px; display: flex; align-items: center;">
             <label for="disableHnatSwitch" style="margin-right: 5px;width:150px"><%:Disable Software/Hardware Acceleration%></label>
@@ -141,7 +157,7 @@
         </div>
 
         <div class="desc">
-            <span><%:The name of the LAN interface, used for detecting terminal information. The system default is bridge interface (br-lan). If the LAN port has been modified to a physical interface, please modify it to the corresponding name, such as eth0.%></span>
+            <span><%:The name of the LAN interface, used for detecting terminal information. The system default is bridge interface (br-lan). If the LAN port has been modified to a physical interface, please modify it to the corresponding name, such as eth0, support fuzzy matching, For example, you can setup lan to match br-lan and br-lan2.%></span>
         </div>
 
 

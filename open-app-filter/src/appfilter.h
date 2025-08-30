@@ -6,9 +6,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdarg.h>
+#include "utils.h"
 
 #define LOG_FILE_PATH "/tmp/log/appfilter.log"
-#define OAF_VERSION "6.1.4"
+#define OAF_VERSION "6.1.5"
 
 typedef enum {
     LOG_LEVEL_DEBUG,

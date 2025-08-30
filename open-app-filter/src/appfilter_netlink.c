@@ -34,10 +34,13 @@ THE SOFTWARE.
 #include "appfilter_user.h"
 #include "appfilter_netlink.h"
 #include "appfilter.h"
+#include "appfilter_config.h"
+
 #define MAX_NL_RCV_BUF_SIZE 4096
 
 #define REPORT_INTERVAL_SECS 60
 extern int hash_appid(int appid);
+extern unsigned int g_feature_update_time;
 void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
 {
     int ret;
@@ -49,6 +52,7 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
     int type;
     int id;
     char *mac = NULL;
+    u_int32_t cur_time = get_timestamp();
 
     struct msghdr msg = {
         .msg_name = &nladdr,
@@ -95,6 +99,7 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         return;
     }
 
+    LOG_DEBUG("report %s\n", kdata);
     struct json_object *mac_obj = json_object_object_get(root, "mac");
 
     if (!mac_obj)
@@ -113,32 +118,36 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         node = add_dev_node(mac);
         if (!node)
         {
-            printf("add dev node failed\n");
-            json_object_put(root);
-            return;
+            goto EXIT;
         }
     }
 
     struct json_object *ip_obj = json_object_object_get(root, "ip");
     if (ip_obj)
         strncpy(node->ip, json_object_get_string(ip_obj), sizeof(node->ip));
+
+
     struct json_object *visit_array = json_object_object_get(root, "visit_info");
     if (!visit_array)
     {
-        json_object_put(root);
-        return;
+       goto EXIT;
     }
+
 
     for (i = 0; i < json_object_array_length(visit_array); i++)
     {
         struct json_object *visit_obj = json_object_array_get_idx(visit_array, i);
         struct json_object *appid_obj = json_object_object_get(visit_obj, "appid");
         struct json_object *action_obj = json_object_object_get(visit_obj, "latest_action");
-        struct json_object *up_obj = json_object_object_get(visit_obj, "up_bytes");
-        struct json_object *down_obj = json_object_object_get(visit_obj, "down_bytes");
-        struct timeval cur_time;
 
-        gettimeofday(&cur_time, NULL);
+        // old appid may be not in the feature list
+        if (cur_time - g_feature_update_time < 300){
+            if (strlen(get_app_name_by_id(json_object_get_int(appid_obj))) == 0){
+                LOG_INFO("ignore appid %d because it is not in the feature list\n", json_object_get_int(appid_obj)); 
+                continue;
+            }
+        }
+
         int appid = json_object_get_int(appid_obj);
         int action = json_object_get_int(action_obj);
 
@@ -147,33 +156,27 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
         if (id <= 0 || type <= 0)
             continue;
         node->stat[type - 1][id - 1].total_time += REPORT_INTERVAL_SECS;
-
-        //	node->stat[type - 1][id - 1].total_down_bytes += json_object_get_int(down_obj);
-        //	node->stat[type - 1][id - 1].total_up_bytes += json_object_get_int(up_obj);
-
         int hash = hash_appid(appid);
         visit_info_t *head = node->visit_htable[hash];
         visit_info_t *p = head;
         while(p){
-            LOG_DEBUG("appid = %d, p->appid = %d, p->latest_time = %d, cur_time.tv_sec = %d, cur_time.tv_sec - p->latest_time = %d\n",
-                 appid, p->appid, p->latest_time, cur_time.tv_sec, cur_time.tv_sec - p->latest_time);
-            if((p->appid == appid) && ((cur_time.tv_sec - p->latest_time) < 300)){
-                LOG_DEBUG("match appid = %d\n", appid, cur_time.tv_sec - p->latest_time);
+            if((p->appid == appid) && (cur_time - p->latest_time < 300)){
+                LOG_DEBUG("match appid = %d\n", appid, cur_time - p->latest_time);
                 break;
             }
- 
             p = p->next;
         }
         if (!p){
             p = (visit_info_t *)calloc(1, sizeof(visit_info_t));
             p->appid = appid;
             p->next = NULL;
-            p->first_time = cur_time.tv_sec - MIN_VISIT_TIME;
+            p->first_time = cur_time;
             add_visit_info_node(&node->visit_htable[hash], p);
         }
         p->action = action;
-        p->latest_time = cur_time.tv_sec;
+        p->latest_time = cur_time;
     }
+EXIT:
     json_object_put(root);
 }
 

@@ -19,9 +19,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-#include <sys/types.h>
+
 #ifndef __FILTER_USER_H__
 #define __FILTER_USER_H__
+#include <sys/types.h>
 #define MAX_IP_LEN 32
 #define MAX_MAC_LEN 32
 #define MAX_VISIT_HASH_SIZE 64
@@ -33,48 +34,27 @@ THE SOFTWARE.
 #define MIN_VISIT_TIME 5 // default 5s
 #define MAX_APP_STAT_NUM 8
 #define MAX_VISITLIST_DUMP_NUM 16
-#define MAX_APP_TYPE 16
-#define MAX_APP_ID_NUM 128
-#define MAX_SUPPORT_DEV_NUM 64
+#define MAX_APP_TYPE 32
+#define MAX_APP_ID_NUM 512
+#define MAX_SUPPORT_DEV_NUM 256
 #define SECONDS_PER_DAY (24 * 3600)
 #define MAX_NICKNAME_SIZE 64
 #define MAX_REPORT_URL_LEN 64
 
-//extern dev_node_t *dev_hash_table[MAX_DEV_NODE_HASH_SIZE];
 
-/*
-{
-"mac":	"10:bf:48:37:0c:94",
-"ip":	"192.168.100.244",
-"app_num":	0,
-"visit_info":	[{
-"appid":	8002,
-"latest_action":	1,
-"latest_time":	1602604293,
-"total_num":	4,
-"drop_num":	4,
-"history_info":	[]
-}]
-}
-*/
-/* 单个访问记录结构 */
 typedef struct visit_info
 {
     int appid;
     u_int32_t first_time;
     u_int32_t latest_time;
     int action;
-    int expire; /*定期清除无效数据*/
+    int expire; 
     struct visit_info *next;
-
 } visit_info_t;
 
-/* 用于记录某个app总时间和总流量 */
 typedef struct visit_stat
 {
-    unsigned long long total_time;
-    unsigned long long total_down_bytes;
-    unsigned long long total_up_bytes;
+    u_int32_t total_time;
 } visit_stat_t;
 
 typedef struct dev_node
@@ -88,11 +68,11 @@ typedef struct dev_node
     u_int32_t offline_time;
     u_int32_t online_time;
     visit_info_t *visit_htable[MAX_VISIT_HASH_SIZE];
-    visit_stat_t stat[MAX_APP_TYPE][MAX_APP_ID_NUM];
+    visit_stat_t stat[MAX_APP_TYPE][MAX_APP_ID_NUM]; // todo: list
     char visiting_url[MAX_REPORT_URL_LEN];
     int visiting_app;
+    int is_whitelist;
     struct dev_node *next;
-
 } dev_node_t;
 
 struct app_visit_info
@@ -126,5 +106,9 @@ void flush_expire_visit_info(void);
 void update_dev_list(void);
 void update_dev_nickname(void);
 void update_dev_visiting_info(void);
+void update_dev_whitelist_flag(void);
+void clean_invalid_app_records(void);
+
+void clear_device_app_statistics(void);
 
 #endif

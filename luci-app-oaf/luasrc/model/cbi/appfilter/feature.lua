@@ -23,7 +23,7 @@ local function llog(message)
 end
 
 m = Map("appfilter", translate(""),
-    translate("The feature library is used to describe app features, app filtering effect and number-dependent feature library"))
+    translate("The feature library is used to describe App features, App filtering effect and number-dependent feature library"))
 
 local rule_count = 0
 local version = ""

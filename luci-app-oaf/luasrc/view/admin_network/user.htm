@@ -13,16 +13,7 @@
         text-align: left;
     }
     
-    /* Add user button */
-    .add-user-btn {
-        margin-top: 10px;
-        padding: 5px 15px;
-        background-color: #113861;
-        color: white;
-        border: none;
-        border-radius: 3px;
-        cursor: pointer;
-    }
+
     .mode-selection {
         margin-bottom: 10px;
         margin-top: 10px;
@@ -71,6 +62,8 @@
         align-items: center;
     }
     
+
+    
 </style>
 
 <script type="text/javascript">//<![CDATA[
@@ -79,16 +72,16 @@
         mode: 1
     };
 
+    let whitelistData = {
+        users: []
+    };
             
-    let allUsers = [
-           
-        ];
+    let allUsers = [];
     function initData() {
-        userData.list = [
-       
-        ];
+        userData.list = [];
         getAppFilterUserData();
         getAllUsersData();
+        getWhitelistData();
     }
 
 
@@ -122,7 +115,7 @@
         const rows = table.querySelectorAll('.tr:not(.table-titles)');
         rows.forEach(row => row.remove());
         
-        // Update mode selection radio buttons
+
         const modeRadios = document.querySelectorAll('input[name="mode"]');
 
         console.log("userData.mode = " + userData.mode);
@@ -132,17 +125,24 @@
         });
         if (userData.mode === 1) {
             document.getElementById('user_table').style.display = 'table';
-            document.getElementById('auto_user_table').style.display = 'none';
+            document.getElementById('auto_user_section').style.display = 'none';
+            document.getElementById('whitelist_section').style.display = 'none';
         } else {
             document.getElementById('user_table').style.display = 'none';
-            document.getElementById('auto_user_table').style.display = 'table';
+            document.getElementById('auto_user_section').style.display = 'block';
+            document.getElementById('whitelist_section').style.display = 'block';
         }
 
         // Hide add button and actions column header in manual mode
-        const addButton = document.querySelector('.cbi-button-add');
+        const manualAddButton = document.querySelector('.cbi-section-create:last-child .cbi-button-add');
+        const whitelistAddButton = document.querySelector('#whitelist_section .cbi-button-add');
         const actionsHeader = document.querySelector('.table-titles .th:last-child');
-        if (addButton) {
-            addButton.style.display = userData.mode === 1 ? 'inline-block' : 'none';
+        
+        if (manualAddButton) {
+            manualAddButton.style.display = userData.mode === 1 ? 'inline-block' : 'none';
+        }
+        if (whitelistAddButton) {
+            whitelistAddButton.style.display = userData.mode === 0 ? 'inline-block' : 'none';
         }
         if (actionsHeader) {
             actionsHeader.style.display = userData.mode === 1 ? '' : 'none';
@@ -168,24 +168,57 @@
 
     function renderAutoUserData() {
         const table = document.getElementById('auto_user_table');
+ 
         const rows = table.querySelectorAll('.tr:not(.table-titles)');
         rows.forEach(row => row.remove());
-        console.log("allUsers  111");
-        const displayList =  allUsers;
-        console.log("allUsers 222");
-        displayList.forEach((user, index) => {
-            const hostname = user.hostname || '--';
-            const nickname = user.nickname || '--';
-            const row = document.createElement('div');
-            row.className = 'tr';
-            row.innerHTML = `
-                <div class="td">${user.mac}</div>
-                <div class="td">${hostname}</div>
-                <div class="td">${nickname}</div>
-            `;
-            table.appendChild(row);
-        });
-        console.log("allUsers 333");
+        
+ 
+        const displayList = allUsers.filter(user => user.is_whitelist !== 1);
+        
+        if (displayList.length === 0) {
+      
+            document.getElementById('no_users_message').style.display = 'block';
+        } else {
+      
+            document.getElementById('no_users_message').style.display = 'none';
+            
+      
+            displayList.forEach((user, index) => {
+                const hostname = user.hostname || '--';
+                const nickname = user.nickname || '--';
+                
+                const row = document.createElement('div');
+                row.className = 'tr';
+                row.innerHTML = `
+                    <div class="td">${user.mac}</div>
+                    <div class="td">${hostname}</div>
+                    <div class="td">${nickname}</div>
+                                    <div class="td">
+                    <button type="button" class="cbi-button cbi-button-add" onclick="addUserToWhitelist('${user.mac}')"><%:Add to Whitelist%></button>
+                </div>
+                `;
+                table.appendChild(row);
+            });
+        }
+    }
+
+    function addUserToWhitelist(mac) {
+        const data = {
+            mac_list: [mac]
+        };
+        const data_str = JSON.stringify(data);
+        
+        new XHR().post('<%=url('admin/network/add_whitelist_user')%>', 
+            { data: data_str },
+            function(x, data) {
+                setTimeout(() => {
+                    getWhitelistData();
+                    getAllUsersData(); 
+                    renderAutoUserData(); 
+                }, 500); 
+                showSuccessMessage('<%:Add to whitelist successful%>');
+            }
+        );
     }
 
     function showSuccessMessage(message = '<%:Settings saved successfully%>') {
@@ -211,6 +244,7 @@
     
 
     function showUserModal() {
+        console.log("showUserModal");
         const modal = document.getElementById('userModal');
         modal.style.display = 'flex';
         
@@ -285,6 +319,117 @@
         });
     }
 
+    function getWhitelistData() {
+        new XHR().get('<%=url('admin/network/get_whitelist_user')%>', null,
+            function (x, data) {
+                if (data.data && Array.isArray(data.data.list)) {
+                    whitelistData.users = data.data.list;
+                } else {
+                    whitelistData.users = [];
+                }
+                renderWhitelistData();
+            }
+        );
+    }
+
+    function renderWhitelistData() {
+        const table = document.getElementById('whitelist_table');
+        if (!table) return;
+        
+        const rows = table.querySelectorAll('.tr:not(.table-titles)');
+        rows.forEach(row => row.remove());
+        
+        whitelistData.users.forEach((user, index) => {
+            const hostname = user.hostname || '--';
+            const nickname = user.nickname || '--';
+            const row = document.createElement('div');
+            row.className = 'tr';
+            row.innerHTML = `
+                <div class="td">${user.mac}</div>
+                <div class="td">${hostname}</div>
+                <div class="td">${nickname}</div>
+                <div class="td"><button type="button" class="delete-button" onclick="removeWhitelistUser(${index})"><%:Delete%></button></div>
+            `;
+            table.appendChild(row);
+        });
+    }
+
+    function showWhitelistModal() {
+        console.log("showWhitelistModal");
+        const modal = document.getElementById('whitelistModal');
+        modal.style.display = 'flex';
+        
+        const userList = document.getElementById('whitelistUserList');
+        userList.innerHTML = '';
+
+        allUsers.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.style.padding = '8px';
+            userElement.style.borderBottom = '1px solid #eee';
+            
+            // Determine the display name
+            const displayName = user.nickname || user.hostname || '';
+            
+            userElement.innerHTML = `
+                <label style="display: flex; align-items: center;">
+                    <input type="checkbox" value="${user.mac}" style="margin-right: 8px;">
+                    <span>${user.mac}</span>
+                    <span style="color: #666; margin-left: 8px;">${displayName ? `(${displayName})` : ''}</span>
+                </label>
+            `;
+            userList.appendChild(userElement);
+        });
+    }
+    
+    function closeWhitelistModal() {
+        const modal = document.getElementById('whitelistModal');
+        modal.style.display = 'none';
+    }
+
+    function addSelectedWhitelistUsers() {
+        console.log("addSelectedWhitelistUsers");
+        const userList = document.getElementById('whitelistUserList');
+        const checkboxes = userList.querySelectorAll('input[type="checkbox"]:checked');
+        
+        const selectedMacs = Array.from(checkboxes).map(checkbox => checkbox.value);
+        
+        var data = {
+            mac_list: selectedMacs
+        }
+        var data_str = JSON.stringify(data);
+
+        console.log(selectedMacs);
+        new XHR().post('<%=url('admin/network/add_whitelist_user')%>', 
+            { data: data_str },
+            function(x, data) {
+          
+                setTimeout(() => {
+                    getWhitelistData();
+                    getAllUsersData(); 
+                    renderAutoUserData(); 
+                }, 500); 
+                closeWhitelistModal();
+                showSuccessMessage('<%:Add to whitelist successful%>');
+            }
+        );
+    }
+
+    function removeWhitelistUser(index) {
+        const userToRemove = whitelistData.users[index];
+        new XHR().post('<%=url('admin/network/del_whitelist_user')%>', 
+            { mac: userToRemove.mac },
+            function(x, data) {
+ 
+                setTimeout(() => {
+                    getWhitelistData();
+                    getAllUsersData(); 
+                    renderAutoUserData();
+                }, 500);
+                showSuccessMessage('<%:Remove from whitelist successful%>');
+            }
+        );
+    }
+
     window.onload = initData;
 //]]></script>
 
@@ -295,7 +440,7 @@
             <input type="radio" name="mode" value="1" checked onclick="switchMode(1)"> <%:Manual Mode%>
         </div>
 
-    <!-- Add a new element for mode description -->
+
     <div id="modeDescription" style="margin-bottom: 15px;">
         <%:In manual mode, only the following added terminals are controlled%>
     </div>
@@ -309,17 +454,39 @@
         </div>
     </div>
 
-    <div class="table" id="auto_user_table" style="display: none;">
-        <div class="tr table-titles">
-            <div class="th"><%:MAC%></div>
-            <div class="th"><%:Hostname%></div>
-            <div class="th"><%:Remark%></div>
+    <div id="auto_user_section" style="display: none; margin-top: 20px;">
+        <h3 style="margin-bottom: 15px;"><%:Effective Users%></h3>
+        <div class="table" id="auto_user_table">
+            <div class="tr table-titles">
+                <div class="th"><%:MAC%></div>
+                <div class="th"><%:Hostname%></div>
+                <div class="th"><%:Remark%></div>
+                <div class="th"><%:Actions%></div>
+            </div>
+        </div>
+
+        <div id="no_users_message" style="display: none; text-align: center; padding: 40px 0; color: #666; font-size: 14px;">
+            <%:No Users Available%>
         </div>
     </div>
 
-    <div class="cbi-section-create">
-        <input type="button" class="cbi-button cbi-button-add" value="<%:Add User%>" onclick="showUserModal()" />
+
+    <div id="whitelist_section" style="display: none; margin-top: 20px;">
+        <h3 style="margin-bottom: 15px;"><%:Whitelist Users%></h3>
+        <div style="margin-bottom: 15px;"><%:Users in whitelist are not controlled%></div>
+        <div class="table" id="whitelist_table">
+            <div class="tr table-titles">
+                <div class="th"><%:MAC%></div>
+                <div class="th"><%:Hostname%></div>
+                <div class="th"><%:Remark%></div>
+                <div class="th"><%:Actions%></div>
+            </div>
+        </div>
     </div>
+
+     <div class="cbi-section-create">
+        <input type="button" class="cbi-button cbi-button-add" value="<%:Add User%>" onclick="showUserModal()" />
+    </div> 
 
     </div>
 </div>
@@ -335,7 +502,6 @@
             </div>
         </div>
     </div> 
-
 
     <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
         <div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 130px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
