@@ -188,7 +188,7 @@ void af_load_global_config(af_global_config_t *config){
 		strncpy(config->lan_ifname, lan_ifname, sizeof(config->lan_ifname) - 1);
 
     uci_free_context(ctx);
-    LOG_INFO("enable=%d, user_mode=%d, work_mode=%d", config->enable, config->user_mode, config->work_mode);
+    LOG_DEBUG("enable=%d, user_mode=%d, work_mode=%d\n", config->enable, config->user_mode, config->work_mode);
 }
 
 void af_load_config(af_config_t *config){
@@ -209,7 +209,7 @@ void update_oaf_proc_value(char *key, char *value){
     if (strcmp(old_value, value) != 0){
         sprintf(cmd_buf, "echo %s >/proc/sys/oaf/%s", value, key);
         system(cmd_buf);
-        LOG_INFO("update %s %s-->%s\n", key, old_value, value);
+        LOG_DEBUG("update %s %s-->%s\n", key, old_value, value);
     }
 }
 
@@ -261,6 +261,7 @@ void update_lan_ip(void){
         lan_mask = mask_addr.s_addr;
         update_oaf_proc_u32_value("lan_mask", lan_mask);
     }
+	uci_free_context(ctx);
 }
 
 
@@ -364,7 +365,7 @@ void af_hnat_init(void){
         return;
     }
     if (g_hnat_init == 0){
-        LOG_INFO("disable hnat...\n");
+        LOG_DEBUG("disable hnat...\n");
         system("/usr/bin/hnat.sh");
         g_hnat_init = 1;
     }
@@ -468,12 +469,13 @@ void dev_list_timeout_handler(struct uloop_timeout *t)
         update_dev_list();
     }
     if (count % 60 == 0){
+		LOG_DEBUG("begin check dev count = %d\n", count);
         check_dev_visit_info_expire();
+        flush_expire_visit_info();
         update_lan_ip();
         if (check_dev_expire()){
             flush_dev_expire_node();
         }
-        flush_expire_visit_info();
         update_oaf_status();
 		check_date_change();
         dump_dev_list();

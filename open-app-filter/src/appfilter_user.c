@@ -315,7 +315,7 @@ void update_dev_online_status(void)
     update_dev_from_oaf();
 }
 
-#define DEV_OFFLINE_TIME (SECONDS_PER_DAY * 3)
+#define DEV_OFFLINE_TIME (SECONDS_PER_DAY * 7)
 
 int check_dev_expire(void)
 {
@@ -504,12 +504,11 @@ void dump_dev_list(void)
 EXIT:
     fclose(fp);
 }
-// 记录最大保存时间 todo: support config
-#define MAX_RECORD_TIME (3 * 24 * 60 * 60) // 7day
-// 超过1天后清除短时间的记录
-#define RECORD_REMAIN_TIME (24 * 60 * 60) // 1day
-#define INVALID_RECORD_TIME (5 * 60)      // 5min
 
+#define MAX_RECORD_TIME (3 * 24 * 60 * 60) // 3day
+// 超过1天后清除短时间的记录
+#define RECORD_REMAIN_TIME (60 * 60) // 1hour
+#define INVALID_RECORD_TIME (5 * 60)      // 5min
 void check_dev_visit_info_expire(void)
 {
     int i, j;
@@ -525,6 +524,7 @@ void check_dev_visit_info_expire(void)
                 visit_info_t *p_info = node->visit_htable[j];
                 while (p_info)
                 {
+					
                     int total_time = p_info->latest_time - p_info->first_time;
                     int interval_time = cur_time - p_info->first_time;
                     if (interval_time > MAX_RECORD_TIME || interval_time < 0)
@@ -536,6 +536,7 @@ void check_dev_visit_info_expire(void)
                         if (total_time < INVALID_RECORD_TIME)
                             p_info->expire = 1;
                     }
+					LOG_DEBUG("[%s] appid:%d total_time:%ds interval:%ds, expire = %d\n", node->mac, p_info->appid, total_time, interval_time, p_info->expire);
                     p_info = p_info->next;
                 }
             }
@@ -562,11 +563,10 @@ void flush_expire_visit_info(void)
                 {
                     if (p_info->expire)
                     {
-                        LOG_WARN("check expire,flush expire visit info: %s, appid=%d\n", node->mac, p_info->appid);
+                        LOG_DEBUG("check expire,flush expire visit info: %s, appid=%d\n", node->mac, p_info->appid);
                         if (NULL == prev)
                         {
                             node->visit_htable[j] = p_info->next;
-                            LOG_WARN("flush expire visit info: %s, appid=%d\n", node->mac, p_info->appid);
                             free(p_info);
                             p_info = node->visit_htable[j];
                             prev = NULL;
@@ -574,7 +574,6 @@ void flush_expire_visit_info(void)
                         else
                         {
                             prev->next = p_info->next;
-                            LOG_WARN("flush expire visit info: %s, appid=%d\n", node->mac, p_info->appid);
                             free(p_info);
                             p_info = prev->next;
                         }
@@ -658,7 +657,7 @@ void clean_invalid_app_records(void)
                     {
                         p_info->expire = 1;
                         invalid_count++;
-                        LOG_WARN("clean: MAC=%s, AppID=%d\n", node->mac, p_info->appid);
+                        LOG_DEBUG("clean: MAC=%s, AppID=%d\n", node->mac, p_info->appid);
                     }
                     p_info = p_info->next;
                 }

@@ -207,6 +207,7 @@ int send_msg_to_kernel(int fd, void *msg, int len)
     memcpy(NLMSG_DATA(nlh), msg_buf, len + sizeof(struct af_msg_hdr));
 
     ret = sendto(fd, nlh, nlh->nlmsg_len, 0, (struct sockaddr *)&daddr, sizeof(struct sockaddr_nl));
+	free(nlh);
     if (!ret)
     {
         perror("sendto error\n");
