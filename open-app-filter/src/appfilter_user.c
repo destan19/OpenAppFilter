@@ -75,11 +75,6 @@ void init_dev_node_htable()
 dev_node_t *add_dev_node(char *mac)
 {
     unsigned int hash = 0;
-    if (g_cur_user_num >= MAX_SUPPORT_USER_NUM)
-    {
-        printf("error, user num reach max %d\n", g_cur_user_num);
-        return NULL;
-    }
     hash = hash_mac(mac);
     if (hash >= MAX_DEV_NODE_HASH_SIZE)
     {
@@ -173,6 +168,8 @@ void update_dev_hostname(void)
         if (!node)
         {
             node = add_dev_node(mac_buf);
+			if (!node)
+				continue;
             strncpy(node->ip, ip_buf, sizeof(node->ip));
             node->online = 0;
             node->offline_time = get_timestamp();
