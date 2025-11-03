@@ -1675,7 +1675,11 @@ void init_oaf_timer(void)
 
 void fini_oaf_timer(void)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 16, 0)
 	del_timer_sync(&oaf_timer);
+#else
+	timer_delete_sync(&oaf_timer);
+#endif
 	AF_INFO("del oaf timer...ok");
 }
 
