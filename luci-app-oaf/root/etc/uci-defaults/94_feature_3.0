@@ -1,5 +1,7 @@
 #!/bin/sh
 
+[ "$(uci -q get appfilter.feature.format)" = "v3.0" ] && exit 0
+
 uci -q batch <<-EOF >/dev/null
         set appfilter.feature.format='v3.0'
         set appfilter.rule='rule'
@@ -7,5 +9,9 @@ uci -q batch <<-EOF >/dev/null
         set appfilter.global.tcp_rst='1'
         set appfilter.global.lan_ifname='br-lan'
         set appfilter.global.auto_load_engine='1'
+        del_list appfilter.time.time='00:00-23:59'
+        add_list appfilter.time.time='00:00-23:59'
         commit appfilter
 EOF
+
+exit 0
