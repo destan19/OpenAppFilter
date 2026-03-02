@@ -22,6 +22,7 @@ THE SOFTWARE.
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/socket.h>
@@ -125,6 +126,42 @@ void appfilter_nl_handler(struct uloop_fd *u, unsigned int ev)
     struct json_object *ip_obj = json_object_object_get(root, "ip");
     if (ip_obj)
         strncpy(node->ip, json_object_get_string(ip_obj), sizeof(node->ip));
+
+
+    struct json_object *active_obj = json_object_object_get(root, "active");
+    if (active_obj) {
+        node->active = json_object_get_int(active_obj);
+		if (node->active)
+		{
+			// 根据当前时间判断是上午还是下午，分别累加
+			time_t now = time(NULL);
+			struct tm *tm_info = localtime(&now);
+			int current_hour = tm_info->tm_hour;
+			
+			if (current_hour < 12) {
+				// 上午：0:00-11:59
+				node->today_am_active_time += 1; //min
+			} else {
+				// 下午：12:00-23:59
+				node->today_pm_active_time += 1; //min
+			}
+		}
+
+	}
+    
+    
+    struct json_object *up_flow_obj = json_object_object_get(root, "up_flow");
+    struct json_object *down_flow_obj = json_object_object_get(root, "down_flow");
+    unsigned long long total_up_bytes = 0;
+    unsigned long long total_down_bytes = 0;
+    
+    if (up_flow_obj) {
+        node->today_up_bytes += (unsigned long long)json_object_get_int64(up_flow_obj) * 1024;
+    }
+	
+    if (down_flow_obj) {
+        node->today_down_bytes += (unsigned long long)json_object_get_int64(down_flow_obj) * 1024;
+    }
 
 
     struct json_object *visit_array = json_object_object_get(root, "visit_info");

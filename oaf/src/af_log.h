@@ -10,7 +10,8 @@ extern unsigned int af_lan_ip;
 extern unsigned int af_lan_mask;
 extern int g_feature_init;
 extern int g_user_mode;
-
+extern int g_disable_quic;
+extern int g_app_filter_mode;
 extern char g_lan_ifname[64];
 extern int g_tcp_rst;
 #define LOG(level, fmt, ...) do { \

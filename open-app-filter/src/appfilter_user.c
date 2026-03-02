@@ -22,6 +22,7 @@ THE SOFTWARE.
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <libubox/uloop.h>
 #include <libubox/utils.h>
 #include <libubus.h>
@@ -38,10 +39,14 @@ dev_node_t *dev_hash_table[MAX_DEV_NODE_HASH_SIZE];
 int g_cur_user_num = 0;
 unsigned int hash_mac(unsigned char *mac)
 {
+    unsigned int hash = 0;
+    int i;
     if (!mac)
         return 0;
-    else
-        return mac[0] & (MAX_DEV_NODE_HASH_SIZE - 1);
+    for (i = 0; mac[i] != '\0' && i < MAX_MAC_LEN; i++) {
+        hash = hash * 31 + mac[i]; 
+    }
+    return hash & (MAX_DEV_NODE_HASH_SIZE - 1);
 }
 
 int hash_appid(int appid)
@@ -208,10 +213,8 @@ void update_dev_nickname(void)
             continue;
 
         af_uci_get_array_value(uci_ctx, "user_info.@user_info[%d].nickname", i, nickname_buf, sizeof(nickname_buf));
-        printf("update dev nickname: %s\n", nickname_buf);
         strncpy(node->nickname, nickname_buf, sizeof(node->nickname));
     }   
-    printf("update dev nickname ok\n");
     uci_free_context(uci_ctx);
 }
 
@@ -247,6 +250,56 @@ void update_dev_whitelist_flag(void)
     uci_free_context(uci_ctx);
 }
 
+void clean_dev_selected_flag_iter(void *arg, dev_node_t *node)
+{
+    node->is_selected = 0;
+}
+
+void clean_dev_selected_flag(void)
+{
+    dev_foreach(NULL, clean_dev_selected_flag_iter);
+}
+
+void update_dev_selected_flag(void)
+{
+    extern af_config_t g_af_config;
+    int user_mode = g_af_config.global.user_mode;
+    
+    clean_dev_selected_flag();
+    
+    if (user_mode == 0) {
+        int i;
+        for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++) {
+            dev_node_t *node = dev_hash_table[i];
+            while (node) {
+                if (!node->is_whitelist) {
+                    node->is_selected = 1;
+                }
+                node = node->next;
+            }
+        }
+        LOG_DEBUG("Auto mode: all users except whitelist are selected\n");
+    } else {
+        struct uci_context *uci_ctx = uci_alloc_context();
+        if (!uci_ctx) {
+            LOG_ERROR("Failed to allocate UCI context in update_dev_selected_flag\n");
+            return;
+        }
+        
+        char mac_str[128] = {0};
+        int num = af_get_uci_list_num(uci_ctx, "appfilter", "af_user");
+        for (int i = 0; i < num; i++) {
+            af_uci_get_array_value(uci_ctx, "appfilter.@af_user[%d].mac", i, mac_str, sizeof(mac_str));
+            dev_node_t *node = find_dev_node(mac_str);
+            if (node) {
+                node->is_selected = 1;
+            }
+        }
+        uci_free_context(uci_ctx);
+        LOG_DEBUG("Manual mode: %d users from af_user config are selected\n", num);
+    }
+}
+
 
 
 void clean_dev_online_status(void)
@@ -269,26 +322,32 @@ void clean_dev_online_status(void)
 
 }
 
-/*
-Id   Mac                  Ip
-1    10:bf:48:37:0c:94    192.168.66.244
-*/
-void update_dev_from_oaf(void)
+
+void update_dev_from_kernel(void)
 {
     char line_buf[256] = {0};
     char mac_buf[32] = {0};
     char ip_buf[32] = {0};
+    char ipv6_buf[128] = {0};
+    unsigned int up_rate = 0;
+    unsigned int down_rate = 0;
 
     FILE *fp = fopen("/proc/net/af_client", "r");
     if (!fp)
     {
-        printf("open dev file....failed\n");
+        printf("open client file....failed\n");
         return;
     }
     fgets(line_buf, sizeof(line_buf), fp); // title
     while (fgets(line_buf, sizeof(line_buf), fp))
     {
-        sscanf(line_buf, "%*s %s %s", mac_buf, ip_buf);
+        int id;
+        int parsed = sscanf(line_buf, "%d %s %s %s %u %u", &id, mac_buf, ip_buf, ipv6_buf, &up_rate, &down_rate);
+        if (parsed < 3) 
+        {
+            printf("invalid line format:%s\n", line_buf);
+            continue;
+        }
         if (strlen(mac_buf) < 17)
         {
             printf("invalid mac:%s\n", mac_buf);
@@ -302,14 +361,43 @@ void update_dev_from_oaf(void)
                 continue;
             strncpy(node->ip, ip_buf, sizeof(node->ip));
         }
+
+        strncpy(node->ip, ip_buf, sizeof(node->ip));
+
+        if (parsed >= 4 && strlen(ipv6_buf) > 0)
+        {
+            strncpy(node->ipv6, ipv6_buf, sizeof(node->ipv6));
+        }
+        else
+        {
+            node->ipv6[0] = '\0'; 
+        }
+
+        if (parsed >= 5)
+        {
+            node->up_rate = up_rate;
+        }
+        else
+        {
+            node->up_rate = 0;
+        }
+        if (parsed >= 6)
+        {
+            node->down_rate = down_rate;
+        }
+        else
+        {
+            node->down_rate = 0;
+        }
         node->online = 1;
     }
     fclose(fp);
 }
 
+
 void update_dev_online_status(void)
 {
-    update_dev_from_oaf();
+    update_dev_from_kernel();
 }
 
 #define DEV_OFFLINE_TIME (SECONDS_PER_DAY * 7)
@@ -392,6 +480,131 @@ void flush_dev_expire_node(void)
     }
 }
 
+void flush_offline_users(void)
+{
+    int i, j;
+    int count = 0;
+    dev_node_t *node = NULL;
+    dev_node_t *prev = NULL;
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
+    {
+        dev_node_t *node = dev_hash_table[i];
+        prev = NULL;
+        while (node)
+        {
+            if (!node->online)  // Clear all offline users
+            {
+                // Free visit info first
+                for (j = 0; j < MAX_VISIT_HASH_SIZE; j++)
+                {
+                    visit_info_t *p_info = node->visit_htable[j];
+                    while (p_info)
+                    {
+                        visit_info_t *next = p_info->next;
+                        free(p_info);
+                        p_info = next;
+                    }
+                }
+                
+                // Remove node from hash table
+                if (NULL == prev)
+                {
+                    dev_hash_table[i] = node->next;
+                    free(node);
+                    node = dev_hash_table[i];
+                    prev = NULL;
+                }
+                else
+                {
+                    prev->next = node->next;
+                    free(node);
+                    node = prev->next;
+                }
+                count++;
+            }
+            else
+            {
+                prev = node;
+                node = node->next;
+            }
+        }
+    }
+    LOG_WARN("Cleared %d offline users\n", count);
+}
+
+void save_user_time_to_file(void)
+{
+    int i;
+    int count = 0;
+    FILE *fp = fopen(OAF_USER_FILE, "w");
+    if (!fp) {
+        LOG_ERROR("Failed to open file %s for writing\n", OAF_USER_FILE);
+        return;
+    }
+    
+    fprintf(fp, "MAC,AM_Time,PM_Time\n");
+    
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++) {
+        dev_node_t *node = dev_hash_table[i];
+        while (node) {
+            fprintf(fp, "%s,%u,%u\n", 
+                    node->mac, 
+                    node->today_am_active_time, 
+                    node->today_pm_active_time);
+            count++;
+            node = node->next;
+        }
+    }
+    
+    fclose(fp);
+    LOG_DEBUG("Saved %d users' time data to %s\n", count, OAF_USER_FILE);
+}
+
+void load_user_time_from_file(void)
+{
+    FILE *fp = fopen(OAF_USER_FILE, "r");
+    if (!fp) {
+        LOG_DEBUG("File %s not found or cannot be opened, starting with empty data\n", OAF_USER_FILE);
+        return;
+    }
+    
+    char line_buf[256] = {0};
+    int count = 0;
+    
+    if (fgets(line_buf, sizeof(line_buf), fp) == NULL) {
+        fclose(fp);
+        return;
+    }
+    
+    while (fgets(line_buf, sizeof(line_buf), fp)) {
+        char mac[32] = {0};
+        unsigned int am_time = 0;
+        unsigned int pm_time = 0;
+        
+        if (sscanf(line_buf, "%31[^,],%u,%u", mac, &am_time, &pm_time) == 3) {
+            dev_node_t *node = find_dev_node(mac);
+            if (!node) {
+                // If node doesn't exist, create a new one
+                node = add_dev_node(mac);
+                if (!node) {
+                    LOG_WARN("Failed to create device node for MAC=%s\n", mac);
+                    continue;
+                }
+                LOG_DEBUG("Created new device node for MAC=%s\n", mac);
+            }
+            node->today_am_active_time = am_time;
+            node->today_pm_active_time = pm_time;
+            count++;
+            LOG_DEBUG("Loaded user time: MAC=%s, AM=%u, PM=%u\n", mac, am_time, pm_time);
+        } else {
+            LOG_WARN("Failed to parse line: %s\n", line_buf);
+        }
+    }
+    
+    fclose(fp);
+    LOG_WARN("Loaded %d users' time data from %s\n", count, OAF_USER_FILE);
+}
+
 void update_dev_visiting_info(void){
     char line_buf[256] = {0};
     char mac_buf[32] = {0};
@@ -430,6 +643,7 @@ void update_dev_list(void)
     update_dev_nickname();
     update_dev_online_status();
     update_dev_visiting_info();
+    update_dev_selected_flag(); 
 }
 
 
@@ -466,10 +680,7 @@ void dump_dev_list(void)
                         i + 1, node->mac, ip_buf, hostname_buf, node->online);
                 count++;
             }
-            if (count >= MAX_SUPPORT_DEV_NUM)
-            {
-                goto EXIT;
-            }
+
             node = node->next;
         }
     }
@@ -493,8 +704,7 @@ void dump_dev_list(void)
                 fprintf(fp, "%-4d %-20s %-20s %-32s %-8d\n",
                         i + 1, node->mac, ip_buf, hostname_buf, node->online);
             }
-            if (count >= MAX_SUPPORT_DEV_NUM)
-                goto EXIT;
+
             node = node->next;
         }
     }
@@ -502,8 +712,7 @@ EXIT:
     fclose(fp);
 }
 
-#define MAX_RECORD_TIME (3 * 24 * 60 * 60) // 3day
-// 超过1天后清除短时间的记录
+#define MAX_RECORD_TIME (1 * 24 * 60 * 60) // 1day
 #define RECORD_REMAIN_TIME (60 * 60) // 1hour
 #define INVALID_RECORD_TIME (5 * 60)      // 5min
 void check_dev_visit_info_expire(void)
@@ -682,4 +891,110 @@ void clear_device_app_statistics(void)
         }
     }
     
+}
+
+void check_and_reset_today_active_time(dev_node_t *node)
+{
+    if (!node)
+        return;
+    
+    time_t now = time(NULL);
+    struct tm *tm_info = localtime(&now);
+    int current_hour = tm_info->tm_hour;
+    int current_min = tm_info->tm_min;
+    
+
+    static int last_reset_hour = -1;
+    static int last_reset_min = -1;
+    
+    if (current_hour == 12 && current_min == 0) {
+        if (last_reset_hour != 12 || last_reset_min != 0) {
+            LOG_DEBUG("Reset today_am_active_time for %s: %d -> 0 (12:00 reset)\n", 
+                     node->mac, node->today_am_active_time);
+            node->today_am_active_time = 0;
+            last_reset_hour = 12;
+            last_reset_min = 0;
+        }
+    } else {
+        last_reset_hour = current_hour;
+        last_reset_min = current_min;
+    }
+}
+
+void reset_all_users_today_active_time(void)
+{
+    extern af_run_time_status_t g_af_status;
+    int i;
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++) {
+        dev_node_t *node = dev_hash_table[i];
+        while (node) {
+            LOG_DEBUG("Reset today active time for %s: am=%d->0, pm=%d->0 (day changed)\n", 
+                     node->mac, node->today_am_active_time, node->today_pm_active_time);
+            node->today_am_active_time = 0;
+            node->today_pm_active_time = 0;
+            node = node->next;
+        }
+    }
+    g_af_status.period_blocked = 0;
+}
+
+
+void reset_all_users_today_flow(void)
+{
+    int i;
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++) {
+        dev_node_t *node = dev_hash_table[i];
+        while (node) {
+
+            node->today_down_bytes = 0;
+            node->today_up_bytes = 0;
+            node = node->next;
+        }
+    }
+}
+
+
+void check_all_users_period_time(void)
+{
+    int i;
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++)
+    {
+        dev_node_t *node = dev_hash_table[i];
+        while (node)
+        {
+            check_and_reset_today_active_time(node);
+            
+            node = node->next;
+        }
+    }
+}
+
+void save_user_active_time_to_file(void)
+{
+    FILE *fp = fopen(OAF_USER_FILE, "w");
+    if (!fp) {
+        LOG_ERROR("Failed to open file for writing: %s\n", OAF_USER_FILE);
+        return;
+    }
+    
+    fprintf(fp, "mac,today_am_active_time,today_pm_active_time\n");
+    
+    int i;
+    int count = 0;
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++) {
+        dev_node_t *node = dev_hash_table[i];
+        while (node) {
+            if (node->today_am_active_time > 0 || node->today_pm_active_time > 0) {
+                fprintf(fp, "%s,%u,%u\n", 
+                        node->mac, 
+                        node->today_am_active_time, 
+                        node->today_pm_active_time);
+                count++;
+            }
+            node = node->next;
+        }
+    }
+    
+    fclose(fp);
+    LOG_DEBUG("Saved %d users' active time to %s\n", count, OAF_USER_FILE);
 }

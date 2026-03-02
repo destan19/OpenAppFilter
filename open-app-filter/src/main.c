@@ -48,13 +48,16 @@ af_config_t g_af_config;
 int g_hnat_init = 0;
 int g_feature_update = 0;
 int g_feature_update_time = 0;
-void dev_list_timeout_handler(struct uloop_timeout *t);
+void oaf_timeout_handler(struct uloop_timeout *t);
 
 void af_init_time_status(void){
     g_af_status.filter = 0;
     g_af_status.deny_time = 0;
     g_af_status.allow_time = 0;
     g_af_status.match_time = 0;
+    g_af_status.remain_time = 0;
+    g_af_status.used_time = 0;
+    g_af_status.period_blocked = 0;
 }
 
 
@@ -62,28 +65,98 @@ void af_init_status(void){
     af_init_time_status();
 }
 struct uloop_timeout dev_tm = {
-    .cb = dev_list_timeout_handler};
+    .cb = oaf_timeout_handler};
+
 
 static struct uloop_fd appfilter_nl_fd = {
     .cb = appfilter_nl_handler,
 };
 
 
+void apply_time_config_to_uci(af_time_config_t *time_config){
+	struct uci_context *uci_ctx = uci_alloc_context();
+	if (!uci_ctx) {
+		printf("Failed to allocate UCI context\n");
+		return;
+	}
+	af_uci_set_int_value(uci_ctx, "appfilter.time.time_mode", time_config->time_mode);
 
-/** 
-config time 'time'
-	option time_mode '0'
-	option start_time '00:00'
-	option end_time '23:59'
-	option days '1 2 3 4 5'
-	list time '12:00-13:00'
-	list time '15:00-16:00'
-	list time '18:00-19:00'
-	list time '21:00-21:30'
-	list time '22:00-23:00'
-	list time '23:01-23:30'
-	list time '23:50-23:40'
-*/
+	// Build days string from global weekday array (used as fallback)
+	char days_str[128] = {0};
+	int first = 1;
+	int i, j;
+	for (i = 0; i < 7; i++) {
+		if (time_config->days[i] == 1) {
+			if (!first) {
+				strcat(days_str, " ");
+			}
+			char tmp[8];
+			snprintf(tmp, sizeof(tmp), "%d", i);
+			strcat(days_str, tmp);
+			first = 0;
+		}
+	}
+	af_uci_set_value(uci_ctx, "appfilter.time.days", days_str);
+
+	if (time_config->time_mode == 0) {
+		// Manual mode: write time_list
+		af_uci_delete(uci_ctx, "appfilter.time.time");
+		int time_list_len = time_config->time_num;
+		for (i = 0; i < time_list_len; i++) {
+			char time_str[256] = {0};
+			// Build weekday string: "1,2,4,5"
+			char weekday_str[64] = {0};
+			first = 1;
+			for (j = 0; j < 7; j++) {
+				if (time_config->time_list[i].days[j] == 1) {
+					if (!first) {
+						strcat(weekday_str, ",");
+					}
+					char tmp[8];
+					snprintf(tmp, sizeof(tmp), "%d", j);
+					strcat(weekday_str, tmp);
+					first = 0;
+				}
+			}
+			// Format time: "HH:MM" with zero padding
+			char start_time_str[16] = {0};
+			char end_time_str[16] = {0};
+			snprintf(start_time_str, sizeof(start_time_str), "%02d:%02d", 
+					time_config->time_list[i].start_time.hour, 
+					time_config->time_list[i].start_time.min);
+			snprintf(end_time_str, sizeof(end_time_str), "%02d:%02d", 
+					time_config->time_list[i].end_time.hour, 
+					time_config->time_list[i].end_time.min);
+			
+			// Format: "1,2,4,5;00:00-23:59"
+			snprintf(time_str, sizeof(time_str), "%s;%s-%s", weekday_str, start_time_str, end_time_str);
+			
+			printf("time_str: %s\n", time_str);
+			af_uci_add_list(uci_ctx, "appfilter.time.time", time_str);
+		}
+	} else {
+		// Dynamic mode: write seg_time, deny_time, allow_time
+		af_uci_set_int_value(uci_ctx, "appfilter.time.deny_time", time_config->deny_time);
+		af_uci_set_int_value(uci_ctx, "appfilter.time.allow_time", time_config->allow_time);
+
+		char start_time_str[16] = {0};
+		char end_time_str[16] = {0};
+		// Format time: "HH:MM" with zero padding
+		snprintf(start_time_str, sizeof(start_time_str), "%02d:%02d", 
+				time_config->seg_time.start_time.hour, 
+				time_config->seg_time.start_time.min);
+		snprintf(end_time_str, sizeof(end_time_str), "%02d:%02d", 
+				time_config->seg_time.end_time.hour, 
+				time_config->seg_time.end_time.min);
+		
+		af_uci_set_value(uci_ctx, "appfilter.time.start_time", start_time_str);
+		af_uci_set_value(uci_ctx, "appfilter.time.end_time", end_time_str);
+	}
+	af_uci_commit(uci_ctx, "appfilter");
+
+	uci_free_context(uci_ctx);
+}
+
 
 int af_load_time_config(af_time_config_t *t_config)
 {
@@ -92,6 +165,8 @@ int af_load_time_config(af_time_config_t *t_config)
     char start_time_buf[128] = {0};
     char end_time_buf[128] = {0};
     struct uci_context *ctx = uci_alloc_context();
+	int old_ver_config = 0;
+    printf("af_load_time_config: start\n");
     if (!ctx)
         return -1;
     memset(t_config, 0, sizeof(af_time_config_t));
@@ -102,34 +177,147 @@ int af_load_time_config(af_time_config_t *t_config)
     af_uci_get_value(ctx, "appfilter.time.start_time", start_time_buf, sizeof(start_time_buf));
     af_uci_get_value(ctx, "appfilter.time.end_time", end_time_buf, sizeof(end_time_buf));
     af_uci_get_value(ctx, "appfilter.time.days", days_buf, sizeof(days_buf));
-    LOG_DEBUG("mode = %d, start_time: %s, end_time: %s, days: %s\n", t_config->time_mode, start_time_buf, end_time_buf, days_buf);
     sscanf(start_time_buf, "%d:%d", &t_config->seg_time.start_time.hour, &t_config->seg_time.start_time.min);
     sscanf(end_time_buf, "%d:%d", &t_config->seg_time.end_time.hour, &t_config->seg_time.end_time.min);
-
     t_config->time_num = 0;
-    char *p = strtok(days_buf, " ");
-    if (!p)
-        goto EXIT;
-    do
-    {
-        t_config->days[atoi(p)] = 1;
-    } while (p = strtok(NULL, " "));
+    // Parse global days (may be empty, continue even if empty)
+    char *saveptr2 = NULL;
+    char *p = strtok_r(days_buf, " ", &saveptr2);
+    if (p) {
+        do {
+            t_config->days[atoi(p)] = 1;
+            printf("af_load_time_config: day[%d] = 1\n", atoi(p));
+            p = strtok_r(NULL, " ", &saveptr2);
+        } while (p != NULL);
+    }
 
     af_uci_get_list_value(ctx, "appfilter.time.time", time_list_buf, sizeof(time_list_buf), " ");
-    p = strtok(time_list_buf, " ");
-    if (!p)
+    printf("af_load_time_config: time_list_buf from uci: %s\n", time_list_buf);
+    
+    char time_list_copy[MAX_TIME_LIST_LEN] = {0};
+    strncpy(time_list_copy, time_list_buf, sizeof(time_list_copy) - 1);
+    
+    // Use strtok_r to avoid issues with nested strtok calls
+    char *saveptr1 = NULL;
+    p = strtok_r(time_list_copy, " ", &saveptr1);
+    if (!p) {
+        printf("af_load_time_config: no time periods found\n");
         goto EXIT;
+    }
+    
+    int period_idx = 0;
     do
     {
-        sscanf(p, "%d:%d-%d:%d", &t_config->time_list[t_config->time_num].start_time.hour,
+        printf("af_load_time_config: parsing period[%d]: %s\n", period_idx, p);
+        
+        char *time_part = p;
+        // Initialize days array for this time period (use global days as default)
+        int i;
+        for (i = 0; i < 7; i++) {
+            t_config->time_list[t_config->time_num].days[i] = t_config->days[i];
+        }
+        
+        // Check if format is new (with weekdays): "1,2,4,5;00:00-23:59"
+        char *semicolon = strchr(p, ';');
+        if (semicolon) {
+            // New format: parse weekdays and store in this time period's days array
+            char weekday_str[64] = {0};
+            strncpy(weekday_str, p, semicolon - p);
+            weekday_str[semicolon - p] = '\0';
+            time_part = semicolon + 1;
+            
+            printf("af_load_time_config: period[%d] has weekdays: %s, time_part: %s\n", period_idx, weekday_str, time_part);
+            
+            // Clear days array for this time period first
+            for (i = 0; i < 7; i++) {
+                t_config->time_list[t_config->time_num].days[i] = 0;
+            }
+            
+            // Parse weekdays: "1,2,4,5" using strtok_r
+            char weekday_copy[64] = {0};
+            strncpy(weekday_copy, weekday_str, sizeof(weekday_copy) - 1);
+            char *saveptr2 = NULL;
+            char *wd = strtok_r(weekday_copy, ",", &saveptr2);
+            while (wd) {
+                int day_val = atoi(wd);
+                if (day_val >= 0 && day_val < 7) {
+                    t_config->time_list[t_config->time_num].days[day_val] = 1;
+                    printf("af_load_time_config: period[%d] set day %d\n", period_idx, day_val);
+                }
+                wd = strtok_r(NULL, ",", &saveptr2);
+            }
+        } else {
+            LOG_WARN("af_load_time_config: period[%d] no weekdays, using global days\n", period_idx);
+			old_ver_config = 1;
+        }
+        // If no semicolon, use global days (already copied above)
+        
+        // Parse time: "00:00-23:59" or "1,2,4,5;00:00-23:59" (time_part already points to time part)
+        int ret = sscanf(time_part, "%d:%d-%d:%d", &t_config->time_list[t_config->time_num].start_time.hour,
              &t_config->time_list[t_config->time_num].start_time.min, &t_config->time_list[t_config->time_num].end_time.hour, &t_config->time_list[t_config->time_num].end_time.min);
-        LOG_DEBUG("time[%d] %d:%d-%d:%d\n", t_config->time_num, t_config->time_list[t_config->time_num].start_time.hour, t_config->time_list[t_config->time_num].start_time.min,
-                 t_config->time_list[t_config->time_num].end_time.hour, t_config->time_list[t_config->time_num].end_time.min);
-        t_config->time_num++;
-    } while (p = strtok(NULL, " "));
+        if (ret != 4) {
+            printf("af_load_time_config: period[%d] ERROR: failed to parse time from %s\n", period_idx, time_part);
+        } else {
+            printf("af_load_time_config: time[%d] %d:%d-%d:%d, days: ", t_config->time_num, t_config->time_list[t_config->time_num].start_time.hour, t_config->time_list[t_config->time_num].start_time.min,
+                     t_config->time_list[t_config->time_num].end_time.hour, t_config->time_list[t_config->time_num].end_time.min);
+            for (i = 0; i < 7; i++) {
+                if (t_config->time_list[t_config->time_num].days[i]) {
+                    printf("%d ", i);
+                }
+            }
+            printf("\n");
+            t_config->time_num++;
+        }
+        period_idx++;
+    } while (p = strtok_r(NULL, " ", &saveptr1));
+    
+    printf("af_load_time_config: total periods loaded: %d\n", t_config->time_num);
+    
+    // Load mode 2 daily limit config (if time_mode is 2)
+    if (t_config->time_mode == 2) {
+        int weekday;
+        for (weekday = 0; weekday < 7; weekday++) {
+            char uci_key[64] = {0};
+            snprintf(uci_key, sizeof(uci_key), "appfilter.time.daily_limit_%d", weekday);
+            
+            char daily_limit_str[128] = {0};
+            af_uci_get_value(ctx, uci_key, daily_limit_str, sizeof(daily_limit_str));
+            
+            // Initialize to default values
+            t_config->daily_limit[weekday].enable = 0;
+            t_config->daily_limit[weekday].am_time = 0;
+            t_config->daily_limit[weekday].pm_time = 0;
+            
+            // Parse format: "enable:am_time:pm_time"
+            if (strlen(daily_limit_str) > 0) {
+                char *first_colon = strchr(daily_limit_str, ':');
+                if (first_colon) {
+                    char *second_colon = strchr(first_colon + 1, ':');
+                    if (second_colon) {
+                        // New format: "enable:am_time:pm_time"
+                        t_config->daily_limit[weekday].enable = atoi(daily_limit_str);
+                        t_config->daily_limit[weekday].am_time = atoi(first_colon + 1);
+                        t_config->daily_limit[weekday].pm_time = atoi(second_colon + 1);
+                    } else {
+                        // Old format: "am_time:pm_time"
+                        t_config->daily_limit[weekday].enable = 1;
+                        t_config->daily_limit[weekday].am_time = atoi(daily_limit_str);
+                        t_config->daily_limit[weekday].pm_time = atoi(first_colon + 1);
+                    }
+                } else {
+                    t_config->daily_limit[weekday].enable = 1;
+                    t_config->daily_limit[weekday].am_time = atoi(daily_limit_str);
+                }
+            }
+            printf("af_load_time_config: daily_limit[%d] enable=%d, am_time=%d, pm_time=%d\n", 
+                   weekday, t_config->daily_limit[weekday].enable, 
+                   t_config->daily_limit[weekday].am_time, t_config->daily_limit[weekday].pm_time);
+        }
+    }
+    
 EXIT:
     uci_free_context(ctx);
-    return 0;
+    return old_ver_config;
 }
 
 
@@ -180,21 +368,34 @@ void af_load_global_config(af_global_config_t *config){
     else
         config->auto_load_engine = ret;
 
+    ret = af_uci_get_int_value(ctx, "appfilter.global.disable_quic");
+    if (ret < 0)
+        config->disable_quic = 0;
+    else
+        config->disable_quic = ret;
 
-    ret = af_uci_get_value(ctx, "appfilter.global.disable_hnat", lan_ifname, sizeof(lan_ifname));
+    ret = af_uci_get_int_value(ctx, "appfilter.global.app_filter_mode");
+    if (ret < 0)
+        config->app_filter_mode = 0; // Default to specified apps mode
+    else
+        config->app_filter_mode = ret;
+
+    ret = af_uci_get_value(ctx, "appfilter.global.lan_ifname", lan_ifname, sizeof(lan_ifname));
 	if (ret < 0)
 		strncpy(config->lan_ifname, "br-lan", sizeof(config->lan_ifname) - 1);
 	else
 		strncpy(config->lan_ifname, lan_ifname, sizeof(config->lan_ifname) - 1);
 
     uci_free_context(ctx);
-    LOG_DEBUG("enable=%d, user_mode=%d, work_mode=%d\n", config->enable, config->user_mode, config->work_mode);
+    LOG_DEBUG("enable=%d, user_mode=%d, work_mode=%d, disable_quic=%d, app_filter_mode=%d\n", config->enable, config->user_mode, config->work_mode, config->disable_quic, config->app_filter_mode);
 }
 
 void af_load_config(af_config_t *config){
     memset(config, 0, sizeof(af_config_t));
     af_load_global_config(&config->global);
-    af_load_time_config(&config->time);
+    if (1 == af_load_time_config(&config->time)){
+		apply_time_config_to_uci(&config->time);
+	}
 }
 
 
@@ -271,18 +472,23 @@ int af_check_time_manual(af_time_config_t *t_config) {
     time_t now = time(NULL);
     struct tm *current_time = localtime(&now);
     int current_minutes = current_time->tm_hour * 60 + current_time->tm_min;
+    int current_wday = current_time->tm_wday;
 
-    LOG_DEBUG("current time: %02d:%02d\n", current_time->tm_hour, current_time->tm_min);
-
-    for (int i = 0; i < t_config->time_num; i++) {
+    int i;
+    for (i = 0; i < t_config->time_num; i++) {
+        if (!t_config->time_list[i].days[current_wday]) {
+            printf("current day %d not in time[%d] days\n", current_wday, i);
+            continue;
+        }
+        
         int start_minutes = t_config->time_list[i].start_time.hour * 60 + t_config->time_list[i].start_time.min;
         int end_minutes = t_config->time_list[i].end_time.hour * 60 + t_config->time_list[i].end_time.min;
-        LOG_DEBUG("check time: %02d:%02d-%02d:%02d\n", 
+        printf("check time: %02d:%02d-%02d:%02d\n", 
                t_config->time_list[i].start_time.hour, t_config->time_list[i].start_time.min,
                t_config->time_list[i].end_time.hour, t_config->time_list[i].end_time.min);
         
         if (current_minutes >= start_minutes && current_minutes <= end_minutes) {
-            LOG_DEBUG("current time in time list\n");
+            printf("current time in time list\n");
             g_af_status.match_time = 1;
             return 1;
         }
@@ -292,8 +498,23 @@ int af_check_time_manual(af_time_config_t *t_config) {
 }
 
 int af_check_time_dynamic(af_time_config_t *t_config) {
-    time_t now = time(NULL);
+    return g_af_status.filter;
+}
+
+
+int update_dynamic_used_time(af_time_config_t *t_config){
+    if (t_config->time_mode != 1) 
+		return -1;
+	time_t now = time(NULL);
     struct tm *current_time = localtime(&now);
+
+	if (!t_config->days[current_time->tm_wday]) {
+	   LOG_DEBUG("current day not in configured days\n");
+	   af_init_time_status();
+	   return -1;
+    }
+
+	
     int current_minutes = current_time->tm_hour * 60 + current_time->tm_min;
 
     int start_minutes = t_config->seg_time.start_time.hour * 60 + t_config->seg_time.start_time.min;
@@ -313,37 +534,123 @@ int af_check_time_dynamic(af_time_config_t *t_config) {
         if (g_af_status.deny_time >= t_config->deny_time) {
             g_af_status.filter = 0;
             g_af_status.deny_time = 0;
-            LOG_DEBUG("deny time over, filter = 0");
         }
-        LOG_DEBUG("deny_time: %d\n", g_af_status.deny_time);
     } else {
         g_af_status.allow_time++;
         if (g_af_status.allow_time >= t_config->allow_time) {
             g_af_status.filter = 1;
             g_af_status.allow_time = 0;
-            LOG_DEBUG("allow time over, filter = 1");
         }
-        LOG_DEBUG("allow_time: %d\n", g_af_status.allow_time);
     }
-    return g_af_status.filter;
+	return 0;
 }
 
-int af_check_time(af_time_config_t *t_config) {
+
+int af_check_time_period_limit(af_time_config_t *t_config) {
+    int total_active_time = 0;
+    int selected_user_count = 0;
+    int i;
+
     time_t now = time(NULL);
     struct tm *current_time = localtime(&now);
-    LOG_DEBUG("current day: %d\n", current_time->tm_wday);
-    if (!t_config->days[current_time->tm_wday]) {
-        LOG_DEBUG("current day not in configured days\n");
-        af_init_time_status();
+    int current_weekday = current_time->tm_wday; 
+    int current_hour = current_time->tm_hour;
+    
+    LOG_DEBUG("check period limit mode: weekday=%d, hour=%d\n", current_weekday, current_hour);
+    
+    daily_limit_config_t *daily_limit = &t_config->daily_limit[current_weekday];
+    
+    if (!daily_limit->enable) {
+        LOG_DEBUG("Time limit not enabled for weekday %d\n", current_weekday);
+        g_af_status.match_time = 0;
+        g_af_status.remain_time = 0;
+        g_af_status.used_time = 0;
+        g_af_status.period_blocked = 0; 
         return 0;
     }
-    if (t_config->time_mode == 0) {
-        LOG_DEBUG("manual mode\n");
-        return af_check_time_manual(t_config);
+    
+    int max_allowed_time = 0;
+    int is_morning = (current_hour < 12);
+    
+    if (is_morning) {
+        max_allowed_time = daily_limit->am_time;
+        LOG_DEBUG("Morning period: max_allowed_time=%d\n", max_allowed_time);
     } else {
-        LOG_DEBUG("dynamic mode\n");
-        return af_check_time_dynamic(t_config);
+        max_allowed_time = daily_limit->pm_time;
+        LOG_DEBUG("Afternoon period: max_allowed_time=%d\n", max_allowed_time);
     }
+    
+    if (max_allowed_time <= 0) {
+        LOG_DEBUG("No time limit set for current period\n");
+        g_af_status.match_time = 0;
+        g_af_status.remain_time = 0;
+        g_af_status.used_time = 0;
+        g_af_status.period_blocked = 0;
+        return 0;
+    }
+    
+    check_all_users_period_time();
+    
+    for (i = 0; i < MAX_DEV_NODE_HASH_SIZE; i++) {
+        dev_node_t *node = dev_hash_table[i];
+        while (node) {
+            if (node->is_selected) {
+                if (is_morning) {
+                    total_active_time += node->today_am_active_time;
+                    LOG_DEBUG("Selected user %s (online=%d): today_am_active_time=%d, total=%d\n", 
+                             node->mac, node->online, node->today_am_active_time, total_active_time);
+                } else {
+                    total_active_time += node->today_pm_active_time;
+                    LOG_DEBUG("Selected user %s (online=%d): today_pm_active_time=%d, total=%d\n", 
+                             node->mac, node->online, node->today_pm_active_time, total_active_time);
+                }
+                if (node->online) {
+                    selected_user_count++;
+                }
+            }
+            node = node->next;
+        }
+    }
+    
+    g_af_status.used_time = total_active_time;
+    
+    int remain_time = max_allowed_time - total_active_time;
+    if (remain_time < 0) {
+        remain_time = 0;
+    }
+    g_af_status.remain_time = remain_time;
+    
+    LOG_DEBUG("Selected users count: %d, total_active_time=%d, max_allowed=%d, remain_time=%d\n", 
+             selected_user_count, total_active_time, max_allowed_time, remain_time);
+    
+    if (total_active_time >= max_allowed_time) {
+        g_af_status.match_time = 1;
+        g_af_status.period_blocked = 1; 
+        LOG_DEBUG("Period limit mode: enable filter (total time exceeded: %d >= %d)\n", 
+                 total_active_time, max_allowed_time);
+        return 1; 
+    } else {
+        g_af_status.match_time = 1;
+        g_af_status.period_blocked = 0; 
+        LOG_DEBUG("Period limit mode: disable filter (total time: %d < %d, remain: %d)\n", 
+                 total_active_time, max_allowed_time, remain_time);
+        return 0; 
+    }
+}
+
+int af_check_time_valid(af_time_config_t *t_config) {
+    time_t now = time(NULL);
+    struct tm *current_time = localtime(&now);
+	
+    if (t_config->time_mode == 0) {
+        return af_check_time_manual(t_config);
+    } else if (t_config->time_mode == 1) {
+		return af_check_time_dynamic(t_config);
+    } else if (t_config->time_mode == 2) {
+		return af_check_time_period_limit(t_config);
+    }else{
+		return 0;
+	}
 }
 
 
@@ -351,24 +658,21 @@ void update_oaf_status(void){
     int ret = 0;
     int cur_enable = 0;
     if(g_af_config.global.enable == 1){
-		ret = af_check_time(&g_af_config.time);
+		ret = af_check_time_valid(&g_af_config.time);
 	}
-    update_oaf_proc_value("enable", ret==1?"1":"0");
+    update_oaf_proc_value("enable", ret == 1 ? "1" : "0");
 }
 
 void update_oaf_record_status(void){
     update_oaf_proc_value("record_enable", g_af_config.global.record_enable==1?"1":"0");
 }
 
-void af_hnat_init(void){
-    if (g_af_config.global.enable == 0){
-        return;
-    }
-    if (g_hnat_init == 0){
-        LOG_DEBUG("disable hnat...\n");
-        system("/usr/bin/hnat.sh");
-        g_hnat_init = 1;
-    }
+void update_oaf_disable_quic_status(void){
+    update_oaf_proc_value("disable_quic", g_af_config.global.disable_quic==1?"1":"0");
+}
+
+void update_oaf_app_filter_mode_status(void){
+    update_oaf_proc_value("app_filter_mode", g_af_config.global.app_filter_mode==1?"1":"0");
 }
 
 
@@ -455,49 +759,56 @@ void check_date_change(void)
         LOG_WARN("day changed: %d -> %d\n",last_day, current_day);
         if (last_day != -1){
             clear_device_app_statistics();
+            reset_all_users_today_active_time();
+			reset_all_users_today_flow();
         }
         last_day = current_day;
     }
 }
 
 
-void dev_list_timeout_handler(struct uloop_timeout *t)
+void oaf_timeout_handler(struct uloop_timeout *t)
 {
     static int count = 0;
-    count++;
     if (count % 10 == 0){
         update_dev_list();
+		update_oaf_status();
     }
     if (count % 60 == 0){
 		LOG_DEBUG("begin check dev count = %d\n", count);
         check_dev_visit_info_expire();
         flush_expire_visit_info();
+		update_dynamic_used_time(&g_af_config.time);
+		update_oaf_status();
         update_lan_ip();
         if (check_dev_expire()){
             flush_dev_expire_node();
         }
-        update_oaf_status();
-		check_date_change();
+        check_date_change();
+        check_all_users_period_time();
         dump_dev_list();
     }
+    if (count % 300 == 0 && count > 0 && g_af_config.time.time_mode == 2){
+        save_user_time_to_file();
+    }
     if (g_oaf_config_change == 1){
+		LOG_WARN("config changed\n");
         update_lan_ip();
         af_load_config(&g_af_config);
+        update_dev_selected_flag(); 
+		update_dynamic_used_time(&g_af_config.time);
         update_oaf_status();
         update_oaf_record_status();
+        update_oaf_disable_quic_status();
+        update_oaf_app_filter_mode_status();
         g_oaf_config_change = 0;
     }
-    if (count > 10){ // delay init
-        af_hnat_init();
-    }
-
 
     if (appfilter_nl_fd.fd < 0 && access("/proc/sys/oaf", F_OK) == 0){
         appfilter_nl_fd.fd = appfilter_nl_init();
         if (appfilter_nl_fd.fd > 0){
             uloop_fd_add(&appfilter_nl_fd, ULOOP_READ);
             system("oaf_rule reload &");
-            // /etc/init.d/appfilter reload
             LOG_INFO("netlink connect success\n");
         }
     }
@@ -507,7 +818,7 @@ void dev_list_timeout_handler(struct uloop_timeout *t)
             g_feature_update = 0;
         }
     }
-
+    count++;
     uloop_timeout_set(t, 1000);
 }
 
@@ -528,10 +839,18 @@ void af_load_engine(void){
 
 
 void handle_sigusr1(int sig) {
-    LOG_INFO("Received SIGUSR1 signal\n");
+    LOG_WARN("Received SIGUSR1 signal\n");
     g_feature_update = 1;
 }
 
+void handle_sigusr2(int sig) {
+    LOG_INFO("Received SIGUSR2 signal\n");
+	if (current_log_level >= LOG_LEVEL_ERROR)
+   		current_log_level = LOG_LEVEL_DEBUG;
+	else
+		current_log_level++;
+	LOG_WARN("change log level to %d\n", current_log_level);
+}
 
 
 int main(int argc, char **argv)
@@ -544,8 +863,12 @@ int main(int argc, char **argv)
     af_init_status();
     uloop_init();
     signal(SIGUSR1, handle_sigusr1);
+    signal(SIGUSR2, handle_sigusr2);
     signal(SIGCHLD, SIG_IGN);
     init_dev_node_htable();
+    
+    load_user_time_from_file();
+    
     if (appfilter_ubus_init() < 0)
     {
         LOG_ERROR("Failed to connect to ubus\n");

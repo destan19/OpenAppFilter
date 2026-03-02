@@ -94,7 +94,6 @@ int af_config_handle(char *config, unsigned int len)
 	if (!config_obj)
 	{
 		AF_ERROR("config_obj is NULL\n");
-		cJSON_Delete(config_obj);
 		return -1;
 	}
 	

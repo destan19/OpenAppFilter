@@ -88,6 +88,9 @@ msgstr "特征码个数"
 msgid "Update feature"
 msgstr "特征库更新"
 
+msgid "Feature Upgrade"
+msgstr "特征库升级"
+
 msgid "Time Setting"
 msgstr "时间控制"
 
@@ -112,8 +115,23 @@ msgstr "周五"
 msgid "Sat"
 msgstr "周六"
 
+msgid "Up Rate"
+msgstr "上行速率"
+
+msgid "Down Rate"
+msgstr "下行速率"
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "Visiting"
+msgstr "正在访问"
+
 msgid "Update the feature file successfully, please refresh the page"
 msgstr "更新特征库成功，请刷新页面!"
+
+msgid "Update the feature file successfully"
+msgstr "特征库文件更新成功"
 
 msgid "Failed to update feature file, format error"
 msgstr "更新特征库失败，格式错误!"
@@ -160,7 +178,7 @@ msgstr "分"
 msgid "Enable App Filter"
 msgstr "开启应用过滤"
 
-msgid "App Feature"
+msgid "App Feature Library"
 msgstr "应用特征库"
 
 msgid "Effective User"
@@ -184,6 +202,16 @@ msgstr "网关模式"
 msgid "Bypass Mode"
 msgstr "旁路模式"
 
+msgid "App Filter is a powerful parental control software"
+msgstr "应用过滤是一款强大的家长控制软件"
+
+msgid "OAF is now relatively stable. If the test fails, please disable ad filtering, proxy, acceleration, and other modules. If you are unsure which modules are conflicting, it is recommended to reset the device and then disable the acceleration module in the firewall for testing. If only some Apps are not working, you need to update the App feature library, as the filtering effect is related to the App feature library."
+msgstr "OAF目前已经相对稳定，如果测试失效，请关闭广告过滤、代理、加速等模块，如果不确定哪些模块冲突，建议将设备复位，然后关闭防火墙中的加速模块进行测试，如果只是部分应用无法生效，需要更新特征库，过滤的效果和特征库有关。"
+
+msgid "In bypass mode, down rate cannot be measured, because data is directly forwarded from the gateway to the terminal."
+msgstr "旁路模式下无法统计下行速率，因为数据直接通过网关转发到了终端。"
+
+
 msgid "Current version"
 msgstr "当前版本"
 
@@ -193,8 +221,6 @@ msgstr "App个数"
 msgid "Feature download"
 msgstr "特征库下载"
 
-msgid "The second time is optional, the end time must be greater than the start time"
-msgstr "时间2为选填，结束时间要大于开始时间"
 
 msgid "Time Mode"
 msgstr "时间匹配模式"
@@ -205,8 +231,10 @@ msgstr "黑名单模式"
 msgid "Whitelist mode"
 msgstr "白名单模式"
 
-msgid "The feature library is used to describe App features, App filtering effect and number-dependent feature library"
-msgstr "特征库用于描述App特征，App过滤效果和个数依赖特征库"
+
+msgid "The App feature library is used to describe the packet protocol of applications, including port, domain, and Layer7 payload. It is the core of the DPI engine and affects the effectiveness of OAF. You can also add or modify App features according to the official website tutorial."
+msgstr "特征库用于描述应用的协议特征，包括端口、域名、七层内容等，它是DPI引擎的核心，影响到OAF的识别和过滤效果，也可以根据官网教程自行添加或者修改应用特征库。"
+
 
 msgid "User List"
 msgstr "用户列表"
@@ -223,23 +251,29 @@ msgstr "设置成功"
 msgid "Invalid LAN interface name. Please ensure it is no more than 8 characters long and contains only letters, numbers, and -."
 msgstr "LAN接口名称无效。请确保其长度不超过8，并且只包含字母、数字和-。"
 
-msgid "Disable Software/Hardware Acceleration"
-msgstr "关闭软/硬件加速"
+msgid "Flow Offloading"
+msgstr "流量卸载"
 
-msgid "Software and hardware acceleration, NAT offload and other modules may affect filtering or statistics functions. This interface only attempts to turn them off, but may not be completely successful. Please check the status in the firewall or network acceleration menu. Re-enabling acceleration requires a device restart to take effect."
-msgstr "软硬件加速、NAT offload等模块会影响过滤或统计功能，在该界面只是尝试关闭，不一定能够完全成功，请在防火墙或者网络加速菜单中查看关闭状态，重新开启加速需要重启设备生效。"
+msgid "Disable Flow Offloading"
+msgstr "关闭流量卸载"
 
-msgid "Auto-load oaf driver"
-msgstr "自动加载oaf驱动"
+msgid "The name of the LAN interface, used for detecting client info, supports fuzzy matching, but a complete interface name must be specified in bypass mode"
+msgstr "LAN接口名称，用于探测客户端列表，支持模糊匹配，但是在桥模式下只能设置完整的接口名称。"
 
-msgid "If the oaf driver cannot be manually unloaded or the current driver is unstable, you can turn off auto-loading at startup and manually install a suitable driver. It is recommended to use the official stable OpenWrt firmware."
-msgstr "如果oaf驱动无法手动卸载或者当前驱动不稳定，可以关闭开机自动加载，然后手动安装合适的驱动，建议用openwrt官方稳定版固件。"
+
+msgid "Flow offloading may affect filtering function. If the filtering feature does not work, you can disable flow offloading here and test again. Note: This only disables flow offloading temporarily. To permanently disable flow offloading, please turn it off in the firewall settings."
+msgstr "流量卸载可能会影响过滤功能，如果过滤功能失效，请尝试关闭流量卸载模块，注意这里只是临时关闭，如果要永久关闭，请在防火墙中进行设置。"
+
+msgid "Auto-load OAF driver"
+msgstr "自动加载OAF驱动"
+
+
+msgid "If the OAF driver cannot be manually unloaded or the current driver is unstable, you can turn off auto-loading at startup and manually install a suitable driver. It is recommended to use the official stable OpenWrt firmware."
+msgstr "如果OAF驱动无法手动卸载或者当前驱动不稳定，可以关闭开机自动加载，然后手动安装合适的驱动，建议用openwrt官方稳定版固件。"
 
 msgid "LAN Interface"
 msgstr "LAN接口"
 
-msgid "The name of the LAN interface, used for detecting terminal information. The system default is bridge interface (br-lan). If the LAN port has been modified to a physical interface, please modify it to the corresponding name, such as eth0, support fuzzy matching, For example, you can setup lan to match br-lan and br-lan2."
-msgstr "LAN接口的名称，用于探测终端信息，系统默认都是桥接口(br-lan)，如果将lan口修改成了物理接口，请修改为对应的名称，比如eth0，支持模糊匹配，比如可以设置lan用来匹配br-lan和br-lan2"
 
 msgid "Save"
 msgstr "保存"
@@ -274,6 +308,9 @@ msgstr "动态时间"
 msgid "Weekday Selection"
 msgstr "星期选择"
 
+msgid "Weekdays"
+msgstr "星期"
+
 msgid "Start Time"
 msgstr "开始时间"
 
@@ -293,7 +330,7 @@ msgid "Enable Duration Each Time (Study Time)"
 msgstr "每次启用时长(学习时间)"
 
 msgid "minutes"
-msgstr "分钟"
+msgstr "分"
 
 msgid "Disable Duration Each Time (Break Time)"
 msgstr "每次关闭时长(课余时间)"
@@ -377,9 +414,12 @@ msgid "App Name"
 msgstr "APP名称"
 
 msgid "Start Time"
+msgstr "开始时间"
+
+msgid "Start Visit Time"
 msgstr "开始访问时间"
 
-msgid "Last Time"
+msgid "Last Visit Time"
 msgstr "最后访问时间"
 
 msgid "Duration"
@@ -415,8 +455,8 @@ msgstr "未配置"
 msgid "Running"
 msgstr "运行中"
 
-msgid "Will close in"
-msgstr "分钟后关闭"
+msgid "Currently in dynamic time mode,will close in"
+msgstr "当前为动态时间模式，下次关闭等待时间:"
 
 msgid "Not Running"
 msgstr "未运行"
@@ -424,8 +464,11 @@ msgstr "未运行"
 msgid "Current time is not within the time range"
 msgstr "当前时间不在时间范围内"
 
-msgid "Will start in"
-msgstr "分钟后开启"
+msgid "Currently in dynamic time mode,will start in"
+msgstr "当前为动态时间模式，下次开启等待时间:"
+
+msgid "Remaining online time"
+msgstr "剩余上网时长"
 
 msgid "oaf driver not loaded, please download the oaf.ko driver file corresponding to the kernel version of this firmware for installation, and enable auto-loading. Current kernel version is"
 msgstr "oaf驱动未加载,请下载该固件对应内核版本的oaf.ko驱动文件进行安装，并开启自动加载，当前内核版本为"
@@ -451,9 +494,6 @@ msgstr "特征库升级"
 msgid "Updating, please wait..."
 msgstr "正在更新，请稍后..."
 
-msgid "Feature library files can be downloaded from the official website. After downloading, upload to upgrade. Note the feature code format version, which needs to be consistent with the current feature code format!"
-msgstr "特征库文件可以通过官网下载，下载后上传升级，注意特征码格式版本，需要和当前特征码格式一致！"
-
 msgid "If the App you want is not in the list, you can upgrade the feature library of the official website or customize the App"
 msgstr "如果列表中没有你想要的App，可以通过升级官网的特征库或者自定义App"
 
@@ -471,6 +511,9 @@ msgstr "白名单用户"
 
 msgid "Add to Whitelist"
 msgstr "添加到白名单"
+
+msgid "Select Device for Whitelist"
+msgstr "选择设备添加到白名单"
 
 msgid "Add to whitelist successful"
 msgstr "添加到白名单成功"
@@ -492,3 +535,285 @@ msgstr "OAF版本"
 
 msgid "OAF Driver Version"
 msgstr "OAF驱动版本"
+
+msgid "Basic Info"
+msgstr "基本信息"
+
+msgid "App List"
+msgstr "应用列表"
+
+msgid "You can download the App feature library from the website(www.openappfilter.com),then upload it here.Please note that after downloading, you need to extract the files and select the one in .bin format."
+msgstr "可以通过OAF官网(www.openappfilter.com)下载最新特征库，注意下载后需要先解压然后选择.bin格式的文件升级。"
+
+msgid "QUIC Protocol"
+msgstr "QUIC协议"
+
+
+msgid "Filter the QUIC protocol"
+msgstr "过滤QUIC协议"
+
+msgid "Some Apps use encrypted QUIC protocol, which cannot be distinguished for filtering, Such as Youtube, Instagram, etc. For better filtering results, you can try disabling the QUIC protocol."
+msgstr "部分应用采用了加密的QUIC协议，无法区分实现完全过滤，比如淘宝、京东等，如需要达到更好的效果，可尝试禁用QUIC协议。"
+
+msgid "Total"
+msgstr "总计"
+
+msgid "Page"
+msgstr "页"
+
+msgid "First"
+msgstr "首页"
+
+msgid "Previous"
+msgstr "上一页"
+
+msgid "Next"
+msgstr "下一页"
+
+msgid "Last"
+msgstr "末页"
+
+msgid "Show All"
+msgstr "显示全部"
+
+msgid "Page Size"
+msgstr "每页数量"
+
+msgid "Upload Rate"
+msgstr "上行速率"
+
+msgid "Download Rate"
+msgstr "下行速率"
+
+msgid "Filter Rules"
+msgstr "过滤规则"
+
+msgid "Filter Mode"
+msgstr "过滤模式"
+
+msgid "Specified Apps"
+msgstr "指定应用"
+
+msgid "All Apps"
+msgstr "所有应用"
+
+msgid "After the rule takes effect, all apps will be unable to connect to the network"
+msgstr "规则生效后所有应用将会无法联网"
+
+msgid "In this mode, after the rule takes effect, all apps will be unable to connect to the network, similar to scheduled internet disconnection"
+msgstr "该模式下规则生效后所有应用将会无法联网，类似定时断网功能"
+
+msgid "No available users to add"
+msgstr "没有可添加的用户"
+
+msgid "User already in whitelist"
+msgstr "用户已在白名单中"
+
+msgid "Please select at least one user"
+msgstr "请至少选择一个用户"
+
+msgid "Some users are already in whitelist"
+msgstr "部分用户已在白名单中"
+
+msgid "Clear Active Time"
+msgstr "清除上网时长"
+
+msgid "Are you sure you want to clear active time of all users?"
+msgstr "确定要清除所有用户的上网时长吗？"
+
+msgid "Active time cleared successfully"
+msgstr "上网时长清除成功"
+
+msgid "Failed to clear active time"
+msgstr "清除上网时长失败"
+
+msgid "Clear Offline Users"
+msgstr "清除离线用户"
+
+msgid "Are you sure you want to clear all offline users?"
+msgstr "确定要清除所有离线用户吗？"
+
+msgid "Offline users cleared successfully"
+msgstr "离线用户清除成功"
+
+msgid "Failed to clear offline users"
+msgstr "清除离线用户失败"
+
+
+
+msgid "Fixed Time Mode"
+msgstr "固定时间模式"
+
+msgid "Dynamic Time Mode"
+msgstr "动态时间模式"
+
+msgid "Period"
+msgstr "时间段"
+
+msgid "Time Range"
+msgstr "时间范围"
+
+msgid "Weekdays"
+msgstr "星期"
+
+msgid "Weekday"
+msgstr "星期"
+
+msgid "All Days"
+msgstr "全部"
+
+msgid "No time periods configured"
+msgstr "未配置时间段"
+
+msgid "Effective Users"
+msgstr "生效用户"
+
+msgid "Dynamic time mode: Whitelist users are excluded"
+msgstr "动态时间模式：已排除白名单用户"
+
+msgid "No users found"
+msgstr "未找到用户"
+
+msgid "Time Configuration"
+msgstr "时间配置"
+
+msgid "User Configuration"
+msgstr "用户配置"
+
+msgid "Loading..."
+msgstr "加载中..."
+
+msgid "Daily Time Limit"
+msgstr "上网时长模式"
+
+msgid "Daily time limit mode allows you to set a daily internet time limit for each weekday. Once the limit is reached, internet access will be restricted."
+msgstr "上网时长模式允许您为每个星期设置每日上网时长限制，达到限制后将限制网络访问。"
+
+msgid "Daily Time Limit (minutes)"
+msgstr "每日上网时长（分钟）"
+
+msgid "Monday"
+msgstr "星期一"
+
+msgid "Tuesday"
+msgstr "星期二"
+
+msgid "Wednesday"
+msgstr "星期三"
+
+msgid "Thursday"
+msgstr "星期四"
+
+msgid "Friday"
+msgstr "星期五"
+
+msgid "Saturday"
+msgstr "星期六"
+
+msgid "Sunday"
+msgstr "星期日"
+
+msgid "Note: Set to 0 to disable time limit for that day."
+msgstr "提示：设置为0表示该天不限制上网时长。"
+
+msgid "Morning Time Limit (minutes)"
+msgstr "上午限制时长（分钟）"
+
+msgid "Afternoon Time Limit (minutes)"
+msgstr "下午限制时长（分钟）"
+
+msgid "Note: Set to 0 to disable time limit for that period."
+msgstr "提示：设置为0表示该时段不限制上网时长。"
+
+msgid "Value cannot be negative"
+msgstr "值不能为负数"
+
+msgid "Value cannot exceed 720 minutes (12 hours)"
+msgstr "值不能超过720分钟（12小时）"
+
+msgid "Value cannot be empty"
+msgstr "值不能为空"
+
+msgid "Please enter a valid number"
+msgstr "请输入有效的数字"
+
+msgid "Morning Time Limit"
+msgstr "上午时长"
+
+msgid "Afternoon Time Limit"
+msgstr "下午时长"
+
+msgid "No daily time limits configured"
+msgstr "未配置每日时长限制"
+
+msgid "Yes"
+msgstr "是"
+
+msgid "No"
+msgstr "否"
+
+msgid "Today Active Time"
+msgstr "今日活跃时长"
+
+msgid "Morning"
+msgstr "上午"
+
+msgid "Afternoon"
+msgstr "下午"
+
+msgid "Morning limit"
+msgstr "上午限制"
+
+msgid "Afternoon limit"
+msgstr "下午限制"
+
+msgid "min"
+msgstr "分"
+
+msgid "Used"
+msgstr "已使用"
+
+msgid "Active"
+msgstr "活跃"
+
+msgid "Current Time Usage"
+msgstr "当前上网时长"
+
+msgid "Today Time Usage"
+msgstr "今日上网时长"
+
+msgid "Today is"
+msgstr "今天是"
+
+msgid "Time limit not enabled for today"
+msgstr "今日未启用时间限制"
+
+msgid "Active Users"
+msgstr "生效用户数"
+
+msgid "AM"
+msgstr "上午"
+
+msgid "PM"
+msgstr "下午"
+
+msgid "Not set"
+msgstr "未设置"
+
+msgid "Used up"
+msgstr "已用完"
+
+msgid "Clear"
+msgstr "清除"
+
+msgid "Current Time"
+msgstr "当前时间"
+
+msgid "Disable Hardware Acceleration"
+msgstr "禁用硬件加速"
+
+msgid "Disable hardware acceleration (HNAT/ECM) and flow offloading to ensure application filtering works correctly. When enabled, this will automatically disable hardware acceleration and flow offloading features."
+msgstr "禁用硬件加速（HNAT/ECM）和流加速，以确保应用过滤功能正常工作。启用后，将自动禁用硬件加速和流加速功能，注意这里只是尝试关闭常用的加速模块。"
+
+msgid "Current hardware acceleration module is not disabled, which may affect filtering functionality. For better filtering results, please disable the acceleration module in Advanced Settings."
+msgstr "当前未关闭加速模块，可能影响过滤功能，为了更好的过滤效果，请在高级设置中关闭加速模块。"

@@ -283,6 +283,7 @@ int __af_visit_info_report(af_client_info_t *node)
 	cJSON_AddNumberToObject(root_obj, "app_num", node->visit_app_num);
 	cJSON_AddNumberToObject(root_obj, "up_flow", (u32)(node->period_flow.up_bytes >> 10));
 	cJSON_AddNumberToObject(root_obj, "down_flow", (u32)(node->period_flow.down_bytes >> 10));
+	cJSON_AddNumberToObject(root_obj, "active", node->active);
 
 	visit_info_array = cJSON_CreateArray();
 	for (i = 0; i < MAX_RECORD_APP_NUM; i++)
@@ -299,15 +300,15 @@ int __af_visit_info_report(af_client_info_t *node)
 
 	cJSON_AddItemToObject(root_obj, "visit_info", visit_info_array);
 	out = cJSON_Print(root_obj);
-	if (!out)
+	if (!out) {
+		cJSON_Delete(root_obj);
 		return 0;
-	cJSON_Minify(out);
-	if (count > 0 || node->report_count == 0)
-	{
-		AF_INFO("report:%s count=%d\n", out, node->report_count);
-		node->report_count++;
-		af_send_msg_to_user(out, strlen(out));
 	}
+	cJSON_Minify(out);
+
+	AF_INFO("report:%s count=%d\n", out, node->report_count);
+	node->report_count++;
+	af_send_msg_to_user(out, strlen(out));
 	cJSON_Delete(root_obj);
 
 	memset(&node->period_flow, 0x0, sizeof(node->period_flow));
@@ -350,7 +351,7 @@ void af_update_client_status(af_client_info_t *node)
 	node->last_flow.down_bytes = node->flow.down_bytes;
 	node->last_flow.up_pkts  = node->flow.up_pkts;
 	node->last_flow.down_pkts = node->flow.down_pkts;
-	if (node->rate.pkt_down_rate > 20){
+	if (node->rate.pkt_down_rate > 10){
 		node->active_time++;
 		node->inactive_time = 0;
 		node->active = 1;
@@ -584,23 +585,19 @@ static void client_timer_handler(unsigned long data)
 {
     af_client_info_t *client = (af_client_info_t *)data;
 #endif
-	static int t_count = 0;
-    
     if (!client) {
         AF_ERROR("client timer handler: invalid client\n");
         return;
     }
 	
-	if (t_count % 60 == 0){ // 60s
+	if (client->timer_count >= 30) {
 		__af_visit_info_report(client);
+		client->timer_count = 0;
 	}
 
-	if (t_count % 2 == 0){  // 2s
-		af_update_client_status(client);
-	}
-	t_count++;
-	AF_DEBUG("tcount=%d\n", t_count);
-    mod_timer(&client->client_timer, jiffies + HZ * 1); 
+	af_update_client_status(client);
+	client->timer_count++;
+    mod_timer(&client->client_timer, jiffies + HZ * 2); 
 }
 
  void init_client_timer(af_client_info_t *client)

@@ -30,6 +30,7 @@ THE SOFTWARE.
 #define MAX_HOSTNAME_SIZE 64
 #define OAF_VISIT_LIST_FILE "/tmp/visit_list"
 #define OAF_DEV_LIST_FILE "/tmp/dev_list"
+#define OAF_USER_FILE "/etc/user_list.dat"
 #define MIN_VISIT_TIME 5 // default 5s
 #define MAX_APP_STAT_NUM 8
 #define MAX_VISITLIST_DUMP_NUM 16
@@ -60,6 +61,7 @@ typedef struct dev_node
 {
     char mac[MAX_MAC_LEN];
     char ip[MAX_IP_LEN];
+	char ipv6[64];
     char hostname[MAX_HOSTNAME_SIZE];
     char nickname[MAX_NICKNAME_SIZE];
     int online;
@@ -71,6 +73,14 @@ typedef struct dev_node
     char visiting_url[MAX_REPORT_URL_LEN];
     int visiting_app;
     int is_whitelist;
+	u_int32_t up_rate;
+	u_int32_t down_rate;
+	u_int64_t today_up_bytes;
+	u_int64_t today_down_bytes;
+	int active;
+	u_int32_t today_am_active_time;
+	u_int32_t today_pm_active_time;
+	int is_selected; 
     struct dev_node *next;
 } dev_node_t;
 
@@ -102,12 +112,25 @@ void flush_expire_visit_info();
 int check_dev_expire(void);
 void flush_dev_expire_node(void);
 void flush_expire_visit_info(void);
+void flush_offline_users(void);
+void save_user_time_to_file(void);
+void load_user_time_from_file(void);
 void update_dev_list(void);
 void update_dev_nickname(void);
 void update_dev_visiting_info(void);
 void update_dev_whitelist_flag(void);
+void update_dev_selected_flag(void); 
 void clean_invalid_app_records(void);
 
 void clear_device_app_statistics(void);
+
+void check_and_reset_today_active_time(dev_node_t *node);
+void reset_all_users_today_active_time(void);
+
+void reset_all_users_today_flow(void);
+
+void check_all_users_period_time(void);
+void update_dev_online_status(void);
+
 
 #endif

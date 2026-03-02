@@ -1,69 +1,249 @@
 <link rel="stylesheet" href="<%=resource%>/css/common.css">
 <style>
+    /* 固定按钮样式，不受主题影响 - 蓝色背景，白色文字 */
+    .cbi-button.cbi-button-add {
+        background-color: #1a73e8 !important;
+        color: #ffffff !important;
+        border: none !important;
+        padding: 6px 12px !important;
+        border-radius: 4px !important;
+        cursor: pointer !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        transition: background-color 0.2s ease !important;
+    }
+    .cbi-button.cbi-button-add:hover {
+        background-color: #1557b0 !important;
+        color: #ffffff !important;
+    }
+    .cbi-button.cbi-button-add:active {
+        background-color: #0d47a1 !important;
+        color: #ffffff !important;
+    }
+    
+    /* 页面卡片边框 */
+    .cbi-section.cbi-tblsection {
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        margin-top: 20px;
+        padding: 4px;
+        overflow-x: auto;
+    }
+    .cbi-section.cbi-tblsection > div {
+        min-width: 600px;
+    }
 
-    .user-list {
+    /* 确保表格在手机端也保持正常表格布局 */
+    .cbi-section-table .tr {
+        display: table-row !important;
+    }
+    .cbi-section-table .th,
+    .cbi-section-table .td {
+        display: table-cell !important;
+    }
+    .cbi-section-table thead {
+        display: table-header-group !important;
+    }
+    .cbi-section-table tbody {
+        display: table-row-group !important;
+    }
+
+    /* Table styles - 表格美化 */
+    .cbi-section-table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 15px;
+        margin: 15px 0;
+        border: none;
+        display: table;
     }
     
-    .user-list th, .user-list td {
-        padding: 8px;
-        border: 1px solid #ddd;
+    .cbi-section-table th, .cbi-section-table td {
+        padding: 10px 16px;
         text-align: left;
+        border-bottom: 1px solid var(--border-color-low, #e5e7eb);
     }
     
+    .cbi-section-table th {
+        background: var(--background-color-low, #f5f5f5);
+        color: var(--text-color-medium, #6b7280);
+        font-weight: 600;
+        font-size: 12.5px;
+        letter-spacing: 0.2px;
+        border-bottom: 1px solid var(--border-color-medium, #d1d5db);
+        white-space: nowrap;
+    }
+    
+    .cbi-section-table tr:hover td {
+        background-color: var(--background-color-low, #f5f5f5);
+    }
+    
+    .cbi-section-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    /* 单元格内容样式 */
+    .cbi-section-table td {
+        font-size: 13px;
+        vertical-align: middle;
+        line-height: 1.5;
+    }
 
     .mode-selection {
-        margin-bottom: 10px;
+        margin-bottom: 20px;
         margin-top: 10px;
+        display: flex !important;
+        align-items: center !important;
+        gap: 16px;
     }
-    .delete-button {
-        padding: 3px 8px;
-        background-color: #ff4444;
-        color: white;
-        border: none;
-        border-radius: 3px;
+    .mode-selection label {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px;
         cursor: pointer;
+        font-size: 14px;
+        line-height: 1.4;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .mode-selection label input[type="radio"] {
+        margin: 0 !important;
+        vertical-align: middle !important;
+        flex-shrink: 0;
+        position: relative !important;
+        top: 0 !important;
+        transform: none !important;
+    }
+    .mode-selection label span,
+    .mode-selection label {
+        vertical-align: middle !important;
     }
 
+    /* 按钮样式优化 */
+    .delete-button {
+        padding: 5px 12px;
+        color: #d93025;
+        border: 1px solid var(--border-color-medium, #d1d5db);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.2s;
+        background: transparent;
+    }
     
-    /* Modal styles */
-    .modal {
+    .delete-button:hover {
+        background-color: #fce8e6;
+        border-color: #d93025;
+        color: #c5221f;
+    }
+
+    /* 表格内操作按钮 */
+    .cbi-section-table .cbi-button,
+    .cbi-section-table .cbi-button-add {
+        padding: 5px 12px;
+        font-size: 12px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color-medium, #d1d5db);
+        background: transparent;
+        color: #1a73e8;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+
+    .cbi-section-table .cbi-button:hover,
+    .cbi-section-table .cbi-button-add:hover {
+        background-color: #e8f0fe;
+        border-color: #1a73e8;
+    }
+    
+    /* 独立的添加按钮 - 蓝底白字 */
+    .cbi-section-create .cbi-button-add,
+    .cbi-section-create input.cbi-button-add {
+        padding: 8px 16px !important;
+        background-color: #1a73e8 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+    
+    .cbi-section-create .cbi-button-add:hover,
+    .cbi-section-create input.cbi-button-add:hover {
+        background-color: #1557b0 !important;
+    }
+
+    /* Modal styles - 与 user_status 完全一致 */
+    .oaf-modal-overlay {
         display: none;
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(3px);
         z-index: 1000;
+        justify-content: center;
+        align-items: center;
     }
     
-    .modal-content {
-        background-color: white;
-        margin: 15% auto;
-        padding: 20px;
-        border-radius: 5px;
-        width: 60%;
-        max-width: 600px;
+    .oaf-modal-box {
+        background-color: var(--background-color-high, #fff);
+        padding: 28px;
+        border-radius: 12px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+        width: 450px;
+        max-width: 90%;
     }
     
     .user-selection {
         max-height: 300px;
         overflow-y: auto;
         margin: 15px 0;
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        border-radius: 4px;
     }
     
     .user-item {
-        padding: 8px;
-        border-bottom: 1px solid #eee;
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color-low, #e5e7eb);
         display: flex;
         align-items: center;
+        transition: background-color 0.2s;
+    }
+
+    .user-item:last-child {
+        border-bottom: none;
+    }
+
+    .user-item:hover {
+        background-color: var(--background-color-low, #f5f5f5);
+    }
+
+    h3 {
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    /* Keyframes */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
     
-
-    
+    @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
 </style>
 
 <script type="text/javascript">//<![CDATA[
@@ -112,15 +292,16 @@
 
     function renderUserData() {
         const table = document.getElementById('user_table');
-        const rows = table.querySelectorAll('.tr:not(.table-titles)');
-        rows.forEach(row => row.remove());
+        let tbody = table.querySelector('tbody');
+        if (!tbody) {
+            tbody = document.createElement('tbody');
+            table.appendChild(tbody);
+        }
+        tbody.innerHTML = '';
         
 
         const modeRadios = document.querySelectorAll('input[name="mode"]');
-
-        console.log("userData.mode = " + userData.mode);
         modeRadios.forEach(radio => {
-            console.log("radio.value = " + radio.value);
             radio.checked = parseInt(radio.value) === userData.mode;
         });
         if (userData.mode === 1) {
@@ -134,9 +315,9 @@
         }
 
         // Hide add button and actions column header in manual mode
-        const manualAddButton = document.querySelector('.cbi-section-create:last-child .cbi-button-add');
-        const whitelistAddButton = document.querySelector('#whitelist_section .cbi-button-add');
-        const actionsHeader = document.querySelector('.table-titles .th:last-child');
+        const manualAddButton = document.getElementById('manualAddUserBtn');
+        const whitelistAddButton = document.getElementById('whitelistAddUserBtn');
+        const actionsHeader = document.querySelector('#user_table .th:last-child');
         
         if (manualAddButton) {
             manualAddButton.style.display = userData.mode === 1 ? 'inline-block' : 'none';
@@ -150,30 +331,41 @@
         
         const displayList = userData.mode === 1 ? userData.list : allUsers;
         
+        let html = '';
         displayList.forEach((user, index) => {
             const hostname = user.hostname || '--';
             const nickname = user.nickname || '--';
-            const row = document.createElement('div');
-            row.className = 'tr';
-            row.innerHTML = `
-                <div class="td">${user.mac}</div>
-                <div class="td">${hostname}</div>
-                <div class="td">${nickname}</div>
-                ${userData.mode === 1 ? `<div class="td"><button type="button" class="delete-button" onclick="removeUser(${index})"><%:Delete%></button></div>` : ''}
-            `;
-            table.appendChild(row);
+            html += `<tr class="tr">
+                <td class="td">${user.mac}</td>
+                <td class="td">${hostname}</td>
+                <td class="td">${nickname}</td>
+                <td class="td" style="${userData.mode === 1 ? '' : 'display: none;'}">
+                    <div style="display: flex; white-space: nowrap;">
+                    ${userData.mode === 1 ? `<button type="button" class="delete-button" onclick="removeUser(${index})"><%:Delete%></button>` : ''}
+                    </div>
+                </td>
+            </tr>`;
         });
+        tbody.innerHTML = html;
     }
 
 
     function renderAutoUserData() {
         const table = document.getElementById('auto_user_table');
- 
-        const rows = table.querySelectorAll('.tr:not(.table-titles)');
-        rows.forEach(row => row.remove());
+        let tbody = table.querySelector('tbody');
+        if (!tbody) {
+            tbody = document.createElement('tbody');
+            table.appendChild(tbody);
+        }
+        tbody.innerHTML = '';
         
- 
-        const displayList = allUsers.filter(user => user.is_whitelist !== 1);
+        // Get whitelist MAC addresses
+        const whitelistMacs = whitelistData.users.map(user => user.mac || user);
+        
+        // Filter out users already in whitelist and users with is_whitelist flag
+        const displayList = allUsers.filter(user => {
+            return user.is_whitelist !== 1 && !whitelistMacs.includes(user.mac);
+        });
         
         if (displayList.length === 0) {
       
@@ -183,26 +375,34 @@
             document.getElementById('no_users_message').style.display = 'none';
             
       
+            let html = '';
             displayList.forEach((user, index) => {
                 const hostname = user.hostname || '--';
                 const nickname = user.nickname || '--';
                 
-                const row = document.createElement('div');
-                row.className = 'tr';
-                row.innerHTML = `
-                    <div class="td">${user.mac}</div>
-                    <div class="td">${hostname}</div>
-                    <div class="td">${nickname}</div>
-                                    <div class="td">
-                    <button type="button" class="cbi-button cbi-button-add" onclick="addUserToWhitelist('${user.mac}')"><%:Add to Whitelist%></button>
-                </div>
-                `;
-                table.appendChild(row);
+                html += `<tr class="tr">
+                    <td class="td">${user.mac}</td>
+                    <td class="td">${hostname}</td>
+                    <td class="td">${nickname}</td>
+                    <td class="td">
+                        <div style="display: flex; white-space: nowrap;">
+                        <button type="button" class="cbi-button cbi-button-add" onclick="addUserToWhitelist('${user.mac}')"><%:Add to Whitelist%></button>
+                        </div>
+                    </td>
+                </tr>`;
             });
+            tbody.innerHTML = html;
         }
     }
 
     function addUserToWhitelist(mac) {
+        // Check if user is already in whitelist
+        const whitelistMacs = whitelistData.users.map(user => user.mac || user);
+        if (whitelistMacs.includes(mac)) {
+            showSuccessMessage('<%:User already in whitelist%>');
+            return;
+        }
+        
         const data = {
             mac_list: [mac]
         };
@@ -253,8 +453,7 @@
 
         allUsers.forEach(user => {
             const userElement = document.createElement('div');
-            userElement.style.padding = '8px';
-            userElement.style.borderBottom = '1px solid #eee';
+            userElement.className = 'user-item';
             
             // Determine the display name
             const displayName = user.nickname || user.hostname || '';
@@ -263,7 +462,7 @@
                 <label style="display: flex; align-items: center;">
                     <input type="checkbox" value="${user.mac}" style="margin-right: 8px;">
                     <span>${user.mac}</span>
-                    <span style="color: #666; margin-left: 8px;">${displayName ? `(${displayName})` : ''}</span>
+                    <span style="opacity: 0.6; margin-left: 8px;">${displayName ? `(${displayName})` : ''}</span>
                 </label>
             `;
             userList.appendChild(userElement);
@@ -336,22 +535,29 @@
         const table = document.getElementById('whitelist_table');
         if (!table) return;
         
-        const rows = table.querySelectorAll('.tr:not(.table-titles)');
-        rows.forEach(row => row.remove());
+        let tbody = table.querySelector('tbody');
+        if (!tbody) {
+            tbody = document.createElement('tbody');
+            table.appendChild(tbody);
+        }
+        tbody.innerHTML = '';
         
+        let html = '';
         whitelistData.users.forEach((user, index) => {
             const hostname = user.hostname || '--';
             const nickname = user.nickname || '--';
-            const row = document.createElement('div');
-            row.className = 'tr';
-            row.innerHTML = `
-                <div class="td">${user.mac}</div>
-                <div class="td">${hostname}</div>
-                <div class="td">${nickname}</div>
-                <div class="td"><button type="button" class="delete-button" onclick="removeWhitelistUser(${index})"><%:Delete%></button></div>
-            `;
-            table.appendChild(row);
+            html += `<tr class="tr">
+                <td class="td">${user.mac}</td>
+                <td class="td">${hostname}</td>
+                <td class="td">${nickname}</td>
+                <td class="td">
+                    <div style="display: flex; white-space: nowrap;">
+                    <button type="button" class="delete-button" onclick="removeWhitelistUser(${index})"><%:Delete%></button>
+                    </div>
+                </td>
+            </tr>`;
         });
+        tbody.innerHTML = html;
     }
 
     function showWhitelistModal() {
@@ -362,10 +568,22 @@
         const userList = document.getElementById('whitelistUserList');
         userList.innerHTML = '';
 
-        allUsers.forEach(user => {
+        // Get whitelist MAC addresses
+        const whitelistMacs = whitelistData.users.map(user => user.mac || user);
+        
+        // Filter out users already in whitelist
+        const availableUsers = allUsers.filter(user => {
+            return !whitelistMacs.includes(user.mac);
+        });
+
+        if (availableUsers.length === 0) {
+            userList.innerHTML = '<div style="text-align: center; padding: 20px; opacity: 0.6;"><%:No available users to add%></div>';
+            return;
+        }
+
+        availableUsers.forEach(user => {
             const userElement = document.createElement('div');
-            userElement.style.padding = '8px';
-            userElement.style.borderBottom = '1px solid #eee';
+            userElement.className = 'user-item';
             
             // Determine the display name
             const displayName = user.nickname || user.hostname || '';
@@ -374,7 +592,7 @@
                 <label style="display: flex; align-items: center;">
                     <input type="checkbox" value="${user.mac}" style="margin-right: 8px;">
                     <span>${user.mac}</span>
-                    <span style="color: #666; margin-left: 8px;">${displayName ? `(${displayName})` : ''}</span>
+                    <span style="opacity: 0.6; margin-left: 8px;">${displayName ? `(${displayName})` : ''}</span>
                 </label>
             `;
             userList.appendChild(userElement);
@@ -392,6 +610,20 @@
         const checkboxes = userList.querySelectorAll('input[type="checkbox"]:checked');
         
         const selectedMacs = Array.from(checkboxes).map(checkbox => checkbox.value);
+        
+        if (selectedMacs.length === 0) {
+            showSuccessMessage('<%:Please select at least one user%>');
+            return;
+        }
+        
+        // Check if any selected user is already in whitelist
+        const whitelistMacs = whitelistData.users.map(user => user.mac || user);
+        const alreadyInWhitelist = selectedMacs.filter(mac => whitelistMacs.includes(mac));
+        
+        if (alreadyInWhitelist.length > 0) {
+            showSuccessMessage('<%:Some users are already in whitelist%>');
+            return;
+        }
         
         var data = {
             mac_list: selectedMacs
@@ -436,8 +668,8 @@
 <div class="cbi-section cbi-tblsection">
     <div style="max-width: 1000px; margin-left: 5px;padding: 5px;">
         <div class="mode-selection">
-            <input type="radio" name="mode" value="0" onclick="switchMode(0)"> <%:Automatic Mode%>
-            <input type="radio" name="mode" value="1" checked onclick="switchMode(1)"> <%:Manual Mode%>
+            <label><input type="radio" name="mode" value="0" onclick="switchMode(0)"> <%:Automatic Mode%></label>
+            <label><input type="radio" name="mode" value="1" checked onclick="switchMode(1)"> <%:Manual Mode%></label>
         </div>
 
 
@@ -445,27 +677,33 @@
         <%:In manual mode, only the following added terminals are controlled%>
     </div>
     
-    <div class="table" id="user_table" style="display: none;">
-        <div class="tr table-titles">
-            <div class="th"><%:MAC%></div>
-            <div class="th"><%:Hostname%></div>
-            <div class="th"><%:Remark%></div>
-            <div class="th"><%:Actions%></div>
-        </div>
-    </div>
+    <table class="cbi-section-table" id="user_table" style="display: none;">
+        <thead>
+            <tr class="tr table-titles">
+                <th class="th"><%:MAC%></th>
+                <th class="th"><%:Hostname%></th>
+                <th class="th"><%:Remark%></th>
+                <th class="th"><%:Actions%></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 
     <div id="auto_user_section" style="display: none; margin-top: 20px;">
         <h3 style="margin-bottom: 15px;"><%:Effective Users%></h3>
-        <div class="table" id="auto_user_table">
-            <div class="tr table-titles">
-                <div class="th"><%:MAC%></div>
-                <div class="th"><%:Hostname%></div>
-                <div class="th"><%:Remark%></div>
-                <div class="th"><%:Actions%></div>
-            </div>
-        </div>
+        <table class="cbi-section-table" id="auto_user_table">
+            <thead>
+                <tr class="tr table-titles">
+                    <th class="th"><%:MAC%></th>
+                    <th class="th"><%:Hostname%></th>
+                    <th class="th"><%:Remark%></th>
+                    <th class="th"><%:Actions%></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
 
-        <div id="no_users_message" style="display: none; text-align: center; padding: 40px 0; color: #666; font-size: 14px;">
+        <div id="no_users_message" style="display: none; text-align: center; padding: 40px 0; opacity: 0.6; font-size: 14px;">
             <%:No Users Available%>
         </div>
     </div>
@@ -473,38 +711,58 @@
 
     <div id="whitelist_section" style="display: none; margin-top: 20px;">
         <h3 style="margin-bottom: 15px;"><%:Whitelist Users%></h3>
-        <div style="margin-bottom: 15px;"><%:Users in whitelist are not controlled%></div>
-        <div class="table" id="whitelist_table">
-            <div class="tr table-titles">
-                <div class="th"><%:MAC%></div>
-                <div class="th"><%:Hostname%></div>
-                <div class="th"><%:Remark%></div>
-                <div class="th"><%:Actions%></div>
-            </div>
-        </div>
+        <div style="margin-bottom: 15px; opacity: 0.6; font-size: 13px;"><%:Users in whitelist are not controlled%></div>
+        <table class="cbi-section-table" id="whitelist_table">
+            <thead>
+                <tr class="tr table-titles">
+                    <th class="th"><%:MAC%></th>
+                    <th class="th"><%:Hostname%></th>
+                    <th class="th"><%:Remark%></th>
+                    <th class="th"><%:Actions%></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
-     <div class="cbi-section-create">
-        <input type="button" class="cbi-button cbi-button-add" value="<%:Add User%>" onclick="showUserModal()" />
+     <div class="cbi-section-create" style="margin-top: 15px;">
+        <input type="button" value="<%:Add User%>" onclick="showUserModal()" id="manualAddUserBtn" style="padding: 8px 16px; background-color: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; display: none;" />
+        <input type="button" value="<%:Add to Whitelist%>" onclick="showWhitelistModal()" id="whitelistAddUserBtn" style="padding: 8px 16px; background-color: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; display: none;" />
     </div> 
+
+    <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+        <button type="button" onclick="location.reload()" style="padding: 8px 20px; width: 150px; background: transparent; color: #1a73e8; border: 1px solid var(--border-color-medium, #d1d5db); border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; line-height: 1.4;"><%:Refresh%></button>
+    </div>
 
     </div>
 </div>
 
-    <div id="userModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 400px; height: 300px; display: flex; flex-direction: column;">
-            <h3 style="margin: 0 0 15px 0;"><%:Select Device%></h3>
-            <div id="userList" style="flex: 1; overflow-y: auto;">
+    <div id="userModal" class="oaf-modal-overlay">
+        <div class="oaf-modal-box">
+            <h3><%:Select Device%></h3>
+            <div id="userList" class="user-selection">
             </div>
-            <div style="margin-top: 15px; text-align: right;">
-                <button type="button" onclick="addSelectedUsers()" style="margin-right: 10px; padding: 5px 15px;"><%:OK%></button>
-                <button type="button" onclick="closeUserModal()" style="padding: 5px 15px;"><%:Cancel%></button>
+            <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="closeUserModal()" style="padding: 7px 16px; border: 1px solid var(--border-color-medium, #d1d5db); border-radius: 4px; cursor: pointer; font-size: 13px; background: transparent;"><%:Cancel%></button>
+                <button type="button" onclick="addSelectedUsers()" style="padding: 7px 16px; background-color: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;"><%:OK%></button>
             </div>
         </div>
     </div> 
 
-    <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 130px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
-            <p style="margin: 0;color: white;"><%:Settings saved successfully%></p>
+    <div id="whitelistModal" class="oaf-modal-overlay">
+        <div class="oaf-modal-box">
+            <h3><%:Select Device for Whitelist%></h3>
+            <div id="whitelistUserList" class="user-selection">
+            </div>
+            <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="closeWhitelistModal()" style="padding: 7px 16px; border: 1px solid var(--border-color-medium, #d1d5db); border-radius: 4px; cursor: pointer; font-size: 13px; background: transparent;"><%:Cancel%></button>
+                <button type="button" onclick="addSelectedWhitelistUsers()" style="padding: 7px 16px; background-color: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;"><%:OK%></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background-color: rgba(0, 0, 0, 0.65); padding: 14px 24px; border-radius: 6px; text-align: center; color: white; display: flex; justify-content: center; align-items: center;">
+            <p style="margin: 0; color: white; font-size: 14px;"><%:Settings saved successfully%></p>
         </div>
     </div>

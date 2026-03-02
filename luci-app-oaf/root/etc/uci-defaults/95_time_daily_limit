@@ -1,0 +1,16 @@
+#!/bin/sh
+
+if ! uci -q get appfilter.time.daily_limit_0 >/dev/null 2>&1; then
+	uci -q batch <<-EOF >/dev/null
+		set appfilter.time.daily_limit_0='0:0:0'
+		set appfilter.time.daily_limit_1='0:0:0'
+		set appfilter.time.daily_limit_2='0:0:0'
+		set appfilter.time.daily_limit_3='0:0:0'
+		set appfilter.time.daily_limit_4='0:0:0'
+		set appfilter.time.daily_limit_5='0:0:0'
+		set appfilter.time.daily_limit_6='0:0:0'
+		set appfilter.global.disable_quic='0'
+		commit appfilter
+	EOF
+fi
+

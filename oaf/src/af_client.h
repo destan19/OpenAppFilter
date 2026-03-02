@@ -82,6 +82,7 @@ typedef struct af_client_info
 	int inactive_time;
 	int active;
 	visiting_info_t visiting;
+	int timer_count;
 	int report_count;
 	app_visit_info_t visit_info[MAX_RECORD_APP_NUM];
 } af_client_info_t;

@@ -9,19 +9,19 @@
 #include "utils.h"
 
 #define LOG_FILE_PATH "/tmp/log/appfilter.log"
-#define OAF_VERSION "6.1.6"
+#define OAF_VERSION "6.1.7"
 
 typedef enum {
-    LOG_LEVEL_DEBUG,
+    LOG_LEVEL_ERROR,
+	LOG_LEVEL_WARN,
     LOG_LEVEL_INFO,
-    LOG_LEVEL_WARN,
-    LOG_LEVEL_ERROR
+    LOG_LEVEL_DEBUG
 } LogLevel;
 
 extern int current_log_level;
 
  static void af_log(LogLevel level, const char *format, ...){
-    if (level < current_log_level) 
+    if (level > current_log_level) 
         return;
     
     FILE *log_file = fopen(LOG_FILE_PATH, "a");
@@ -76,13 +76,22 @@ typedef struct af_global_config_t{
 	int disable_hnat;
     int auto_load_engine;
 	int tcp_rst;
+	int disable_quic;
+	int app_filter_mode; // 0 = specified apps, 1 = all apps
 	char lan_ifname[16];
 }af_global_config_t;
 
 typedef struct time_config{
 	af_time_t start_time;
 	af_time_t end_time;
+	int days[7];
 }time_config_t;
+
+typedef struct daily_limit_config {
+    int enable;
+    int am_time;
+    int pm_time;
+} daily_limit_config_t;
 
 typedef struct af_time_config_t{
 	int time_mode;
@@ -92,6 +101,7 @@ typedef struct af_time_config_t{
 	int days[7];
     int time_num;
 	time_config_t time_list[MAX_TIME_LIST];
+    daily_limit_config_t daily_limit[7];
 }af_time_config_t;
 
 typedef struct af_config_t{
@@ -104,6 +114,9 @@ typedef struct af_run_time_status{
     int allow_time;
     int filter;
     int match_time;
+    int remain_time; 
+    int used_time; 
+    int period_blocked;
 }af_run_time_status_t;
 
 

@@ -127,6 +127,7 @@ static int af_client_seq_show(struct seq_file *s, void *v)
     sprintf(ip_str, "%pI4", &node->ip);
 	ipv6_to_str(&node->ipv6, ipv6_str);
 
+
     seq_printf(s, "%-4d %-20s %-20s %-32s %-16d %-16d\n", index, mac_str, ip_str, ipv6_str, node->rate.up_rate, node->rate.down_rate);
     return 0;
 }

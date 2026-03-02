@@ -98,9 +98,11 @@ reload_base_config(){
     config_get work_mode "global" "work_mode"
     config_get lan_ifname "global" "lan_ifname"
     config_get user_mode "global" "user_mode"
+    config_get app_filter_mode "global" "app_filter_mode"
 
     echo "$work_mode" >/proc/sys/oaf/work_mode
     echo "$user_mode" >/proc/sys/oaf/user_mode
+    echo "${app_filter_mode:-0}" >/proc/sys/oaf/app_filter_mode
       
     if [ x"" != x"$lan_ifname" ];then
         echo "$lan_ifname" >/proc/sys/oaf/lan_ifname

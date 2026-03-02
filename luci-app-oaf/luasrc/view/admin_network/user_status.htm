@@ -10,23 +10,227 @@
 				
 			]
 		}
-		let cur_page = 0;
+		let cur_page = 1; // Start from page 1
+		let page_size = 10; // Fixed page size
+		let total_pages = 1;
+		let total_count = 0;
+		
+		// Visit list pagination variables
+		let visit_cur_page = 1;
+		let visit_page_size = 10;
+		let visit_total_pages = 1;
+		let visit_total_count = 0;
+		let current_mac = '';
 
-		function getAllUsersData(page) {
-			new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: page},
+		function getAllUsersData(page, size) {
+			if (page === undefined) page = cur_page;
+			if (size === undefined) size = page_size;
+			new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: page, page_size: size},
 				function (x, data) {
-					user_list_data = data.data
+					user_list_data = data.data;
+					if (data.data.total !== undefined) {
+						total_count = data.data.total;
+						total_pages = data.data.total_pages || 1;
+						cur_page = data.data.page || 1;
+						// page_size is fixed at 15, don't update from response
+					}
 					render_user_list(user_list_data);
+					updatePagination();
 				}
 			);
 		}
 
+		function updatePagination() {
+			var paginationDiv = document.getElementById('pagination');
+			if (!paginationDiv || total_pages <= 0) {
+				if (paginationDiv) paginationDiv.innerHTML = '';
+				return;
+			}
+			
+			// Calculate page numbers to display (max 10 pages)
+			// Try to show 5 pages on left and 5 pages on right of current page
+			var startPage = Math.max(1, cur_page - 5);
+			var endPage = Math.min(total_pages, cur_page + 5);
+			
+			// Adjust if we don't have 10 pages
+			var pageCount = endPage - startPage + 1;
+			if (pageCount < 10) {
+				if (startPage == 1) {
+					// If at the beginning, extend to the right
+					endPage = Math.min(total_pages, startPage + 9);
+				} else if (endPage == total_pages) {
+					// If at the end, extend to the left
+					startPage = Math.max(1, endPage - 9);
+				} else {
+					// In the middle, try to balance
+					var needed = 10 - pageCount;
+					var canExtendLeft = startPage - 1;
+					var canExtendRight = total_pages - endPage;
+					if (canExtendLeft >= canExtendRight) {
+						startPage = Math.max(1, startPage - Math.min(needed, canExtendLeft));
+						endPage = Math.min(total_pages, startPage + 9);
+					} else {
+						endPage = Math.min(total_pages, endPage + Math.min(needed, canExtendRight));
+						startPage = Math.max(1, endPage - 9);
+					}
+				}
+			}
+			
+			var html = '<div style="display: flex; align-items: center; justify-content: center; margin-top: 20px; padding: 15px 0;">';
+			html += '<div style="display: flex; align-items: center; gap: 4px;">';
+			
+			// Previous page link
+			if (cur_page > 1) {
+				html += '<a href="javascript:void(0)" onclick="goToPage(' + (cur_page - 1) + ')" style="padding: 8px 12px; color: #1a73e8; text-decoration: none; cursor: pointer; border-radius: 4px;"><%:Previous%></a>';
+			} else {
+				html += '<span style="padding: 8px 12px; opacity: 0.4; cursor: default;"><%:Previous%></span>';
+			}
+			
+			// Page numbers
+			for (var i = startPage; i <= endPage; i++) {
+				if (i == cur_page) {
+					html += '<span style="padding: 8px 12px; color: #1a73e8; font-weight: 500; cursor: default; border-radius: 4px;">' + i + '</span>';
+				} else {
+					html += '<a href="javascript:void(0)" onclick="goToPage(' + i + ')" style="padding: 8px 12px; text-decoration: none; cursor: pointer; border-radius: 4px;">' + i + '</a>';
+				}
+			}
+			
+			// Next page link
+			if (cur_page < total_pages) {
+				html += '<a href="javascript:void(0)" onclick="goToPage(' + (cur_page + 1) + ')" style="padding: 8px 12px; color: #1a73e8; text-decoration: none; cursor: pointer; border-radius: 4px;"><%:Next%></a>';
+			} else {
+				html += '<span style="padding: 8px 12px; opacity: 0.4; cursor: default;"><%:Next%></span>';
+			}
+			
+			html += '</div>';
+			html += '<div style="margin-left: 20px; opacity: 0.6; font-size: 14px;">';
+			html += '<%:Total%>: ' + total_count + ' | <%:Page%>: ' + cur_page + ' / ' + total_pages;
+			html += '</div>';
+			html += '</div>';
+			
+			paginationDiv.innerHTML = html;
+		}
+
+		function goToPage(page) {
+			if (page < 1) page = 1;
+			if (page > total_pages && total_pages > 0) page = total_pages;
+			cur_page = page;
+			getAllUsersData(cur_page, page_size);
+		}
+
+			let currentView = 'table'; // 'table' or 'card'
+
+		function switchView(view) {
+			currentView = view;
+			var tableWrapper = document.getElementById('tableViewWrapper');
+			var cardWrapper = document.getElementById('cardViewWrapper');
+			var btnTable = document.getElementById('btnTableView');
+			var btnCard = document.getElementById('btnCardView');
+
+			if (view === 'card') {
+				tableWrapper.style.display = 'none';
+				cardWrapper.style.display = 'grid';
+				btnTable.classList.remove('active');
+				btnCard.classList.add('active');
+			} else {
+				tableWrapper.style.display = 'block';
+				cardWrapper.style.display = 'none';
+				btnTable.classList.add('active');
+				btnCard.classList.remove('active');
+			}
+			if (user_list_data && user_list_data.list) {
+				if (view === 'card') render_card_view(user_list_data);
+			}
+		}
+
+		function render_card_view(data) {
+			var container = document.getElementById('cardViewWrapper');
+			if (!container || !data || !data.list) return;
+			var user_list = data.list;
+			var html = '';
+
+			for (var i = 0; i < user_list.length; i++) {
+				var u = user_list[i];
+				var nickname = u.nickname || "";
+				var hostname = u.hostname || "";
+				var displayName = nickname || hostname || "--";
+				var mac = u.mac || "--";
+
+				// 在线状态
+				var statusClass = 'offline';
+				var statusText = '<%:Offline%>';
+				if (u.online == 2) { statusClass = 'active'; statusText = '<%:Active%>'; }
+				else if (u.online == 1) { statusClass = 'online'; statusText = '<%:Online%>'; }
+
+				var upRate = formatRate(u.up_rate, u.online);
+				var downRate = formatRate(u.down_rate, u.online);
+
+				var am_time = u.today_am_active_time || 0;
+				var pm_time = u.today_pm_active_time || 0;
+				var total_time = am_time + pm_time;
+				var time_str = formatTime(total_time);
+				var tooltip_text = "<%:Morning%>: " + formatTime(am_time) + ", <%:Afternoon%>: " + formatTime(pm_time);
+
+				// 今日流量
+				var today_up_flow = u.today_up_flow || 0;
+				var today_down_flow = u.today_down_flow || 0;
+				var total_flow = today_up_flow + today_down_flow;
+				var flow_str = formatFlow(total_flow);
+
+				if (!Array.isArray(u.applist)) u.applist = [];
+				var app_icons = u.applist.slice(0, 5).map(function(app) {
+					var iconSrc = app.icon === 0 ? '<%=resource%>/app_icons/default.png' : '<%=resource%>/app_icons/' + app.id + '.png';
+					return '<img src="' + iconSrc + '" alt="' + app.name + '" title="' + app.name + '" class="card-app-icon">';
+				}).join('');
+				if (!app_icons) app_icons = '<span style="opacity:0.4;font-size:12px;">--</span>';
+
+				html += '<div class="user-card ' + (u.online == 0 ? 'user-card--offline' : '') + '" onclick="showDetails(\'' + mac + '\')">';
+				html += '<span class="card-status card-status--' + statusClass + '">' + statusText + '</span>';
+				html += '<div class="card-device">';
+				html += '<div class="card-name">' + displayName + '</div>';
+				html += '<div class="card-mac">' + mac + '</div>';
+				html += '</div>';
+				html += '<div class="card-rate">';
+				html += '<span class="card-rate-item" title="<%:Up Rate%>"><svg width="12" height="12" viewBox="0 0 12 12" fill="#34a853"><path d="M6 1L10 6H7v5H5V6H2z"/></svg> ' + upRate + '</span>';
+				html += '<span class="card-rate-item" title="<%:Down Rate%>"><svg width="12" height="12" viewBox="0 0 12 12" fill="#4285f4"><path d="M6 11L2 6h3V1h2v5h3z"/></svg> ' + downRate + '</span>';
+				html += '</div>';
+				var current_app = u.app || "";
+				var current_url = u.url || "";
+				var display_url = current_url;
+				if (current_url.length > 18) {
+					display_url = current_url.substring(0, 8) + '...' + current_url.substring(current_url.length - 8);
+				}
+				html += '<div class="card-visiting">';
+				html += '<span class="card-visiting-label"><%:Visiting%>: </span>';
+				if (current_app || current_url) {
+					if (current_app) html += '<span class="card-visiting-app">' + current_app + '</span>';
+					if (current_url) html += '<span class="card-visiting-url" title="' + current_url + '">' + display_url + '</span>';
+				} else {
+					html += '<span class="card-visiting-none">--</span>';
+				}
+				html += '</div>';
+				html += '<div class="card-info">';
+				html += '<div class="card-apps">' + app_icons + '</div>';
+				html += '<div style="display: flex; gap: 12px; align-items: center;">';
+				html += '<div class="card-time" title="' + tooltip_text + '">' + time_str + '</div>';
+				html += '<div class="card-flow" title="<%:Today Flow%>">' + flow_str + '</div>';
+				html += '</div>';
+				html += '</div>';
+				html += '</div>';
+			}
+
+			container.innerHTML = html;
+		}
+
 		window.onload = function() {
-			cur_page = 0; // default fetch all
-			getAllUsersData(cur_page);
+			cur_page = 1;
+			getAllUsersData(cur_page, page_size);
+			if (window.innerWidth <= 768) {
+				switchView('card');
+			}
 
 			setInterval(function() {
-				getAllUsersData(cur_page);
+				getAllUsersData(cur_page, page_size);
 			}, 3000);
 		}
 
@@ -40,20 +244,93 @@
 			}, 1000);
 		}
 
+		function formatTime(minutes) {
+	
+			if (minutes === undefined || minutes === null || minutes === '') {
+				return '0m';
+			}
+			var mins = parseInt(minutes);
+			if (isNaN(mins) || mins < 0) {
+				return '0m';
+			}
+
+			if (mins < 60) {
+				return mins + 'm';
+			}
+		
+			var hours = Math.floor(mins / 60);
+			var remainingMins = mins % 60;
+			if (remainingMins === 0) {
+				return hours + 'h';
+			} else {
+				return hours + 'h ' + remainingMins + 'm';
+			}
+		}
+
+		function formatRate(kbps, isOnline) {
+			if (isOnline !== undefined && isOnline == 0) {
+				return '--';
+			}
+
+			var rate = 0;
+			if (kbps !== undefined && kbps !== null && kbps !== '') {
+				rate = parseFloat(kbps);
+				if (isNaN(rate) || rate < 0) {
+					rate = 0;
+				}
+			}
+			rate = Math.round(rate);
+			if (rate >= 1024) {
+				return (rate / 1024).toFixed(1) + ' MB/s';
+			} else {
+				return rate + ' KB/s';
+			}
+		}
+
+		function formatFlow(kb) {
+			if (kb === undefined || kb === null || kb === '') {
+				return '0 KB';
+			}
+			// Use parseFloat to handle large numbers correctly
+			var totalKB = parseFloat(kb);
+			if (isNaN(totalKB) || totalKB < 0) {
+				return '0 KB';
+			}
+			// Round to integer for KB
+			totalKB = Math.round(totalKB);
+			if (totalKB === 0) {
+				return '0 KB';
+			}
+			// Convert to appropriate unit (input is in KB)
+			if (totalKB < 1024) {
+				// KB - no decimal
+				return totalKB + ' KB';
+			} else if (totalKB < 1024 * 1024) {
+				// MB - one decimal
+				return (totalKB / 1024).toFixed(1) + ' MB';
+			} else if (totalKB < 1024 * 1024 * 1024) {
+				// GB - one decimal
+				return (totalKB / (1024 * 1024)).toFixed(1) + ' GB';
+			} else {
+				// TB - one decimal
+				return (totalKB / (1024 * 1024 * 1024)).toFixed(1) + ' TB';
+			}
+		}
+
 		function render_user_list(data) {
 			var tb = document.getElementById('user_status_table');
+			var tbody = tb ? tb.querySelector('tbody') : null;
 			var user_list = data.list;
-			if (user_list && tb) {
-				while (tb.rows.length > 1)
-					tb.deleteRow(1);
+			if (user_list && tbody) {
+				tbody.innerHTML = '';
 				for (var i = 0; i < user_list.length; i++) {
 					var nickname = user_list[i].nickname || "";
 					var hostname = user_list[i].hostname || "";
 					var displayName = nickname || hostname || "--";
 
-					var tr = tb.insertRow(-1);
+					var tr = tbody.insertRow(-1);
 					tr.className = 'tr';
-					if (user_list[i].online != 1) {
+					if (user_list[i].online == 0) {
 						tr.style.color = '#A9A9A9'; 
 					}
 					tr.insertCell(-1).innerHTML = `
@@ -65,7 +342,23 @@
 						</div>
 					`;
 					tr.insertCell(-1).innerHTML = user_list[i].ip;
-					// lua api return {}
+					tr.insertCell(-1).innerHTML = formatRate(user_list[i].up_rate, user_list[i].online);
+					tr.insertCell(-1).innerHTML = formatRate(user_list[i].down_rate, user_list[i].online);
+					
+					var am_time = user_list[i].today_am_active_time || 0;
+					var pm_time = user_list[i].today_pm_active_time || 0;
+					var total_time = am_time + pm_time;
+					var time_str = formatTime(total_time);
+					var tooltip_text = "<%:Morning%>: " + formatTime(am_time) + ", <%:Afternoon%>: " + formatTime(pm_time);
+					tr.insertCell(-1).innerHTML = `<span title="${tooltip_text}" style="cursor: help;">${time_str}</span>`;
+					
+					// 今日流量
+					var today_up_flow = user_list[i].today_up_flow || 0;
+					var today_down_flow = user_list[i].today_down_flow || 0;
+					var total_flow = today_up_flow + today_down_flow;
+					var flow_str = formatFlow(total_flow);
+					tr.insertCell(-1).innerHTML = flow_str;
+					
 				     if (!Array.isArray(user_list[i].applist))           
                          user_list[i].applist = [] 
 					var app_list_str = user_list[i].applist.map(app => {
@@ -77,13 +370,19 @@
 					tr.insertCell(-1).innerHTML = current_app;
 					var current_url = user_list[i].url || "--";
 					var display_url = current_url;
-					if (current_url !== "--" && current_url.length > 20) {
-						display_url = current_url.substring(0, 10) + "..." + current_url.substring(current_url.length - 10);
+					if (current_url !== "--" && current_url.length > 18) {
+						display_url = current_url.substring(0, 8) + "..." + current_url.substring(current_url.length - 8);
 					}
 					tr.insertCell(-1).innerHTML = `<span title="${current_url}">${display_url}</span>`;
-					tr.insertCell(-1).innerHTML = user_list[i].online == 1 
-						? `<span style="color: green;"><%:Online%></span>` 
-						: "<%:Offline%>";
+					var online_status_html = "";
+					if (user_list[i].online == 2) {
+						online_status_html = `<span style="color: #1a73e8;"><%:Active%></span>`;
+					} else if (user_list[i].online == 1) {
+						online_status_html = `<span style="color: green;"><%:Online%></span>`;
+					} else {
+						online_status_html = "<%:Offline%>";
+					}
+					tr.insertCell(-1).innerHTML = online_status_html;
 					tr.insertCell(-1).innerHTML = `
 						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}')" style="margin-right: 5px;"><%:Details%></button>
 						<button type="button" class="cbi-button cbi-button-add" onclick="showModifyNickname('${user_list[i].mac}')"><%:Remark%></button>
@@ -96,20 +395,23 @@
 					});
 				}
 			}
+			if (currentView === 'card') {
+				render_card_view(data);
+			}
 		}
 
 		function render_visit_list_table(data) {
 			var tb = document.getElementById('visit_list_table');
+			var tbody = tb ? tb.querySelector('tbody') : null;
 			var visit_list = data.list;
-			if (visit_list && tb) {
-				while (tb.rows.length > 1)
-					tb.deleteRow(1);
+			if (visit_list && tbody) {
+				tbody.innerHTML = '';
 				for (var i = 0; i < visit_list.length; i++) {
 					var action_status = visit_list[i].act == 1 ? 
 						'<span style="color: red;"><%:Filtered%></span>' : 
 						'<span style="color: green;"><%:Unfiltered%></span>';
 					var hostname = visit_list[i].hostname == "" || visit_list[i].hostname == "*" ? "--" : visit_list[i].hostname;
-					var tr = tb.insertRow(-1);
+					var tr = tbody.insertRow(-1);
 					tr.className = 'tr';
 
 					var iconSrc = visit_list[i].icon === 0 ? '<%=resource%>/app_icons/default.png' : `<%=resource%>/app_icons/${visit_list[i].id}.png`;
@@ -159,6 +461,8 @@
 			var modal = document.getElementById('detailsModal');
 			modal.style.display = 'flex';
 			updateDeviceInfoTitle(mac);
+			current_mac = mac;
+			visit_cur_page = 1; // Reset to first page when opening details
 
 			new XHR().get('<%=url('admin/network/dev_visit_time')%>/' + mac, null,
 				function (x, st) {
@@ -167,12 +471,103 @@
 				}
 			);
 
-			new XHR().get('<%=url('admin/network/dev_visit_list')%>/' + mac, null,
+			getVisitListData(mac, visit_cur_page, visit_page_size);
+		}
+		
+		function getVisitListData(mac, page, size) {
+			if (page === undefined) page = visit_cur_page;
+			if (size === undefined) size = visit_page_size;
+			new XHR().get('<%=url('admin/network/dev_visit_list')%>/' + mac, {page: page, page_size: size},
 				function (x, st) {
 					visit_list_data = st;
+					if (st.total !== undefined) {
+						visit_total_count = st.total;
+						visit_total_pages = st.total_pages || 1;
+						visit_cur_page = st.page || 1;
+						visit_page_size = st.page_size || 10;
+					}
 					render_visit_list_table(visit_list_data);
+					updateVisitListPagination();
 				}
 			);
+		}
+		
+		function updateVisitListPagination() {
+			var paginationDiv = document.getElementById('visitListPagination');
+			if (!paginationDiv || visit_total_pages <= 0) {
+				if (paginationDiv) paginationDiv.innerHTML = '';
+				return;
+			}
+			
+			// Calculate page numbers to display (max 10 pages)
+			// Try to show 5 pages on left and 5 pages on right of current page
+			var startPage = Math.max(1, visit_cur_page - 5);
+			var endPage = Math.min(visit_total_pages, visit_cur_page + 5);
+			
+			// Adjust if we don't have 10 pages
+			var pageCount = endPage - startPage + 1;
+			if (pageCount < 10) {
+				if (startPage == 1) {
+					// If at the beginning, extend to the right
+					endPage = Math.min(visit_total_pages, startPage + 9);
+				} else if (endPage == visit_total_pages) {
+					// If at the end, extend to the left
+					startPage = Math.max(1, endPage - 9);
+				} else {
+					// In the middle, try to balance
+					var needed = 10 - pageCount;
+					var canExtendLeft = startPage - 1;
+					var canExtendRight = visit_total_pages - endPage;
+					if (canExtendLeft >= canExtendRight) {
+						startPage = Math.max(1, startPage - Math.min(needed, canExtendLeft));
+						endPage = Math.min(visit_total_pages, startPage + 9);
+					} else {
+						endPage = Math.min(visit_total_pages, endPage + Math.min(needed, canExtendRight));
+						startPage = Math.max(1, endPage - 9);
+					}
+				}
+			}
+			
+			var html = '<div style="display: flex; align-items: center; justify-content: center; margin-top: 20px; padding: 15px 0;">';
+			html += '<div style="display: flex; align-items: center; gap: 4px;">';
+			
+			// Previous page link
+			if (visit_cur_page > 1) {
+				html += '<a href="javascript:void(0)" onclick="goToVisitPage(' + (visit_cur_page - 1) + ')" style="padding: 8px 12px; color: #1a73e8; text-decoration: none; cursor: pointer; border-radius: 4px;"><%:Previous%></a>';
+			} else {
+				html += '<span style="padding: 8px 12px; opacity: 0.4; cursor: default;"><%:Previous%></span>';
+			}
+			
+			// Page numbers
+			for (var i = startPage; i <= endPage; i++) {
+				if (i == visit_cur_page) {
+					html += '<span style="padding: 8px 12px; color: #1a73e8; font-weight: 500; cursor: default; border-radius: 4px;">' + i + '</span>';
+				} else {
+					html += '<a href="javascript:void(0)" onclick="goToVisitPage(' + i + ')" style="padding: 8px 12px; text-decoration: none; cursor: pointer; border-radius: 4px;">' + i + '</a>';
+				}
+			}
+			
+			// Next page link
+			if (visit_cur_page < visit_total_pages) {
+				html += '<a href="javascript:void(0)" onclick="goToVisitPage(' + (visit_cur_page + 1) + ')" style="padding: 8px 12px; color: #1a73e8; text-decoration: none; cursor: pointer; border-radius: 4px;"><%:Next%></a>';
+			} else {
+				html += '<span style="padding: 8px 12px; opacity: 0.4; cursor: default;"><%:Next%></span>';
+			}
+			
+			html += '</div>';
+			html += '<div style="margin-left: 20px; opacity: 0.6; font-size: 14px;">';
+			html += '<%:Total%>: ' + visit_total_count + ' | <%:Page%>: ' + visit_cur_page + ' / ' + visit_total_pages;
+			html += '</div>';
+			html += '</div>';
+			
+			paginationDiv.innerHTML = html;
+		}
+		
+		function goToVisitPage(page) {
+			if (page < 1) page = 1;
+			if (page > visit_total_pages && visit_total_pages > 0) page = visit_total_pages;
+			visit_cur_page = page;
+			getVisitListData(current_mac, visit_cur_page, visit_page_size);
 		}
 
 		function updateDeviceInfoTitle(mac) {
@@ -223,7 +618,7 @@
 				console.log('Nickname updated successfully');
 				closeModal('nicknameModal');
 				showSuccessMessage('<%:Settings saved successfully%>');
-				getAllUsersData(cur_page);
+				getAllUsersData(cur_page, page_size);
 			});
 		}
 
@@ -301,6 +696,13 @@
         var option = {
 			grid:{
 			},
+ 
+            color: [
+                '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
+                '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc', '#ff9f7f',
+                '#ffdb5c', '#c23531', '#2f4554', '#61a0a8', '#d48265',
+                '#91c7ae', '#749f83', '#ca8622', '#bda29a', '#6e7074'
+            ],
             title: [
                 {
                     text: "<%:App Time Statistics%>",
@@ -388,51 +790,81 @@
 
 //]]></script>
 
-<div style="max-height: 750px; overflow-y: auto;padding-right: 20px;"> <!-- Added container with fixed height and overflow -->
+<div class="view-toggle">
+	<button type="button" class="view-toggle-btn active" id="btnTableView" onclick="switchView('table')" title="<%:Table View%>">
+		<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/></svg>
+	</button>
+	<button type="button" class="view-toggle-btn" id="btnCardView" onclick="switchView('card')" title="<%:Card View%>">
+		<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V2zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V2zM1 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V7zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V7zM1 12a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-2zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-2zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-2z"/></svg>
+	</button>
+</div>
+
+<div style="max-height: 750px; overflow-y: auto;padding-right: 20px;">
 
 	<div class="cbi-section cbi-tblsection">
 
-		<div>
+		<div id="tableViewWrapper" style="overflow-x: auto; min-width: 1200px;">
 
-		<table class="table cbi-section-table" id="user_status_table" style="table-layout: fixed; width: 100%;">
-			<tr class="tr">
-				<th class="th" style="width: 85px;">
-					<%:Device Info%>
-				</th>
-				<th class="th" style="width: 80px;">
-					<%:IP Address%>
-				</th>
-				<th class="th" style="width: 110px;">
-					<%:Common App(TOP5)%>
-				</th>
-				<th class="th" style="width: 65px;">
-					<%:Active App%>
-				</th>
-				<th class="th" style="width: 110px;">
-					<%:Current URL%>
-				</th>
-				<th class="th" style="width: 55px;">
-					<%:Online Status%>
-				</th>
-				<th class="th" style="width: 120px;">
-					<%:Actions%>
-				</th>
-			</tr>
-			<tr class="tr">
-				<td class="td" colspan="9"><em><br />
-						<%:Collecting data...%>
-					</em></td>
-			</tr>
+		<table class="table cbi-section-table" id="user_status_table" style="table-layout: fixed; min-width: 1200px; width: 100%;">
+			<thead>
+				<tr class="tr">
+					<th class="th" style="width: 115px;">
+						<%:Device Info%>
+					</th>
+					<th class="th" style="width: 100px;">
+						<%:IP Address%>
+					</th>
+					<th class="th" style="width: 80px;">
+						<%:Up Rate%>
+					</th>
+					<th class="th" style="width: 80px;">
+						<%:Down Rate%>
+					</th>
+					<th class="th" style="width: 100px;">
+						<%:Today Active Time%>
+					</th>
+					<th class="th" style="width: 100px;">
+						<%:Today Flow%>
+					</th>
+					<th class="th" style="width: 160px; white-space: nowrap;">
+						<%:Common App(TOP5)%>
+					</th>
+					<th class="th" style="width: 85px;">
+						<%:Active App%>
+					</th>
+					<th class="th" style="width: 155px; white-space: nowrap;">
+						<%:Current URL%>
+					</th>
+					<th class="th" style="width: 70px;">
+						<%:Online Status%>
+					</th>
+					<th class="th" style="width: 120px;">
+						<%:Actions%>
+					</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr class="tr">
+					<td class="td" colspan="11"><em><br />
+							<%:Collecting data...%>
+						</em></td>
+				</tr>
+			</tbody>
 		</table>
 
 		</div>
+
+		<div id="cardViewWrapper" class="card-grid" style="display: none;"></div>
+		
+		<!-- Pagination -->
+		<div id="pagination"></div>
 	</div>
 </div>
 <!-- Details Modal -->
-<div id="detailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background-color: white; padding: 30px; border-radius: 8px; text-align: left; width: 800px; height: 550px; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);">
-        <button type="button" onclick="closeModal('detailsModal')" style="position: absolute; top: 15px; right: 15px; background-color: transparent; border: none; font-size: 24px; color: #666; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; transition: background-color 0.2s;">&times;</button>
-        <h4 style="margin: 0 0 25px 0; color: #333; font-size: 18px;"><%:Device Details%> <span id="deviceInfo" style="color: #666; font-size: 14px; font-weight: normal;"></span></h4>
+<div id="detailsModal" class="oaf-modal-overlay">
+    <div class="oaf-modal-box" style="width: 820px; height: 620px;">
+        <button type="button" onclick="closeModal('detailsModal')" class="oaf-modal-close">&times;</button>
+        <h4 class="oaf-modal-title"><%:Device Details%> <span id="deviceInfo" style="opacity: 0.5; font-size: 14px; font-weight: normal;"></span></h4>
         
         <!-- Tab List -->
         <ul class="tab-list">
@@ -441,24 +873,6 @@
 			<li class="tab-item" onclick="showTabContent('tab3')"><%:Access Records%></li>
         </ul>
 
-        <!-- <div id="tab1" class="tab-body" >
-
-			<div class="info-container">
-				<div class="info-row">
-					<div class="info-column">
-						<p><span class="field-label">MAC地址:</span> <span class="field-value" id="device_mac">--</span></p>
-						<p><span class="field-label">在线状态:</span> <span class="field-value" id="device_ip">--</span></p>
-						<p><span class="field-label">在线/离线时间:</span> <span class="field-value" id="download_total">--</span></p>
-						<p><span class="field-label">在线APP:</span> <span class="field-value" id="download_total">--</span></p>
-					</div>
-					<div class="info-column">
-						<p><span class="field-label">IP地址:</span> <span class="field-value" id="group">--</span></p>
-						<p><span class="field-label">主机名:</span> <span class="field-value" id="group">--</span></p>
-						<p><span class="field-label">备注:</span> <span class="field-value" id="hostname">--</span></p>
-					</div>
-				</div>
-			</div>
-        </div> -->
         <div id="tab2" class="tab-body active">
 			<div class="pie-chart">
 				<div id="app_time_chart" style="width:100%;height: 350px;">
@@ -467,161 +881,657 @@
         </div>
 
 		<div id="tab3" class="tab-body">
-			<div style="max-height: 350px; overflow-y: auto;padding-right: 20px;"> <!-- Added container with fixed height and overflow -->
+			<div style="max-height: 320px; overflow-y: auto;padding-right: 20px;"> <!-- Added container with fixed height and overflow, reduced height to make room for pagination -->
 				<table class="table cbi-section-table" id="visit_list_table">
-					<tr class="tr table-titles">
-						<th class="th">
-							<%:App Name%>
-						</th>
-			
-						<th class="th">
-							<%:Start Time%>
-						</th>
-
-						<th class="th">
-							<%:Last Time%>
-						</th>
-						<th class="th">
-							<%:Duration%>
-						</th>
-						<th class="th">
-							<%:Filter Status%>
-						</th>
-					</tr>
-					<tr class="tr">
-						<td class="td" colspan="8"><em><br />
-								<%:Collecting data...%>
-							</em></td>
-					</tr>
+					<thead>
+						<tr class="tr table-titles">
+							<th class="th">
+								<%:App Name%>
+							</th>
+							<th class="th">
+								<%:Start Visit Time%>
+							</th>
+							<th class="th">
+								<%:Last Visit Time%>
+							</th>
+							<th class="th">
+								<%:Duration%>
+							</th>
+							<th class="th">
+								<%:Filter Status%>
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr class="tr">
+							<td class="td" colspan="5"><em><br />
+									<%:Collecting data...%>
+								</em></td>
+						</tr>
+					</tbody>
 				</table>
 			</div>
+			
+			<!-- Visit List Pagination -->
+			<div id="visitListPagination" style="flex-shrink: 0; margin-top: 10px;"></div>
 		</div>
 
     </div>
 </div>
 
 <!-- Nickname Modal -->
-<div id="nicknameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background-color: white; padding: 30px; border-radius: 8px; text-align: left; width: 450px; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);">
-        <button type="button" onclick="closeModal('nicknameModal')" style="position: absolute; top: 15px; right: 15px; background-color: transparent; border: none; font-size: 24px; color: #666; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; transition: background-color 0.2s;">&times;</button>
+<div id="nicknameModal" class="oaf-modal-overlay">
+    <div class="oaf-modal-box" style="width: 460px;">
+        <button type="button" onclick="closeModal('nicknameModal')" class="oaf-modal-close">&times;</button>
         
-        <h4 style="margin: 0 0 25px 0; color: #333; font-size: 18px;"><%:Modify Remark%></h4>
+        <h4 class="oaf-modal-title"><%:Modify Remark%></h4>
         
         <div style="margin-bottom: 20px;">
-            <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;"><span class="field-label"><%:MAC Address%>:</span> <span id="nicknameMacDisplay" style="color: #333; font-weight: 500;">--</span></p>
+            <p style="margin: 0 0 8px 0; opacity: 0.7; font-size: 14px;"><span class="field-label"><%:MAC Address%>:</span> <span id="nicknameMacDisplay" style="font-weight: 500; opacity: 1;">--</span></p>
         </div>
         
         <input type="hidden" id="nicknameMac" value="">
         
         <div style="margin-bottom: 30px;">
-            <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;"><span class="field-label"><%:Remark%>:</span></p>
-            <input type="text" id="nicknameInput" style="padding: 10px; background-color: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; width: 100%; font-size: 14px; transition: border-color 0.2s;" placeholder="请输入备注信息">
+            <p style="margin: 0 0 8px 0; opacity: 0.7; font-size: 14px;"><span class="field-label"><%:Remark%>:</span></p>
+            <input type="text" id="nicknameInput" class="oaf-input" placeholder="请输入备注信息">
         </div>
         
-        <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 10px;">
-            <button type="button" class="cbi-button cbi-button-add" onclick="closeModal('nicknameModal')"><%:Cancel%></button>
-            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()"><%:OK%></button>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <button type="button" class="oaf-btn oaf-btn-cancel" onclick="closeModal('nicknameModal')"><%:Cancel%></button>
+            <button type="button" class="oaf-btn oaf-btn-primary" onclick="submitNicknameChange()"><%:OK%></button>
         </div>
     </div>
 </div>
 
-<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-	<div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
-		<p style="margin: 0;color:white;"><%:Settings saved successfully%></p>
+<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; z-index: 1000; justify-content: center; align-items: center;">
+	<div style="background-color: rgba(0, 0, 0, 0.65); padding: 14px 24px; border-radius: 6px; text-align: center; color: white; display: flex; justify-content: center; align-items: center;">
+		<p style="margin: 0; color: white; font-size: 14px;"><%:Settings saved successfully%></p>
 	</div>
 </div>
 <style>
+    .cbi-button.cbi-button-add {
+        background-color: #1a73e8 !important;
+        color: #ffffff !important;
+        border: none !important;
+        padding: 6px 12px !important;
+        border-radius: 4px !important;
+        cursor: pointer !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        transition: background-color 0.2s ease !important;
+    }
+    .cbi-button.cbi-button-add:hover {
+        background-color: #1557b0 !important;
+        color: #ffffff !important;
+    }
+    .cbi-button.cbi-button-add:active {
+        background-color: #0d47a1 !important;
+        color: #ffffff !important;
+    }
+    .cbi-section-table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 0;
+        border: none;
+    }
+
+    .cbi-section-table thead .th {
+        background: var(--background-color-low, #f5f5f5);
+        color: var(--text-color-medium, #6b7280);
+        font-weight: 600;
+        font-size: 12.5px;
+        letter-spacing: 0.2px;
+        text-transform: none;
+        padding: 10px 12px;
+        border-top: none;
+        border-bottom: 1px solid var(--border-color-medium, #d1d5db);
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        text-align: left;
+    }
+
+    .cbi-section-table tbody .td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border-color-low, #e5e7eb);
+        font-size: 13px;
+        vertical-align: middle;
+        line-height: 1.5;
+        text-align: left;
+    }
+
+    .cbi-section-table tbody tr:last-child .td {
+        border-bottom: none;
+    }
+
+    .cbi-section-table tbody tr:hover .td {
+        background-color: var(--background-color-low, #f5f5f5);
+    }
+
+
+    .cbi-section-table tbody tr:nth-child(even) .td {
+        background-color: var(--background-color-low, #fafbfc);
+    }
+    .cbi-section-table tbody tr:nth-child(even):hover .td {
+        background-color: var(--background-color-low, #f5f5f5);
+    }
+
+   
+    #user_status_table {
+        min-width: 1000px;
+    }
+
+    #user_status_table .td {
+        padding-left: 12px !important;
+    }
+
+
+    #user_status_table .td:last-child {
+        white-space: nowrap;
+    }
+
+
+    #user_status_table td:nth-child(8),
+    #user_status_table .td:nth-child(8) {
+        white-space: nowrap;
+        min-width: 175px;
+    }
+
+
+    #user_status_table .cbi-button {
+        padding: 5px 12px;
+        font-size: 12px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color-medium, #d1d5db);
+        background: transparent;
+        color: #1a73e8;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+
+    #user_status_table .cbi-button:hover {
+        background-color: var(--background-color-low, #f5f5f5);
+        border-color: #1a73e8;
+    }
+
+
+    #visit_list_table .td {
+        padding: 6px 10px !important;
+        height: 32px !important;
+        vertical-align: middle !important;
+        font-size: 12.5px;
+    }
+
+    #visit_list_table .th {
+        padding: 8px 10px !important;
+        height: 36px !important;
+        vertical-align: middle !important;
+    }
+
+ 
     .tab-container {
         margin-top: 10px;
     }
     .tab-list {
         display: flex;
         list-style-type: none;
-        padding: 0 0 0 10px;
-        margin: 0 0 10px 0;
-        border-bottom: 1px solid #e0e0e0;
+        padding: 0;
+        margin: 0 0 0 0;
+        border-bottom: 2px solid var(--border-color-low, #e5e7eb);
+        gap: 2px;
     }
     .tab-item {
-        padding: 4px 12px;
+        padding: 8px 18px;
         cursor: pointer;
-        border: 1px solid #e0e0e0;
-        border-bottom: none;
-        background-color: #f0f0f0;
+        border: none;
+        background-color: transparent;
         border-radius: 6px 6px 0 0;
-        margin-right: 8px;
         transition: all 0.2s ease;
-        color: #333;
+        opacity: 0.6;
         font-size: 13px;
-    }
-    .tab-item.active {
-        background-color: white;
-        color: rgb(133, 133, 203);
-        border-color: #e0e0e0;
-        border-bottom: 1px solid white;
-        margin-bottom: -1px;
-		font-size: 13px;
-        z-index: 1;
+        font-weight: 500;
         position: relative;
     }
+    .tab-item.active {
+        color: #1a73e8;
+        font-weight: 600;
+        opacity: 1;
+    }
+    .tab-item.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #1a73e8;
+        border-radius: 2px 2px 0 0;
+    }
     .tab-item:hover {
-        background-color: #e0e0e0;
-        border-color: #d0d0d0;
+        background-color: var(--background-color-low, #f5f5f5);
+        opacity: 0.8;
     }
 
-	.tab-body {
-		margin-top: 5px;
-		display: none;
-		padding: 25px;
-	}
-	.tab-body.active {
-		
-		display: block;
-	}
+    .tab-body {
+        margin-top: 5px;
+        display: none;
+        padding: 20px;
+    }
+    .tab-body.active {
+        display: block;
+    }
 
-	.pie-chart {
-		width: 600px;
-	}
+    .pie-chart {
+        width: 600px;
+        max-width: 100%;
+    }
 
-	.field-label {
-		font-weight: bold;
-		color: #333;
-		width: 75px; 
-		display: inline-block; 
-	}
-	.field-value {
-		color: #4CAF50;
-	}
-	.info-container {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		margin-left: 20px;
-	}
-	.info-row {
-		display: flex;
-	}
-	.info-column {
-		width: 50%;
-		text-align: left;
-	}
-	.info-column p {
-		margin-bottom: 20px;
-	}
+    .oaf-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(3px);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        animation: oafFadeIn 0.25s ease;
+    }
 
-	#user_status_table .td {
-		padding-left: 10px !important; /* 5px margin-left + 2px original padding */
-	}
+    .oaf-modal-box {
+        background-color: var(--background-color-high, #fff);
+        padding: 28px;
+        border-radius: 12px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+        animation: oafSlideUp 0.3s ease;
+        max-width: 95vw;
+        max-height: 90vh;
+        overflow: hidden;
+    }
 
-	#visit_list_table .td {
-		padding: 4px 8px !important; 
-		height: 28px !important; 
-		vertical-align: middle !important; 
-	}
+    .oaf-modal-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        background-color: transparent;
+        border: none;
+        font-size: 22px;
+        opacity: 0.5;
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        line-height: 1;
+    }
 
-	#visit_list_table .th {
-		padding: 6px 8px !important; 
-		height: 32px !important; 
-		vertical-align: middle !important;
-	}
+    .oaf-modal-close:hover {
+        background-color: var(--background-color-low, #f5f5f5);
+        opacity: 1;
+    }
 
+    .oaf-modal-title {
+        margin: 0 0 20px 0;
+        font-size: 17px;
+        font-weight: 600;
+    }
+
+    .oaf-btn {
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .oaf-btn-primary {
+        background-color: #1a73e8;
+        color: #fff;
+    }
+    .oaf-btn-primary:hover {
+        background-color: #1557b0;
+        box-shadow: 0 2px 6px rgba(26, 115, 232, 0.3);
+    }
+
+    .oaf-btn-cancel {
+        background: transparent;
+        border: 1px solid var(--border-color-medium, #d1d5db);
+    }
+    .oaf-btn-cancel:hover {
+        background-color: var(--background-color-low, #f5f5f5);
+    }
+
+    .oaf-input {
+        padding: 10px 12px;
+        background: transparent;
+        border: 1px solid var(--border-color-medium, #d1d5db);
+        border-radius: 6px;
+        width: 100%;
+        font-size: 14px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-sizing: border-box;
+        color: inherit;
+    }
+    .oaf-input:focus {
+        outline: none;
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12);
+    }
+
+
+    #pagination, #visitListPagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 0;
+        margin-top: 8px;
+    }
+
+ 
+    .field-label {
+        font-weight: 600;
+        width: 75px;
+        display: inline-block;
+    }
+    .field-value {
+        color: #4CAF50;
+    }
+    .info-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-left: 20px;
+    }
+    .info-row {
+        display: flex;
+    }
+    .info-column {
+        width: 50%;
+        text-align: left;
+    }
+    .info-column p {
+        margin-bottom: 20px;
+    }
+
+  
+    .view-toggle {
+        position: relative;
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px;
+        margin-bottom: 10px;
+        margin-left: auto;
+        width: fit-content;
+    }
+    .view-toggle-btn {
+        padding: 6px 10px;
+        border: 1px solid var(--border-color-medium, #d1d5db);
+        background: transparent;
+        opacity: 0.5;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .view-toggle-btn:first-child {
+        border-radius: 4px 0 0 4px;
+    }
+    .view-toggle-btn:last-child {
+        border-radius: 0 4px 4px 0;
+        margin-left: -1px;
+    }
+    .view-toggle-btn.active {
+        color: #1a73e8;
+        border-color: #1a73e8;
+        z-index: 1;
+        position: relative;
+        opacity: 1;
+    }
+    .view-toggle-btn:hover:not(.active) {
+        opacity: 0.7;
+    }
+
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 12px;
+        padding: 4px 0;
+    }
+
+
+    .user-card {
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        border-radius: 10px;
+        padding: 14px 16px;
+        position: relative;
+        cursor: pointer;
+        transition: box-shadow 0.2s, border-color 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .user-card:hover {
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border-color: var(--border-color-medium, #d1d5db);
+    }
+    .user-card--offline {
+        opacity: 0.55;
+    }
+    .user-card--offline:hover {
+        opacity: 0.75;
+    }
+
+    .card-status {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 10px;
+        line-height: 1.4;
+    }
+    .card-status--active {
+        background: #e8f0fe;
+        color: #1a73e8;
+    }
+    .card-status--online {
+        background: #e6f4ea;
+        color: #1e8e3e;
+    }
+    .card-status--offline {
+        background: var(--background-color-low, #f5f5f5);
+        opacity: 0.6;
+    }
+
+    .card-device {
+        padding-right: 60px;
+    }
+    .card-name {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .card-mac {
+        font-size: 11.5px;
+        opacity: 0.5;
+        margin-top: 2px;
+        font-family: monospace;
+    }
+
+    .card-rate {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+    }
+    .card-rate-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12.5px;
+        opacity: 0.7;
+        font-variant-numeric: tabular-nums;
+    }
+    .card-rate-item svg {
+        flex-shrink: 0;
+    }
+
+    .card-visiting {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        opacity: 0.6;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    .card-visiting-label {
+        opacity: 0.7;
+        flex-shrink: 0;
+    }
+    .card-visiting-app {
+        font-weight: 500;
+        flex-shrink: 0;
+        opacity: 1;
+    }
+    .card-visiting-none {
+        opacity: 0.4;
+    }
+    .card-visiting-url {
+        opacity: 0.7;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: help;
+    }
+
+    .card-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border-color-low, #e5e7eb);
+        padding-top: 8px;
+    }
+    .card-apps {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+    .card-app-icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        flex-shrink: 0;
+    }
+    .card-time {
+        font-size: 12px;
+        opacity: 0.6;
+        cursor: help;
+        flex-shrink: 0;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+    .card-flow {
+        font-size: 12px;
+        opacity: 0.6;
+        cursor: help;
+        flex-shrink: 0;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .oaf-modal-box {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            padding: 16px !important;
+            margin: 0 !important;
+        }
+        .oaf-modal-overlay {
+            align-items: stretch !important;
+        }
+        .oaf-modal-close {
+            top: 10px !important;
+            right: 10px !important;
+            z-index: 10;
+            background-color: var(--background-color-low, #f5f5f5) !important;
+        }
+        .oaf-modal-title {
+            font-size: 15px !important;
+            padding-right: 40px;
+        }
+        .pie-chart {
+            width: 100% !important;
+        }
+        #tab2 .pie-chart #app_time_chart {
+            height: 260px !important;
+        }
+        #tab3 > div {
+            max-height: none !important;
+            overflow: auto !important;
+        }
+        .tab-body {
+            padding: 10px 0 !important;
+        }
+        #visit_list_table {
+            min-width: 500px;
+        }
+        .tab-body {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        #tableViewWrapper {
+            display: none !important;
+        }
+        #cardViewWrapper {
+            display: grid !important;
+        }
+        .view-toggle {
+            display: none;
+        }
+        .card-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (min-width: 769px) and (max-width: 1200px) {
+        .card-grid {
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        }
+    }
+
+    @keyframes oafFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes oafSlideUp {
+        from { transform: translateY(16px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
 </style>

@@ -20,6 +20,8 @@ char g_lan_ifname[64] = "br-lan";
 int g_tcp_rst = 1;
 int g_feature_init = 0;
 char g_oaf_version[64] = AF_VERSION;
+int g_disable_quic = 0;
+int g_app_filter_mode = 0; // 0 = specified apps, 1 = all apps
 /* 
 	cat /proc/sys/oaf/debug
 */
@@ -114,6 +116,20 @@ static struct ctl_table oaf_table[] = {
 		.maxlen = sizeof(unsigned int),
 		.mode = 0666,
 		.proc_handler = proc_douintvec,
+	},
+	{
+		.procname	= "disable_quic",
+		.data		= &g_disable_quic,
+		.maxlen 	= sizeof(int),
+		.mode		= 0666,
+		.proc_handler	= proc_dointvec,
+	},
+	{
+		.procname	= "app_filter_mode",
+		.data		= &g_app_filter_mode,
+		.maxlen 	= sizeof(int),
+		.mode		= 0666,
+		.proc_handler	= proc_dointvec,
 	},
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
 	{

@@ -13,6 +13,11 @@ start_service(){
 	test -f $FEATURE_FILE &&{
 		rm $FEATURE_FILE
 	}
+
+	if [ ! -f /etc/appfilter/feature.cfg ]; then
+		cp /etc/appfilter/feature_cn.cfg /etc/appfilter/feature.cfg
+	fi
+	hnat.sh 1
 	ln -s /etc/appfilter/feature.cfg $FEATURE_FILE
 	procd_open_instance
 	procd_set_param respawn 60 5 5

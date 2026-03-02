@@ -7,7 +7,7 @@ function index()
 	end
 	
 	local page
-	entry({"admin", "services", "appfilter"}, alias("admin", "services", "appfilter", "app_filter"),_("App Filter"), 10).dependent = true
+	entry({"admin", "services", "appfilter"}, alias("admin", "services", "appfilter", "user_list"),_("App Filter"), 10).dependent = true
 
 
 	entry({"admin", "services", "appfilter", "user_list"}, 
@@ -15,11 +15,9 @@ function index()
 		cbi("appfilter/dev_status", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true})),
 		_("User List"), 20).leaf=true
 
-	-- entry({"admin", "services", "appfilter", "base_setting"}, cbi("appfilter/base_setting"), _("Basic Settings"), 22).leaf=true
-	-- entry({"admin", "services", "appfilter", "user_setting"}, cbi("appfilter/user_setting"), _("Effective User"), 23).leaf=true
 	entry({"admin", "services", "appfilter", "time"}, cbi("appfilter/time", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("Time Configuration"), 25).leaf=true
 	entry({"admin", "services", "appfilter", "app_filter"}, cbi("appfilter/app_filter", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Filter"), 21).leaf=true
-	entry({"admin", "services", "appfilter", "feature"}, cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Feature"), 26).leaf=true
+	entry({"admin", "services", "appfilter", "feature"}, cbi("appfilter/feature", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("App Feature Library"), 26).leaf=true
 
 	entry({"admin", "services", "appfilter", "user"}, cbi("appfilter/user", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("User Configuration"), 24).leaf=true
 	entry({"admin", "services", "appfilter", "advance"}, cbi("appfilter/advance", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("Advanced Settings"), 27).leaf=true
@@ -49,6 +47,17 @@ function index()
 	entry({"admin", "network", "get_oaf_status"}, call("get_oaf_status"), nil).leaf = true
 	entry({"admin", "network", "get_app_filter_adv"}, call("get_app_filter_adv"), nil).leaf = true
 	entry({"admin", "network", "set_app_filter_adv"}, call("set_app_filter_adv"), nil).leaf = true
+	entry({"admin", "network", "disable_flow_offloading"}, call("disable_flow_offloading"), nil).leaf = true
+	entry({"admin", "network", "cmd"}, call("handle_cmd"), nil).leaf = true
+
+
+	entry({"admin", "appfilter", "feature", "info"}, call("get_feature_info"), nil).leaf = true
+	entry({"admin", "appfilter", "feature", "class_list"}, call("get_feature_class_list"), nil).leaf = true
+	entry({"admin", "appfilter", "feature", "upgrade_status"}, call("get_feature_upgrade_status"), nil).leaf = true
+
+
+
+
 end
 
 function get_hostname_by_mac(dst_mac)
@@ -165,7 +174,12 @@ function get_all_users()
 	luci.http.prepare_content("application/json")
 	local flag = luci.http.formvalue("flag")
 	local page = luci.http.formvalue("page")
-	local class_obj=utl.ubus("appfilter", "get_all_users", {flag=flag, page=page});
+	local page_size = luci.http.formvalue("page_size")
+	local params = {flag=flag, page=page}
+	if page_size then
+		params.page_size = page_size
+	end
+	local class_obj=utl.ubus("appfilter", "get_all_users", params);
 	luci.http.write_json(class_obj);
 end
 
@@ -295,11 +309,19 @@ function set_app_filter_base()
 	local enable = luci.http.formvalue("enable")
 	local work_mode = luci.http.formvalue("work_mode")
 	local record_enable = luci.http.formvalue("record_enable")
+	local disable_quic = luci.http.formvalue("disable_quic")
+	local app_filter_mode = luci.http.formvalue("app_filter_mode")
 
-	llog("enable: "..enable.." work_mode: "..work_mode.." record_enable: "..record_enable)
+	llog("enable: "..enable.." work_mode: "..work_mode.." record_enable: "..record_enable.." disable_quic: "..(disable_quic or "nil").." app_filter_mode: "..(app_filter_mode or "nil"))
 	req_obj.enable = enable
 	req_obj.work_mode = work_mode
 	req_obj.record_enable = record_enable
+	if disable_quic then
+		req_obj.disable_quic = disable_quic
+	end
+	if app_filter_mode then
+		req_obj.app_filter_mode = app_filter_mode
+	end
 
 	local resp_obj=utl.ubus("appfilter", "set_app_filter_base", req_obj);
 	luci.http.write_json(resp_obj);
@@ -323,6 +345,28 @@ function set_app_filter_adv()
 	luci.http.write_json(resp_obj);
 end
 
+function disable_flow_offloading()
+	local json = require "luci.jsonc"
+	llog("disable flow offloading");
+	luci.http.prepare_content("application/json")
+	local resp_obj=utl.ubus("appfilter", "disable_flow_offloading", {});
+	luci.http.write_json(resp_obj);
+end
+
+function handle_cmd()
+	local json = require "luci.jsonc"
+	luci.http.prepare_content("application/json")
+	local action = luci.http.formvalue("action")
+	if not action then
+		luci.http.write_json({code = -1, message = "action parameter is required"});
+		return
+	end
+	local req_obj = {}
+	req_obj.action = action
+	local resp_obj=utl.ubus("appfilter", "cmd", req_obj);
+	luci.http.write_json(resp_obj);
+end
+
 -- data: {"mode":1,"weekday_list":[1,2,3,4,5,6,0],"start_time":"22:22","end_time":"12:00","allow_time":30,"deny_time":5}
 function set_app_filter_time()
 	local json = require "luci.jsonc"
@@ -337,6 +381,30 @@ function get_app_filter_time()
 	local json = require "luci.jsonc"
 	luci.http.prepare_content("application/json")
 	local resp_obj=utl.ubus("appfilter", "get_app_filter_time", {});
+	llog("controller get_app_filter_time: ubus response received");
+	if resp_obj and resp_obj.data then
+		llog("controller get_app_filter_time: mode=" .. tostring(resp_obj.data.mode or "nil"));
+		if resp_obj.data.time_list then
+			llog("controller get_app_filter_time: time_list length=" .. tostring(#resp_obj.data.time_list));
+			for i, time_item in ipairs(resp_obj.data.time_list) do
+				local weekday_str = "nil"
+				if time_item.weekday_list then
+					weekday_str = table.concat(time_item.weekday_list, ",")
+				end
+
+			end
+		else
+			llog("controller get_app_filter_time: time_list is nil");
+		end
+		local response_json = json.stringify(resp_obj);
+		if response_json then
+			llog("controller get_app_filter_time: final JSON response length=" .. tostring(string.len(response_json)));
+		else
+			llog("controller get_app_filter_time: failed to encode JSON");
+		end
+	else
+		llog("controller get_app_filter_time: resp_obj or resp_obj.data is nil");
+	end
 	luci.http.write_json(resp_obj);
 end
 
@@ -368,6 +436,14 @@ function get_dev_visit_list(mac)
 	luci.http.prepare_content("application/json")
 	local req_obj = {}
 	req_obj.mac = mac;
+	local page = luci.http.formvalue("page")
+	local page_size = luci.http.formvalue("page_size")
+	if page then
+		req_obj.page = page
+	end
+	if page_size then
+		req_obj.page_size = page_size
+	end
 	local resp_obj=utl.ubus("appfilter", "dev_visit_list", req_obj);
 	luci.http.write_json(resp_obj);
 end
@@ -427,11 +503,71 @@ function process_uploaded_file(file_path)
 end
 
 function llog(message)
-    local log_file = "/tmp/log/oaf_luci.log"  -- 日志文件路径
-    local fd = io.open(log_file, "a")  -- 以追加模式打开文件
+    local log_file = "/tmp/log/oaf_luci.log"  
+    local fd = io.open(log_file, "a") 
     if fd then
-        local timestamp = os.date("%Y-%m-%d %H:%M:%S")  -- 获取当前时间戳
-        fd:write(string.format("[%s] %s\n", timestamp, message))  -- 写入时间戳和日志信息
-        fd:close()  -- 关闭文件
+        local timestamp = os.date("%Y-%m-%d %H:%M:%S") 
+        fd:write(string.format("[%s] %s\n", timestamp, message))  
+        fd:close()  
     end
+end
+
+
+
+function get_feature_upgrade_status()
+	local fs   = require "nixio.fs"
+	local json = require "luci.jsonc"
+	local http = require "luci.http"
+
+	local status_file = "/tmp/feature_upgrade.status"
+	local status = 0
+
+	if fs.access(status_file) then
+		local content = fs.readfile(status_file) or ""
+		status = tonumber(content:match("(%d+)")) or 0
+		fs.writefile(status_file, "0")
+	end
+
+	http.prepare_content("application/json")
+	http.write(json.stringify({code = 0, status = status}))
+end
+
+
+
+function get_feature_info()
+	local json = require "luci.jsonc"
+	local nfs = require "nixio.fs"
+	local sys = require "luci.sys"
+	luci.http.prepare_content("application/json")
+
+	local info = {
+		version = "",
+		format = "v3.0",
+		app_count = 0
+	}
+
+	if nfs.access("/tmp/feature.cfg") then
+		info.app_count = tonumber(sys.exec("cat /tmp/feature.cfg | grep -v ^$ |grep -v ^# | wc -l")) or 0
+		info.version = sys.exec("cat /tmp/feature.cfg |grep \"#version\" | awk '{print $2}'") or ""
+	end
+
+	luci.http.write(json.stringify({code = 0, data = info, message = "success"}))
+end
+
+function get_feature_class_list()
+	local json = require "luci.jsonc"
+	local utl = require "luci.util"
+	luci.http.prepare_content("application/json")
+
+	local req_obj = {}
+	req_obj.api = "class_list"
+	req_obj.data = {}
+
+	local resp_obj = utl.ubus("fwx", "common", req_obj)
+
+	if resp_obj and resp_obj.code == 2000 and resp_obj.data then
+		luci.http.write(json.stringify(resp_obj.data))
+	else
+		luci.http.write(json.stringify({class_list = {}}))
+	end
 end

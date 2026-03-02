@@ -35,7 +35,7 @@
         flex-direction: column;
     }
     .app-item {
-        width: 140px; /* 固定宽度 */
+        width: 140px; 
         box-sizing: border-box;
         padding: 5px;
         display: flex;
@@ -53,14 +53,17 @@
         text-align: left; 
     }
     
-
     .app-item input[type="checkbox"] {
         margin: 0;
         vertical-align: middle;
         position: relative;
         top: 0;
+        cursor: pointer;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        border: 1px solid #aca9a9;
     }
-    
     .app-item img {
         vertical-align: middle;
         display: inline-block;
@@ -120,7 +123,7 @@
         align-items: center;
         margin: 5px 0;
         padding: 3px 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border-color-low, #e5e7eb);
         width: 100%;
         gap: 5px;
     }
@@ -134,59 +137,469 @@
 
     .select-all-label {
         font-size: 12px;
-        color: #666;
+        opacity: 0.7;
         cursor: pointer;
     }
 
     @media (max-width: 600px) {
         .app-item {
-            width: 25%; 
+            width: 100%; 
         }
     }
+    
+    .config-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 4px 0;
+    }
+    
+    .config-label {
+        font-weight: 500;
+        font-size: 14px;
+        margin-right: 6px;
+    }
+    
 
+    .filter-mode-group {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .filter-mode-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1.4;
+        margin: 0;
+        padding: 0;
+    }
+    .filter-mode-option input[type="radio"] {
+        margin: 0;
+        vertical-align: middle;
+        flex-shrink: 0;
+        position: relative;
+        top: 0;
+    }
+    
+    .help-icon {
+        position: relative;
+        display: inline-block;
+        margin-left: 8px;
+        cursor: help;
+        vertical-align: middle;
+    }
+    
+    .help-question {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: #9aa0a6;
+        color: white;
+        font-size: 11px;
+        font-weight: bold;
+        transition: background-color 0.2s;
+    }
+    
+    .help-icon:hover .help-question {
+        background-color: #5f6368;
+    }
+    
+    .help-tooltip {
+        visibility: hidden;
+        width: 280px;
+        background-color: #3c4043;
+        color: #fff;
+        text-align: left;
+        border-radius: 4px;
+        padding: 12px;
+        position: absolute;
+        z-index: 1000;
+        top: 130%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        line-height: 1.5;
+        opacity: 0;
+        transition: opacity 0.2s;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .help-tooltip::after {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        margin-left: -6px;
+        border-width: 6px;
+        border-style: solid;
+        border-color: transparent transparent #3c4043 transparent;
+    }
+    
+    .help-icon:hover .help-tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    /* Module card styles - 简洁美观风格 */
+    .config-module {
+        margin-top: 5px;
+        border: 1px solid var(--border-color-low, #e0e0e0);
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .module-header {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color-low, #f0f0f0);
+        border-radius: 8px 8px 0 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .module-header:hover {
+        opacity: 0.85;
+    }
+    
+    .module-header .arrow {
+        margin-right: 12px;
+        width: 12px;
+        height: 12px;
+        background-image: url('<%=resource%>/icons/arrow.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        transition: transform 0.3s ease;
+        display: inline-block;
+        transform: rotate(0deg);
+        opacity: 0.6; /* 降低箭头透明度 */
+    }
+    
+    .module-header.expanded .arrow {
+        transform: rotate(90deg);
+    }
+    
+    .module-title {
+        font-size: 15px;
+        font-weight: 600;
+        flex: 1;
+    }
+    
+    .module-content {
+        padding: 18px 20px;
+        display: none;
+    }
+    
+    .module-content.expanded {
+        display: block;
+    }
+    
+    .status-module {
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        border-radius: 8px;
+        padding: 18px 20px;
+        margin-top: 5px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    /* 描述文字样式优化 */
+    .desc {
+        margin-top: 15px;
+        width: 100%;
+        max-width: 800px;
+        padding: 12px 16px;
+        border-radius: 6px;
+        box-sizing: border-box;
+        border-left: 3px solid #1a73e8;
+        opacity: 0.75;
+    }
+    .desc span {
+        font-size: 13px;
+        line-height: 1.6;
+        display: block;
+    }
+
+    /* 按钮样式 - 扁平化 */
+    .submit-button {
+        padding: 8px 20px;
+        width: 150px;
+        height: auto;
+        margin-top: 0;
+        background-color: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.4;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+    }
+    
+    .submit-button:hover {
+        background-color: #1557b0;
+    }
+
+    .button-check {
+        padding: 6px 16px;
+        background: transparent;
+        color: #1a73e8;
+        border: 1px solid var(--border-color-medium, #d1d5db);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .button-check:hover {
+        background-color: var(--background-color-low, #f5f5f5);
+        border-color: #1a73e8;
+        color: #174ea6;
+    }
+
+    /* 开关样式微调 */
+    .switch {
+        width: 36px;
+        height: 20px;
+    }
+    
+    .slider {
+        border-radius: 20px;
+    }
+    
+    .slider:before {
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+    }
+    
+    input:checked + .slider {
+        background-color: #1a73e8;
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(16px);
+    }
+
+    /* Dialog styles */
+    .view-dialog {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .view-dialog-content {
+        background-color: var(--background-color-high, #fff);
+        border-radius: 8px;
+        padding: 20px 20px 0 20px;
+        max-width: 90%;
+        max-height: 90%;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .view-dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color-low, #e5e7eb);
+        flex-shrink: 0;
+    }
+
+    .view-dialog-title {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .view-dialog-close {
+        cursor: pointer;
+        font-size: 24px;
+        opacity: 0.5;
+        line-height: 1;
+    }
+
+    .view-dialog-close:hover {
+        opacity: 1;
+    }
+
+    .view-dialog-body {
+        padding: 10px 0 20px 0;
+        overflow: hidden;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .user-list-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+
+    .user-list-table th,
+    .user-list-table td {
+        padding: 8px;
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        text-align: left;
+    }
+
+    .user-list-table th {
+        background-color: var(--background-color-low, #f5f5f5);
+        font-weight: bold;
+    }
+
+    .user-list-container {
+        flex: 1;
+        overflow-y: auto;
+        margin-top: 10px;
+        min-height: 0;
+    }
+
+    .time-display {
+        margin-top: 10px;
+    }
+
+    .time-period-item {
+        margin: 8px 0;
+        padding: 15px;
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: box-shadow 0.2s;
+    }
+
+    .time-period-item:hover {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .time-period-item strong {
+        font-size: 14px;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .time-period-item div {
+        margin: 5px 0;
+        opacity: 0.7;
+        font-size: 13px;
+    }
+
+    .time-period-item div strong {
+        font-weight: 600;
+        display: inline;
+        margin-right: 5px;
+        opacity: 1;
+    }
+
+    .dynamic-time-item {
+        margin: 8px 0;
+        padding: 15px;
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 时间进度条样式 */
+    .time-progress-row {
+        display: flex;
+        align-items: center;
+        margin-top: 6px;
+    }
+    .time-progress-label {
+        width: 32px;
+        font-size: 12px;
+        color: #666;
+        opacity: 0.9;
+        flex-shrink: 0;
+        font-weight: 500;
+    }
+    .time-progress-bar {
+        flex: 1;
+        height: 6px;
+        background-color: #d1d5db;
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 0 8px;
+        min-width: 80px;
+        max-width: 220px;
+    }
+    .time-progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        background-color: #1a73e8;
+        transition: width 0.5s ease;
+    }
+    .time-progress-text {
+        font-size: 12px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* 清除按钮样式 */
+    .clear-time-btn {
+        padding: 4px 12px;
+        background-color: #ea4335;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+    .clear-time-btn:hover {
+        background-color: #c5221f;
+    }
+
+    .dynamic-time-item div {
+        margin: 8px 0;
+        opacity: 0.7;
+        font-size: 13px;
+    }
+
+    .dynamic-time-item div strong {
+        font-weight: 600;
+        display: inline;
+        margin-right: 5px;
+        opacity: 1;
+    }
 
 </style>
 
 <script type="text/javascript">//<![CDATA[
-	const data2 = {
-            "class_list": [
-                {
-                    "name": "game",
-                    "app_list": Array.from({length: 20}, (_, i) => `${1000 + i + 1},App ${i + 1}`)
-                },
-                {
-                    "name": "video",
-                    "app_list": Array.from({length: 20}, (_, i) => `${2000 + i + 1},App ${i + 1}`)
-                }
-            ]
-        };
-
 		const data = {
             "class_list": [
-                {
-                    "name": "game",
-                    "app_list": ["1001,app 1","1002,app 2"]
-                },
-                {
-                    "name": "video",
-                    	"app_list": ["2001,app 1","2002,app 2"]
-                }
             ]
         };
 		let app_filter_data = [];
-        const selectedAppIds = [1001, 1002, 1003];
+        const selectedAppIds = [];
 
-		function init_data2() {
-			// new XHR().get('<%=url('admin/network/class_list')%>', null,
-			// 	function (x, data) {
-			// 		console.log(data);
-			// 		renderAppList(data);
-			// 	}
-			// );
-			renderAppList(data)
-		}
 
-		
 		function init_data() {
 			getAppFilterData().then(() => {
 				getClassListData();
@@ -250,25 +663,16 @@
 
                 const appList = document.createElement('div');
                 appList.className = 'app-list';
-                
-                if (index === 1 || index === 2) {
-                    appList.style.display = 'flex';
-                    arrow.classList.add('expanded');
-                } else {
-                    appList.style.display = 'none';
-                }
+                appList.style.display = 'none';
 
-                // 添加全选容器到应用列表内部
                 const selectAllContainer = document.createElement('div');
                 selectAllContainer.className = 'select-all-container';
 
-                // 添加全选复选框
                 const selectAllCheckbox = document.createElement('input');
                 selectAllCheckbox.type = 'checkbox';
                 selectAllCheckbox.checked = selectedCount === category.app_list.length;
                 selectAllCheckbox.title = selectedCount === category.app_list.length ? '<%:Deselect All%>' : '<%:Select All%>';
 
-                // 添加全选标签
                 const selectAllLabel = document.createElement('span');
                 selectAllLabel.className = 'select-all-label';
                 selectAllLabel.textContent = '<%:Select All%>';
@@ -277,7 +681,6 @@
                 selectAllContainer.appendChild(selectAllLabel);
                 appList.appendChild(selectAllContainer);
 
-                // 创建应用项目行容器
                 const appItemsRow = document.createElement('div');
                 appItemsRow.className = 'app-items-row';
 
@@ -291,15 +694,13 @@
                     }
                 };
 
-                // 为全选复选框添加change事件
                 selectAllCheckbox.onchange = function(e) {
-                    e.stopPropagation(); // 阻止事件冒泡
+                    e.stopPropagation();
                     toggleSelectAll(category, selectAllCheckbox, appCount);
                 };
 
-                // 为全选标签添加点击事件
                 selectAllLabel.onclick = function(e) {
-                    e.stopPropagation(); // 阻止事件冒泡
+                    e.stopPropagation(); 
                     selectAllCheckbox.checked = !selectAllCheckbox.checked;
                     toggleSelectAll(category, selectAllCheckbox, appCount);
                 };
@@ -352,6 +753,7 @@
                 appList.appendChild(appItemsRow);
                 container.appendChild(appList);
             });
+            updateTotalSelectedCount();
         }
 
         function toggleSelectAll(category, selectAllCheckbox, appCount) {
@@ -367,6 +769,7 @@
             });
             
             updateCategorySelection(category, selectAllCheckbox, appCount);
+            updateTotalSelectedCount();
         }
 
         function updateCategorySelection(category, selectAllCheckbox, appCount) {
@@ -384,6 +787,16 @@
             appCount.textContent = `<%:Selected%> ${selectedCount} <%:items%>`;
             
             selectAllCheckbox.checked = selectedCount === category.app_list.length;
+            updateTotalSelectedCount();
+        }
+
+        function updateTotalSelectedCount() {
+            const checkboxes = document.querySelectorAll('input[name="app"]:checked');
+            const totalCount = checkboxes.length;
+            const totalCountElement = document.getElementById('totalSelectedCount');
+            if (totalCountElement) {
+                totalCountElement.textContent = totalCount;
+            }
         }
 
         function submitAppSelection() {
@@ -393,12 +806,11 @@
                 selectedApps.push(parseInt(checkbox.value));
             });
 
-            // 将数组转换为逗号分隔的字符串
             const selectedAppsStr = selectedApps.join(',');
 
             console.log("app_filter_data is " + selectedAppsStr);
             new XHR().post('<%=url('admin/network/set_app_filter')%>', {
-                app_list: selectedAppsStr  // 提交字符串而不是数组
+                app_list: selectedAppsStr 
             },
             function (x, data) {
                 console.log("set ok");
@@ -413,15 +825,19 @@
             );
         }
 
-        function submitAppFilterBase() {
+        function submitAppFilterBase(callback) {
             const filterSwitch = document.getElementById('filterSwitch').checked;
             const workMode = parseInt(document.getElementById('workMode').value, 10);
             const recordSwitch = document.getElementById('recordSwitch').checked;
+            const quicProtocol = parseInt(document.getElementById('quicProtocol').value, 10);
+            const appFilterMode = parseInt(document.querySelector('input[name="appFilterMode"]:checked').value, 10);
             const data = {
                 data: {
                     enable: filterSwitch ? 1 : 0, 
                     work_mode: workMode,
-                    record_enable: recordSwitch ? 1 : 0
+                    record_enable: recordSwitch ? 1 : 0,
+                    disable_quic: quicProtocol,
+                    app_filter_mode: appFilterMode
                 }
             };
             console.log("submitAppFilterBase");
@@ -429,23 +845,41 @@
                 
                 enable: filterSwitch ? 1 : 0, 
                 work_mode: workMode,
-                record_enable: recordSwitch ? 1 : 0
+                record_enable: recordSwitch ? 1 : 0,
+                disable_quic: quicProtocol,
+                app_filter_mode: appFilterMode
                 
             },
 
 
             function (x, data) {
                 console.log("Base filter settings updated");
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
             }
             );
-
-
 
         }
  
 		function submitHandle() {
-			submitAppFilterBase();
-			submitAppSelection();
+			const appFilterMode = parseInt(document.querySelector('input[name="appFilterMode"]:checked').value, 10);
+			
+			if (appFilterMode == 0) {
+				// Specified apps mode: submit both base and app selection
+				submitAppFilterBase();
+				submitAppSelection();
+			} else {
+				// All apps mode: only submit base, then show success dialog
+				submitAppFilterBase(function() {
+					init_data();
+					const modal = document.getElementById('modal');
+					modal.style.display = 'flex'; 
+					setTimeout(() => {
+						modal.style.display = 'none'; 
+					}, 1000);
+				});
+			}
 		}
 
 		function openModal() {
@@ -455,6 +889,45 @@
 		function closeModal() {
 			document.getElementById('modal').style.display = 'none';
 		}
+
+        function clearActiveTime() {
+            if (!confirm('<%:Are you sure you want to clear active time of all users?%>')) {
+                return;
+            }
+            new XHR().post('<%=url('admin/network/cmd')%>', {
+                action: 'clear_active_time'
+            },
+            function (x, data) {
+                if (data && data.code === 0) {
+                    const modal = document.getElementById('modal');
+                    modal.style.display = 'flex'; 
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                    }, 1000);
+                    // Refresh status to update display
+                    setTimeout(() => {
+                        updateRunStatus();
+                    }, 500);
+                } else {
+                    alert(data ? (data.message || '<%:Failed to clear active time%>') : '<%:Failed to clear active time%>');
+                }
+            });
+        }
+
+        function switchAppFilterMode(mode) {
+            const allAppsWarning = document.getElementById('allAppsWarning');
+            const specificAppsSection = document.getElementById('specificAppsSection');
+            
+            if (mode == 1) {
+                // All Apps mode: hide app selection and QUIC
+                allAppsWarning.style.display = 'block';
+                specificAppsSection.style.display = 'none';
+            } else {
+                // Specified Apps mode: show app selection and QUIC
+                allAppsWarning.style.display = 'none';
+                specificAppsSection.style.display = 'block';
+            }
+        }
 
         function getAppFilterBaseData() {
 			console.log("getAppFilterBaseData");
@@ -471,8 +944,32 @@
                         document.getElementById('recordSwitch').checked = false;
                     }
                     document.getElementById('workMode').value = data.data.work_mode;
+                    document.getElementById('quicProtocol').value = data.data.disable_quic || 0;
+                    
+                    // Load app filter mode (0 = specified apps, 1 = all apps)
+                    const appFilterMode = data.data.app_filter_mode || 0;
+                    if (appFilterMode == 1) {
+                        document.getElementById('appFilterModeAll').checked = true;
+                    } else {
+                        document.getElementById('appFilterModeSpecific').checked = true;
+                    }
+                    switchAppFilterMode(appFilterMode);
+                    
+                    updateBypassModeHint();
                 }
             );
+        }
+        
+        function updateBypassModeHint() {
+            var workMode = parseInt(document.getElementById('workMode').value, 10);
+            var hintDiv = document.getElementById('bypassModeHint');
+            if (hintDiv) {
+                if (workMode === 1) {
+                    hintDiv.style.display = 'block';
+                } else {
+                    hintDiv.style.display = 'none';
+                }
+            }
         }
 
         function redirectToUserConfig() {
@@ -482,13 +979,305 @@
             window.location.href = '<%=url('admin/services/appfilter/time')%>';
         }
 
+        function toggleModule(header) {
+            const content = header.nextElementSibling;
+            header.classList.toggle('expanded');
+            content.classList.toggle('expanded');
+        }
+
+        let timeMode = 0; // Store current time mode
+        let whitelistUsers = []; // Store whitelist users
+
+        function showTimeDialog() {
+            const dialog = document.getElementById('timeDialog');
+            const content = document.getElementById('timeDialogContent');
+            
+            // Get time configuration
+            new XHR().get('<%=url('admin/network/get_app_filter_time')%>', null,
+                function (x, data) {
+                    timeMode = data.data.mode || 0;
+                    content.innerHTML = '';
+                    
+                    if (timeMode == 0) {
+                        // Fixed time mode - show time list
+                        if (data.data.time_list && data.data.time_list.length > 0) {
+                            data.data.time_list.forEach((period, index) => {
+                                const periodDiv = document.createElement('div');
+                                periodDiv.className = 'time-period-item';
+                                
+                                const weekdays = period.weekday_list || [];
+                                const weekdayNames = ['<%:Sun%>', '<%:Mon%>', '<%:Tue%>', '<%:Wed%>', '<%:Thur%>', '<%:Fri%>', '<%:Sat%>'];
+                                const weekdayStr = weekdays.map(wd => weekdayNames[wd]).join(', ') || '<%:All Days%>';
+                                
+                                periodDiv.innerHTML = `
+                                    <strong><%:Period%> ${index + 1}</strong>
+                                    <div><strong><%:Weekdays%>:</strong> ${weekdayStr}</div>
+                                    <div><strong><%:Time Range%>:</strong> ${period.start} - ${period.end}</div>
+                                `;
+                                content.appendChild(periodDiv);
+                            });
+                        } else {
+                            const noData = document.createElement('div');
+                            noData.style.cssText = 'text-align: center; padding: 30px; opacity: 0.5; font-size: 14px;';
+                            noData.textContent = '<%:No time periods configured%>';
+                            content.appendChild(noData);
+                        }
+                    } else if (timeMode == 1) {
+                        // Dynamic time mode
+                        const dynamicDiv = document.createElement('div');
+                        dynamicDiv.className = 'dynamic-time-item';
+                        
+                        const weekdays = data.data.weekday_list || [];
+                        const weekdayNames = ['<%:Sun%>', '<%:Mon%>', '<%:Tue%>', '<%:Wed%>', '<%:Thur%>', '<%:Fri%>', '<%:Sat%>'];
+                        const weekdayStr = weekdays.map(wd => weekdayNames[wd]).join(', ') || '<%:All Days%>';
+                        
+                        dynamicDiv.innerHTML = `
+                            <div><strong><%:Time Range%>:</strong> ${data.data.start_time || '00:00'} - ${data.data.end_time || '23:59'}</div>
+                            <div><strong><%:Weekdays%>:</strong> ${weekdayStr}</div>
+                            <div><strong><%:Deny Time%>:</strong> ${data.data.deny_time || 60} <%:minutes%></div>
+                            <div><strong><%:Allow Time%>:</strong> ${data.data.allow_time || 20} <%:minutes%></div>
+                        `;
+                        content.appendChild(dynamicDiv);
+                    } else if (timeMode == 2 || timeMode == 3) {
+                        // Daily time limit mode (mode 2 or 3) - show in table format
+                        if (data.data.daily_time_list && Array.isArray(data.data.daily_time_list) && data.data.daily_time_list.length === 7) {
+                            const weekdayNames = ['<%:Sunday%>', '<%:Monday%>', '<%:Tuesday%>', '<%:Wednesday%>', '<%:Thursday%>', '<%:Friday%>', '<%:Saturday%>'];
+                            const weekdayDisplayOrder = [1, 2, 3, 4, 5, 6, 0]; // Monday to Sunday for display
+                            
+                            const table = document.createElement('table');
+                            table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 10px;';
+                            table.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th style="border: 1px solid var(--border-color-low, #e5e7eb); padding: 8px; text-align: center; width: 25%;"><%:Weekday%></th>
+                                        <th style="border: 1px solid var(--border-color-low, #e5e7eb); padding: 8px; text-align: center; width: 15%;"><%:Enable%></th>
+                                        <th style="border: 1px solid var(--border-color-low, #e5e7eb); padding: 8px; text-align: center; width: 30%;"><%:Morning Time Limit (minutes)%></th>
+                                        <th style="border: 1px solid var(--border-color-low, #e5e7eb); padding: 8px; text-align: center; width: 30%;"><%:Afternoon Time Limit (minutes)%></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dailyTimeTableBody"></tbody>
+                            `;
+                            content.appendChild(table);
+                            
+                            const tbody = document.getElementById('dailyTimeTableBody');
+                            weekdayDisplayOrder.forEach((dayValue) => {
+                                const arrayIndex = dayValue; // Array index matches weekday value
+                                const dayData = data.data.daily_time_list[arrayIndex];
+                                
+                                const tr = document.createElement('tr');
+                                const amTime = (dayData && dayData.am_time !== undefined) ? dayData.am_time : 0;
+                                const pmTime = (dayData && dayData.pm_time !== undefined) ? dayData.pm_time : 0;
+                                const isEnabled = (dayData && dayData.enable == 1);
+                                
+                                tr.innerHTML = `
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${weekdayNames[dayValue]}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${isEnabled ? '<%:Yes%>' : '<%:No%>'}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${amTime}</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${pmTime}</td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+                        } else {
+                            const noData = document.createElement('div');
+                            noData.style.cssText = 'text-align: center; padding: 30px; opacity: 0.5; font-size: 14px;';
+                            noData.textContent = '<%:No daily time limits configured%>';
+                            content.appendChild(noData);
+                        }
+                    }
+                    
+                    dialog.style.display = 'flex';
+                }
+            );
+        }
+
+        function showUserDialog() {
+            const dialog = document.getElementById('userDialog');
+            const content = document.getElementById('userDialogContent');
+            
+            // First get whitelist users if in dynamic mode
+            new XHR().get('<%=url('admin/network/get_oaf_status')%>', null,
+                function (x, statusData) {
+                    const isDynamicMode = statusData.data.time_mode == 1;
+                    
+                    if (isDynamicMode) {
+                        // Get whitelist users
+                        new XHR().get('<%=url('admin/network/get_whitelist_user')%>', null,
+                            function (x, whitelistData) {
+                                whitelistUsers = [];
+                                if (whitelistData.data && whitelistData.data.user_list) {
+                                    whitelistUsers = whitelistData.data.user_list.map(u => u.mac || u);
+                                }
+                                loadUserList(dialog, content, isDynamicMode);
+                            }
+                        );
+                    } else {
+                        whitelistUsers = [];
+                        loadUserList(dialog, content, isDynamicMode);
+                    }
+                }
+            );
+        }
+
+        function loadUserList(dialog, content, isDynamicMode) {
+            content.innerHTML = '<div style="text-align: center; padding: 20px;"><%:Loading...%></div>';
+            
+            // First get user_mode to determine which users to show
+            new XHR().get('<%=url('admin/network/get_app_filter_user')%>', null,
+                function (x, userConfigData) {
+                    const userMode = userConfigData.data.mode || 0; // 0 = automatic, 1 = manual
+                    // Ensure manualUserList is an array
+                    let manualUserList = [];
+                    if (userConfigData.data && userConfigData.data.list) {
+                        if (Array.isArray(userConfigData.data.list)) {
+                            manualUserList = userConfigData.data.list;
+                        }
+                    }
+                    const manualUserMacs = manualUserList.map(u => u.mac || u);
+                    
+                    // Get all users with full information
+                    new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: 0, page_size: 0},
+                        function (x, data) {
+                            content.innerHTML = '';
+                            
+                            if (isDynamicMode) {
+                                const hint = document.createElement('div');
+                                hint.style.cssText = 'margin-bottom: 10px; padding: 10px; border-radius: 4px; opacity: 0.7; border-left: 3px solid #e8a317;';
+                                hint.textContent = '<%:Dynamic time mode: Whitelist users are excluded%>';
+                                content.appendChild(hint);
+                            }
+                            
+                            const container = document.createElement('div');
+                            container.className = 'user-list-container';
+                            
+                            const table = document.createElement('table');
+                            table.className = 'user-list-table';
+                            table.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th><%:Device Info%></th>
+                                        <th><%:IP Address%></th>
+                                        <th><%:Online Status%></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userListBody"></tbody>
+                            `;
+                            container.appendChild(table);
+                            content.appendChild(container);
+                            
+                            const tbody = document.getElementById('userListBody');
+                            let userList = data.data.list || [];
+                            
+                            // Filter users based on user_mode
+                            if (userMode == 0) {
+                                // Automatic mode: show all users except whitelist
+                                userList = userList.filter(user => user.is_whitelist !== 1);
+                            } else {
+                                // Manual mode: only show manually added users
+                                userList = userList.filter(user => manualUserMacs.includes(user.mac));
+                            }
+                            
+                            // Filter out whitelist users in dynamic mode (additional filter)
+                            if (isDynamicMode && whitelistUsers.length > 0) {
+                                userList = userList.filter(user => !whitelistUsers.includes(user.mac));
+                            }
+                            
+                            if (userList.length === 0) {
+                                container.style.display = 'none';
+                                const noData = document.createElement('div');
+                                noData.style.cssText = 'text-align: center; padding: 20px; opacity: 0.5;';
+                                noData.textContent = '<%:No users found%>';
+                                content.appendChild(noData);
+                            } else {
+                                userList.forEach(user => {
+                                    const tr = document.createElement('tr');
+                                    const nickname = user.nickname || "";
+                                    const hostname = user.hostname || "";
+                                    const displayName = nickname || hostname || "--";
+                                    
+                                    if (user.online != 1) {
+                                        tr.style.color = '#A9A9A9';
+                                    }
+                                    
+                                    tr.innerHTML = `
+                                        <td>
+                                            <div>${displayName}</div>
+                                            <div style="font-size: 12px; opacity: 0.5;">${user.mac}</div>
+                                        </td>
+                                        <td>${user.ip || '--'}</td>
+                                        <td>${user.online == 1 ? '<span style="color: green;"><%:Online%></span>' : '<span style="opacity: 0.5;"><%:Offline%></span>'}</td>
+                                    `;
+                                    tbody.appendChild(tr);
+                                });
+                            }
+                            
+                            if (dialog) {
+                                dialog.style.display = 'flex';
+                            }
+                        }
+                    );
+                }
+            );
+        }
+
+        function closeTimeDialog() {
+            document.getElementById('timeDialog').style.display = 'none';
+        }
+
+        function closeUserDialog() {
+            document.getElementById('userDialog').style.display = 'none';
+        }
+
+        // Close dialog when clicking outside
+        window.onclick = function(event) {
+            const timeDialog = document.getElementById('timeDialog');
+            const userDialog = document.getElementById('userDialog');
+            if (event.target == timeDialog) {
+                closeTimeDialog();
+            }
+            if (event.target == userDialog) {
+                closeUserDialog();
+            }
+        }
+
+        function formatTime(minutes) {
+            // 如果值为空或undefined，显示0min
+            if (minutes === undefined || minutes === null || minutes === '') {
+                return '0<%:min%>';
+            }
+            var mins = parseInt(minutes);
+            if (isNaN(mins) || mins < 0) {
+                return '0<%:min%>';
+            }
+            // 如果小于60分钟，直接显示分钟
+            if (mins < 60) {
+                return mins + '<%:min%>';
+            }
+            // 大于等于60分钟，转换为小时和分钟
+            var hours = Math.floor(mins / 60);
+            var remainingMins = mins % 60;
+            if (remainingMins === 0) {
+                return hours + '<%:h%>';
+            } else {
+                return hours + '<%:h%> ' + remainingMins + '<%:min%>';
+            }
+        }
    
+        function buildProgressBar(label, used, limit) {
+            if (limit <= 0) return `<div class="time-progress-row"><span class="time-progress-label">${label}</span><span class="time-progress-text" style="opacity:0.5;"><%:Not set%></span></div>`;
+            var pct = Math.min(Math.round((used / limit) * 100), 100);
+            var text = used >= limit ? `<span style="color:#d93025;"><%:Used up%></span> <span style="opacity:0.5;">(<%:Total%>: ${limit} <%:min%>)</span>` : `${used} / ${limit} <%:min%>`;
+            return `<div class="time-progress-row"><span class="time-progress-label">${label}</span><div class="time-progress-bar"><div class="time-progress-fill" style="width:${pct}%"></div></div><span class="time-progress-text">${text}</span></div>`;
+        }
+
         function updateRunStatus() {
             new XHR().get('<%=url('admin/network/get_oaf_status')%>', null,
                 function (x, data) {
                     const runStatusElement = document.getElementById('run_status');
                     const runDescElement = document.getElementById('run_desc');
                     const engineStatusContainer = document.querySelector('.app_filter_status:first-child');
+                    const mode2InfoDiv = document.getElementById('mode2TimeUsageInfo');
+                    const mode2ContentDiv = document.getElementById('mode2TimeUsageContent');
+                    const hnatWarningDiv = document.getElementById('hnatWarning');
 
                     if (data.data.engine_status === 1) {
                         if (data.data.config_enable == 0) {
@@ -499,7 +1288,7 @@
                                 runStatusElement.textContent = '<%:Running%>';
                                 runStatusElement.style.color = 'green'; 
                                 if (data.data.time_mode == 1 && data.data.filter == 1) {
-                                    runDescElement.textContent = `(<%:Will close in%> ${data.data.remain_time} <%:minutes%>)`;
+                                    runDescElement.textContent = `(<%:Currently in dynamic time mode,will close in%> ${data.data.remain_time} <%:minutes%>)`;
                                 }
                             } else {
                                 runStatusElement.textContent = '<%:Not Running%>';
@@ -508,8 +1297,10 @@
                                     if (data.data.match_time == 0) {
                                         runDescElement.textContent = `(<%:Current time is not within the time range%>)`;
                                     } else {
-                                        runDescElement.textContent = `(<%:Will start in%> ${data.data.remain_time} <%:minutes%>)`;
+                                        runDescElement.textContent = `(<%:Currently in dynamic time mode,will start in%> ${data.data.remain_time} <%:minutes%>)`;
                                     }
+                                } else if (data.data.time_mode == 2) {
+                                    // Mode 2: 不在运行状态后显示用量，下方有进度条展示
                                 } else {
                                     runDescElement.textContent = `(<%:Current time is not within the time range%>)`;
                                 }
@@ -520,6 +1311,46 @@
                         runStatusElement.textContent = '<%:Not Running%>';
                         runStatusElement.style.color = 'red'; 
                         runDescElement.textContent = `(<%:oaf driver not loaded, please download the oaf.ko driver file corresponding to the kernel version of this firmware for installation, and enable auto-loading. Current kernel version is%> ${data.data.kernel_version})`;
+                    }
+                    
+                    // 显示 Mode 2 的详细信息
+                    if (data.data.time_mode == 2 && mode2InfoDiv && mode2ContentDiv) {
+                        if (data.data.current_weekday !== undefined) {
+                            const weekdayNames = ['<%:Sunday%>', '<%:Monday%>', '<%:Tuesday%>', '<%:Wednesday%>', '<%:Thursday%>', '<%:Friday%>', '<%:Saturday%>'];
+                            const currentWeekday = data.data.current_weekday;
+                            const currentWeekdayName = weekdayNames[currentWeekday] || '';
+                            
+                            const amUsed = data.data.current_am_used_time || 0;
+                            const pmUsed = data.data.current_pm_used_time || 0;
+                            const amLimit = data.data.current_am_limit || 0;
+                            const pmLimit = data.data.current_pm_limit || 0;
+                            const dayEnabled = data.data.current_day_enabled || 0;
+                            const selectedUserCount = data.data.selected_user_count || 0;
+                            
+                            mode2InfoDiv.style.display = 'block';
+                            let html = `<div style="display:flex; align-items:center; justify-content:space-between;"><strong><%:Today is%>: ${currentWeekdayName}</strong><span style="opacity:0.6; font-size:12px;"><%:Active Users%>: ${selectedUserCount}</span></div>`;
+                            if (dayEnabled) {
+                                html += buildProgressBar('<%:AM%>', amUsed, amLimit);
+                                html += buildProgressBar('<%:PM%>', pmUsed, pmLimit);
+                            } else {
+                                html += `<div style="margin-top: 8px; opacity: 0.6;"><%:Time limit not enabled for today%></div>`;
+                            }
+                            mode2ContentDiv.innerHTML = html;
+                        } else {
+                            mode2InfoDiv.style.display = 'none';
+                        }
+                    } else if (mode2InfoDiv) {
+                        mode2InfoDiv.style.display = 'none';
+                    }
+                    
+                    // 检查 disable_hnat 配置，只有在过滤功能开启时才显示提示
+                    if (hnatWarningDiv && data.data.disable_hnat !== undefined) {
+                        // 只有在过滤功能开启时（enable === 1）才显示提示
+                        if (data.data.enable === 1 && data.data.disable_hnat == 0) {
+                            hnatWarningDiv.style.display = 'block';
+                        } else {
+                            hnatWarningDiv.style.display = 'none';
+                        }
                     }
                 }
             );
@@ -532,64 +1363,180 @@
         };
 //]]></script>
 
-<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
-        <p style="margin: 0;color: white;"><%:Settings saved successfully%></p>
+<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background-color: rgba(0, 0, 0, 0.65); padding: 14px 24px; border-radius: 6px; text-align: center; color: white; display: flex; justify-content: center; align-items: center;">
+        <p style="margin: 0; color: white; font-size: 14px;"><%:Settings saved successfully%></p>
     </div>
 </div>
 
 <div class="cbi-section cbi-tblsection">
     <div style="max-width: 1000px; margin-left: 5px;padding: 5px;">
 
-        <div class="app_filter_status">
-            <label><%:Running Status%>:</label>
-            <span id="run_status"><%:Running%></span><span id="run_desc"></span>
-        </div>
-        <div style="margin-top: 10px; display: flex; align-items: center;">
-            <label for="filterSwitch" style="margin-right: 5px;"><%:App Filter%></label>
-            <label class="switch">
-                <input type="checkbox" id="filterSwitch" name="filterSwitch" />
-                <span class="slider"></span>
-            </label>
-            <label for="recordSwitch" style="margin-left: 20px;margin-right: 5px;"><%:App Record%></label>
-            <label class="switch">
-                <input type="checkbox" id="recordSwitch" name="recordSwitch" />
-                <span class="slider"></span>
-            </label>
-        </div>
-
-        <div style="margin-top: 10px;">
-            <label for="workMode"><%:Work Mode%>:</label>
-            <select id="workMode" name="workMode">
-                <option value="0"><%:Gateway Mode%></option>
-                <option value="1"><%:Bypass Mode%></option>
-            </select>
-        </div>
- 
-
-        <div style="margin-top: 10px;">
-            <span><%:App Selection%>:</span>
-        </div>
-        
-        <div style="margin-top: 5px; margin-bottom: 10px;">
-            <span style="font-size: 12px; color: #999;"><%:If the App you want is not in the list, you can upgrade the feature library of the official website or customize the App%></span>
-        </div>
-        <div id="appContainer"></div>
-
-        <div style="display: flex; justify-content: flex-start; align-items: center;width: 600px;margin-top: 10px;">
-            <div style="width: 280px; display: inline-block;">
-                <label><%:Effective Time%>:</label> 
-                <button type="button" class="button-check" onclick="redirectToTimeConfig()"><%:View%></button>
+        <!-- Status Module -->
+        <div class="status-module">
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 14px; font-weight: 500;"><%:App Filter is a powerful parental control software%></span>
+                <span class="help-icon">
+                    <span class="help-question">?</span>
+                    <span class="help-tooltip">
+                        <%:OAF is now relatively stable. If the test fails, please disable ad filtering, proxy, acceleration, and other modules. If you are unsure which modules are conflicting, it is recommended to reset the device and then disable the acceleration module in the firewall for testing. If only some Apps are not working, you need to update the App feature library, as the filtering effect is related to the App feature library.%>
+                    </span>
+                </span>
             </div>
-
-            <div style="width: 280px; display: inline-block; margin-left: 10px;">
-                <label><%:Effective User%>:</label> 
-                <!-- <span style="color: green;">5个</span> -->
-                <button type="button" class="button-check" onclick="redirectToUserConfig()"><%:View%></button>
+            
+            <div style="display: flex; align-items: baseline; margin-bottom: 4px; font-size: 14px; line-height: 1.4;">
+                <label class="config-label" style="line-height: 1.4;"><%:Filter Status%>:</label>
+                <span id="run_status" style="font-weight: 600; margin-right: 6px; font-size: 14px; line-height: 1.4;"><%:Running%></span>
+                <span id="run_desc" style="opacity: 0.6; font-size: 13px; line-height: 1.4;"></span>
+            </div>
+            
+            <!-- HNAT 加速模块提示 -->
+            <div id="hnatWarning" style="display: none; margin-top: 12px; margin-bottom: 12px; padding: 12px 16px; border-radius: 6px; background-color: #fff3cd; border-left: 3px solid #ffc107;">
+                <span style="color: #856404; font-size: 13px; line-height: 1.6;"><%:Current hardware acceleration module is not disabled, which may affect filtering functionality. For better filtering results, please disable the acceleration module in Advanced Settings.%></span>
+            </div>
+            
+            <!-- Mode 2 当前上网时长信息显示 -->
+            <div id="mode2TimeUsageInfo" style="margin-top: 16px; border: 1px solid #1a73e8; border-radius: 5px; padding: 15px; margin-bottom: 15px; display: none;">
+                <div style="font-weight: 600; margin-bottom: 10px; font-size: 14px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; font-weight: bold; color: #1a73e8;">
+                        <span style="margin-right: 8px;">⏱</span> <%:Today Time Usage%>
+                    </div>
+                    <button type="button" class="clear-time-btn" onclick="clearActiveTime()"><%:Clear%></button>
+                </div>
+                <div id="mode2TimeUsageContent" style="font-size: 13px; line-height: 1.8;">
+                    <!-- 内容将通过JavaScript填充 -->
+                </div>
             </div>
         </div>
-        <div class="button-container">
+
+        <!-- Basic Settings Module -->
+        <div class="config-module">
+            <div class="module-header expanded" onclick="toggleModule(this)">
+                <span class="arrow"></span>
+                <span class="module-title"><%:Basic Settings%></span>
+            </div>
+            <div class="module-content expanded">
+                <div class="config-row">
+                    <div style="display: flex; align-items: center; margin-right: 24px;">
+                        <label for="filterSwitch" class="config-label" style="cursor: pointer;"><%:App Filter%></label>
+                        <label class="switch">
+                            <input type="checkbox" id="filterSwitch" name="filterSwitch" />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center;">
+                        <label for="recordSwitch" class="config-label" style="cursor: pointer;"><%:App Record%></label>
+                        <label class="switch">
+                            <input type="checkbox" id="recordSwitch" name="recordSwitch" />
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="config-row">
+                    <label for="workMode" class="config-label"><%:Work Mode%>:</label>
+                    <select id="workMode" name="workMode" onchange="updateBypassModeHint()" style="min-width: 160px; padding: 6px 10px; border-radius: 4px; border: 1px solid #dadce0;">
+                        <option value="0"><%:Gateway Mode%></option>
+                        <option value="1"><%:Bypass Mode%></option>
+                    </select>
+                </div>
+                
+                <div id="bypassModeHint" class="desc" style="display: none; margin-top: 0; margin-bottom: 20px;">
+                    <span><%:In bypass mode, down rate cannot be measured, because data is directly forwarded from the gateway to the terminal.%></span>
+                </div>
+
+                <div class="config-row" style="margin-bottom: 0;">
+                    <div style="display: flex; align-items: center; margin-right: 24px;">
+                        <label class="config-label"><%:Effective Time%>:</label>
+                        <button type="button" class="button-check" onclick="showTimeDialog()"><%:View%></button>
+                    </div>
+
+                    <div style="display: flex; align-items: center;">
+                        <label class="config-label"><%:Effective User%>:</label>
+                        <button type="button" class="button-check" onclick="showUserDialog()"><%:View%></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Rules Module -->
+        <div class="config-module">
+            <div class="module-header expanded" onclick="toggleModule(this)">
+                <span class="arrow"></span>
+                <span class="module-title"><%:Filter Rules%></span>
+            </div>
+            <div class="module-content expanded">
+                <div class="config-row">
+                    <label class="config-label"><%:Filter Mode%>:</label>
+                    <div class="filter-mode-group">
+                        <label class="filter-mode-option">
+                            <input type="radio" name="appFilterMode" value="0" id="appFilterModeSpecific" checked onchange="switchAppFilterMode(0)">
+                            <span><%:Specified Apps%></span>
+                        </label>
+                        <label class="filter-mode-option">
+                            <input type="radio" name="appFilterMode" value="1" id="appFilterModeAll" onchange="switchAppFilterMode(1)">
+                            <span><%:All Apps%></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="allAppsWarning" style="display: none; margin-top: 10px; margin-bottom: 20px; padding: 12px 16px; border-radius: 6px; border-left: 3px solid #ea4335;">
+                    <span style="color: #ea4335; font-size: 13px; font-weight: 500;"><%:In this mode, after the rule takes effect, all apps will be unable to connect to the network, similar to scheduled internet disconnection%></span>
+                </div>
+
+                <div id="specificAppsSection">
+                    <div class="config-row">
+                        <label for="quicProtocol" class="config-label"><%:Filter the QUIC protocol%>:</label>
+                        <select id="quicProtocol" name="quicProtocol" style="min-width: 120px; padding: 6px 10px; border-radius: 4px; border: 1px solid #dadce0;">
+                            <option value="0"><%:Disable%></option>
+                            <option value="1"><%:Enable%></option>
+                        </select>
+                    </div>
+
+                    <div class="desc" style="margin-top: 0; margin-bottom: 20px;">
+                        <span><%:Some Apps use encrypted QUIC protocol, which cannot be distinguished for filtering, Such as Youtube, Instagram, etc. For better filtering results, you can try disabling the QUIC protocol.%></span>
+                    </div>
+
+                    <div style="margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px;">
+                        <span style="font-size: 15px; font-weight: 600;"><%:App Selection%></span>
+                        <span style="font-size: 13px; opacity: 0.6; margin-left: 8px;">(<%:Selected %> <span id="totalSelectedCount" style="color: #1a73e8; font-weight: 600;">0</span> <%:items%>)</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <span style="font-size: 13px; opacity: 0.6; padding: 6px 10px; border-radius: 4px;"><%:If the App you want is not in the list, you can upgrade the feature library of the official website or customize the App%></span>
+                    </div>
+                    
+                    <div id="appContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="submit-button" onclick="location.reload()" style="background: transparent; color: #1a73e8; border: 1px solid var(--border-color-medium, #d1d5db);"><%:Refresh%></button>
             <button type="button" class="submit-button" onclick="submitHandle()"><%:Save%></button>
         </div>
+    </div>
+</div>
+
+<!-- Time View Dialog -->
+<div id="timeDialog" class="view-dialog">
+    <div class="view-dialog-content" style="width: 600px; max-height: 80%;">
+        <div class="view-dialog-header">
+            <div class="view-dialog-title"><%:Time Configuration%></div>
+            <span class="view-dialog-close" onclick="closeTimeDialog()">&times;</span>
+        </div>
+        <div class="view-dialog-body" id="timeDialogContent"></div>
+    </div>
+</div>
+
+<!-- User View Dialog -->
+<div id="userDialog" class="view-dialog">
+    <div class="view-dialog-content" style="width: 800px; max-height: 80%;">
+        <div class="view-dialog-header">
+            <div class="view-dialog-title"><%:Effective Users%></div>
+            <span class="view-dialog-close" onclick="closeUserDialog()">&times;</span>
+        </div>
+        <div class="view-dialog-body" id="userDialogContent"></div>
     </div>
 </div>
