@@ -1530,6 +1530,12 @@ void all_users_callback(void *arg, dev_node_t *dev)
         
         json_object_object_add(user_obj, "up_rate", json_object_new_int(dev->up_rate / 1024));
         json_object_object_add(user_obj, "down_rate", json_object_new_int(dev->down_rate / 1024));
+		u_int32_t up_flow = (u_int32_t)(dev->today_up_bytes / 1024);
+		u_int32_t down_flow = (u_int32_t)(dev->today_down_bytes / 1024);
+        json_object_object_add(user_obj, "up_rate", json_object_new_int(dev->up_rate / 1024));
+        json_object_object_add(user_obj, "down_rate", json_object_new_int(dev->down_rate / 1024));
+        json_object_object_add(user_obj, "today_up_flow", json_object_new_int(up_flow));
+        json_object_object_add(user_obj, "today_down_flow", json_object_new_int(down_flow));
     }
     json_object_array_add(users_array, user_obj);
 }

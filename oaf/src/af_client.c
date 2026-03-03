@@ -351,7 +351,7 @@ void af_update_client_status(af_client_info_t *node)
 	node->last_flow.down_bytes = node->flow.down_bytes;
 	node->last_flow.up_pkts  = node->flow.up_pkts;
 	node->last_flow.down_pkts = node->flow.down_pkts;
-	if (node->rate.pkt_down_rate > 10){
+	if (node->rate.pkt_down_rate > 10 || node->rate.pkt_up_rate > 5){
 		node->active_time++;
 		node->inactive_time = 0;
 		node->active = 1;
