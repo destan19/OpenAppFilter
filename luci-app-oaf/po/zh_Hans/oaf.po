@@ -389,6 +389,15 @@ msgstr "详情"
 msgid "Please enter a valid remark"
 msgstr "请输入合法的备注"
 
+msgid "Table View"
+msgstr "列表视图"
+
+msgid "Card View"
+msgstr "卡片视图"
+
+msgid "Today Flow"
+msgstr "今日流量"
+
 msgid "Device Info"
 msgstr "设备信息"
 
