@@ -38,9 +38,16 @@ Alternatively, you can recompile the entire firmware image; this will integrate 
 make V=s
 ```
 
+## Discussion Group
+
+[https://t.me/openappfilter](https://t.me/openappfilter) (Telegram)
+
+If you encounter some issues during installation or usage, you can join the group for discussion(The group was created only recently).
+
 ## License
-- This software is free for personal use; however, if you intend to integrate it into a commercial product, please contact the author to obtain a license.
+- Individuals can use this software completely free of charge, and are also permitted to develop upon and redistribute it.
 - If you undertake derivative development based on OAF, you must adhere to the GPL 2.0 license and retain references to the OAF repository or website information.
+- If a company wishes to use this software, please contact the author for authorization.
 
 
 
