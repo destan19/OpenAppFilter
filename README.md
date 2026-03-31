@@ -1,74 +1,47 @@
+## Introduction
+OAF is a parental control software based on OpenWrt. It supports popular applications across gaming, video streaming, instant messaging, such as TikTok, YouTube, Facebook. Currently, it supports hundreds of different applications.   
+For a detailed introduction, please visit [www.openappfilter.com](http://www.openappfilter.com).
 
-## 应用过滤(OAF)
-应用过滤是一款OpenWrt防沉迷插件，支持热门的游戏、视频、聊天等APP，比如抖音、斗鱼、王者荣耀等，目前支持了几百款APP，可访问[www.openappfilter.com](http://www.openappfilter.com)查看详细的介绍  
+## Features
+- DPI-based protocol identification: Supports Layer 7 protocol parsing and HTTPS domain resolution, and operates independently of DNS.
+- Industry-standard architecture:  Flow-based identification for high efficiency, with extremely low hardware requirements.
+- Supports custom protocol signatures: Offers a high degree of flexibility and customization.
+- Supports installation as a plugin on OpenWrt systems: Compatible with all OpenWrt-enabled devices.You can download the plugin package corresponding to your architecture from the releases page.
 
-## 如何编译  
-1. 准备一套OpenWrt源码并已经完成固件编译  
-OpenWrt源码编译可自行查找教程，不在这里讲解  
-2. 下载应用过滤源码  
-进入OpenWrt源码根目录执行以下命令下载源码  
+## How to Compile
+1. Prepare a set of OpenWrt source code that has already been successfully compiled into firmware.
+(Instructions for compiling OpenWrt source code can be found via independent tutorials and will not be covered here.)
+2. Clone the OAF source code.
+Navigate to the root directory of your OpenWrt source code and execute the following command:
 ```
-git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter    
+git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 ```
-3. 开启应用过滤编译选项  
-应用过滤包括三个源码包，分别对应页面、服务和内核模块  
-编译前需要开启者三个包的编译选项，可以通过make  menuconfig图形界面选择luci-app-oaf，  
-也可以按照以下命令生成(在源码根目录执行):  
+3. Enable the OAF compilation options.
+Application Filtering consists of three distinct source packages, corresponding to the LuCI App, the service daemon, and the kernel module.
+Before compiling, you must enable the build options for these three packages. You can do this by selecting `luci-app-oaf` via the `make menuconfig` graphical interface.
+Alternatively, you can enable them by executing the following commands (run from the source code root directory):
 ```
-echo "CONFIG_PACKAGE_luci-app-oaf=y" >>.config  
-make defconfig  
+echo "CONFIG_PACKAGE_luci-app-oaf=y" >>.config
+make defconfig
 ```
-这样就会自动开启三个模块的编译选项  
+This will automatically enable the compilation options for all three modules.
 
-4. 开始编译插件  
-如果之前的openwrt源码已经编译成功只需要编译单个插件即可  
+4. Begin compiling OAF.
+If you have previously successfully compiled your OpenWrt source code, you can choose to compile only the individual packages:
 ```
-     make package/luci-app-oaf/compile V=s  
-     make package/open-app-filter/compile V=s
-     make package/oaf/compile V=s
+make package/luci-app-oaf/compile V=s
+make package/open-app-filter/compile V=s
+make package/oaf/compile V=s
 ```
-也可以重新编译整个固件，这样插件会集成到固件中
+Alternatively, you can recompile the entire firmware image; this will integrate the plug-in directly into the firmware build:
 ```
 make V=s
 ```
 
+## License
+- This software is free for personal use; however, if you intend to integrate it into a commercial product, please contact the author to obtain a license.
+- If you undertake derivative development based on OAF, you must adhere to the GPL 2.0 license and retain references to the OAF repository or website information.
 
-## OAF(Open App Filter)  
-OAF is a parental control plug-in based on OpenWrt, which supports app filtering for games, videos, chats, downloads, such as Tiktok, Youtube, Telegram,etc.,and support self-defined app rules, you can lean more and download firmware by visiting [www.openappfilter.com](http://www.openappfilter.com) .
-
-
-### Preparation
-- Prepare a router that supports openwrt  
-There are already many routers that support the openwrt system, you can choose a simple one for installation,[See which devices support](https://openwrt.org).  
-- Install the openwrt system on your router  
-The openwrt install tutorial can be found through the [forum](https://forum.openwrt.org).  
-### How to compile OAF  
-1. Prepare OpenWrt source or SDK and compile successfully   
-#### general steps  
-```
-   git clone https://github.com/openwrt/openwrt
-   cd openwrt
-   ./scripts/feeds update -a
-   ./scripts/feeds install -a
-   make defconfig
-   make V=s
-```   
-2. Download OAF source code  
-git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter    
-3. Open the compile configuration   
-```
-     echo "CONFIG_PACKAGE_luci-app-oaf=y" >>.config  
-     make defconfig  
-```
-4. Begin compile  
-- Compile OAF separately  
-```
-     make package/luci-app-oaf/compile V=s  
-```
-- Compile the entire firmware  
-```
-     make V=s  
-```
 
 
 
