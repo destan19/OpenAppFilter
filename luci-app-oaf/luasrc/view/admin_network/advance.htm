@@ -130,7 +130,7 @@
 		
 
         function validateLanIfname(lanIfname) {
-            const regex = /^[a-zA-Z0-9-]{2,8}$/;
+            const regex = /^[a-zA-Z0-9.-]{2,8}$/;
             return regex.test(lanIfname);
         }
 
@@ -140,7 +140,7 @@
             const disableHnatSwitch = document.getElementById('disableHnatSwitch').checked;
 
             if (!validateLanIfname(lanIfname)) {
-                alert('<%:Invalid LAN interface name. Please ensure it is no more than 8 characters long and contains only letters, numbers, and -.%>');
+                alert('<%:Invalid LAN interface name. Please ensure it is no more than 8 characters long and contains only letters, numbers, dot, and -.%>');
                 return;
             }
 
