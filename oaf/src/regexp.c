@@ -18,6 +18,8 @@ typedef struct RE{
 int match_longest = 0;
 char *match_first = NULL;
 
+int regexp_match(char *reg, char *text);
+
 
 static void * getmem(size_t size)
 {
@@ -221,10 +223,9 @@ static int matchques(RE *cur, RE *regexp, char *text)
 }
 
 static int (*matchfun[TYPENUM][2])(RE *, RE *, char *) = {
-	0, 0, 0, 0, 0, 0, 0, 0,
-	matchstar, matchstar_l,
-	matchplus, matchplus_l,
-	matchques, matchques,
+	[STAR] = { matchstar, matchstar_l },
+	[PLUS] = { matchplus, matchplus_l },
+	[QUES] = { matchques, matchques },
 };
 
 static int matchhere(RE *regexp, char *text)
@@ -261,7 +262,7 @@ int regexp_match(char *reg, char *text)
 	}
 
 	do{
-		if(ret = matchhere(regexp, text))
+		if ((ret = matchhere(regexp, text)))
 		{
 			goto out;
 		}
@@ -273,7 +274,7 @@ out:
 }
 
 
-void TEST_reg_func(char *reg, char * str, int ret)
+static __maybe_unused void TEST_reg_func(char *reg, char * str, int ret)
 {
 	
 	if (ret != regexp_match(reg, str)) {
@@ -293,7 +294,7 @@ void TEST_reg_func(char *reg, char * str, int ret)
 	}
 }
 
-void TEST_regexp(void)
+static __maybe_unused void TEST_regexp(void)
 {
 	TEST_reg_func(".*baidu.com$", "www.baidu.com", 1);
 	TEST_reg_func("^sina.com", "www.sina.com.cn", 0);

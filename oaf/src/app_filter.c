@@ -80,8 +80,8 @@ int hash_mac(unsigned char *mac)
 	return ((mac[0] ^ mac[1]) + (mac[2] ^ mac[3]) + (mac[4] ^ mac[5])) % MAX_AF_MAC_HASH_SIZE;
 }
 
-int __add_app_feature(char *feature, int appid, char *name, int proto, int src_port,
-					  port_info_t dport_info, char *host_url, char *request_url, char *dict, char *search_str, int ignore)
+static int __add_app_feature(char *feature, int appid, char *name, int proto, int src_port,
+							 port_info_t dport_info, char *host_url, char *request_url, char *dict, char *search_str, int ignore)
 {
 	af_feature_node_t *node = NULL;
 	char *p = dict;
@@ -149,7 +149,7 @@ int __add_app_feature(char *feature, int appid, char *name, int proto, int src_p
 	}
 	return 0;
 }
-int validate_range_value(char *range_str)
+static int validate_range_value(char *range_str)
 {
 	if (!range_str)
 		return 0;
@@ -170,7 +170,7 @@ int validate_range_value(char *range_str)
 	return 1;
 }
 
-int parse_range_value(char *range_str, range_value_t *range)
+static int parse_range_value(char *range_str, range_value_t *range)
 {
 	char pure_range[128] = {0};
 	if (!validate_range_value(range_str))
@@ -207,7 +207,7 @@ int parse_range_value(char *range_str, range_value_t *range)
 	return 0;
 }
 
-int parse_port_info(char *port_str, port_info_t *info)
+static int parse_port_info(char *port_str, port_info_t *info)
 {
 	char *p = port_str;
 	char *begin = port_str;
@@ -239,7 +239,7 @@ int parse_port_info(char *port_str, port_info_t *info)
 	return 0;
 }
 
-int af_match_port(port_info_t *info, int port)
+static int af_match_port(port_info_t *info, int port)
 {
 	int i;
 	int with_not = 0;
@@ -276,7 +276,7 @@ int af_match_port(port_info_t *info, int port)
 		return 0;
 }
 //[tcp;;443;baidu.com;;]
-int add_app_feature(int appid, char *name, char *feature)
+static int add_app_feature(int appid, char *name, char *feature)
 {
 	char proto_str[16] = {0};
 	char src_port_str[16] = {0};
@@ -287,7 +287,6 @@ int add_app_feature(int appid, char *name, char *feature)
 	char dict[128] = {0};
 	int proto = IPPROTO_TCP;
 	int param_num = 0;
-	int dst_port = 0;
 	int src_port = 0;
 	char tmp_buf[128] = {0};
 	int ignore = 0;
@@ -373,7 +372,7 @@ int add_app_feature(int appid, char *name, char *feature)
 	return 0;
 }
 
-void af_init_feature(char *feature_str)
+static void af_init_feature(char *feature_str)
 {
 	int app_id;
 	char app_name[128] = {0};
@@ -420,7 +419,7 @@ void af_init_feature(char *feature_str)
 		if (*p == ',')
 		{
 			if (p - begin > MAX_FEATURE_STR_LEN){
-				printk("error, feature len error %d\n", p - len);
+				printk("error, feature len error %d\n", (int)(p - begin));
 				break;
 			}
 			memcpy((char *)feature, begin, p - begin);
@@ -433,7 +432,7 @@ void af_init_feature(char *feature_str)
 	{
 		
 		if (p - begin > MAX_FEATURE_STR_LEN){
-			printk("error, feature len error %d\n", p - len);
+			printk("error, feature len error %d\n", (int)(p - begin));
 		}
 		else{
 			memcpy((char *)feature, begin, p - begin);
@@ -447,7 +446,7 @@ void af_init_feature(char *feature_str)
 		kfree(feature_buf);
 }
 
-void load_feature_buf_from_file(char **config_buf)
+static void load_feature_buf_from_file(char **config_buf)
 {
 	struct inode *inode = NULL;
 	struct file *fp = NULL;
@@ -494,7 +493,7 @@ void load_feature_buf_from_file(char **config_buf)
 	filp_close(fp, NULL);
 }
 
-int load_feature_config(void)
+static __maybe_unused int load_feature_config(void)
 {
 	char *feature_buf = NULL;
 	char *p;
@@ -553,7 +552,7 @@ static void af_clean_feature_list(void)
 	feature_list_write_unlock();
 }
 
-void af_add_feature_msg_handle(char *data, int len)
+static void af_add_feature_msg_handle(char *data, int len)
 {
 	char feature[MAX_FEATURE_LINE_LEN] = {0};
 	if (len <= 0 || len >= MAX_FEATURE_LINE_LEN){
@@ -603,13 +602,12 @@ static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned 
 	return msg_buf;
 }
 
-int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
+static int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
 	unsigned char *ipp;
 	int ipp_len;
 	struct tcphdr *tcph = NULL;
 	struct udphdr *udph = NULL;
-	struct nf_conn *ct = NULL;
 	struct iphdr *iph = NULL;
 	struct ipv6hdr *ip6h = NULL;
 	if (!skb)
@@ -660,7 +658,7 @@ int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 	return -1;
 }
 
-int check_domain(char *h, int len)
+static int check_domain(char *h, int len)
 {
 	int i;
 	for (i = 0; i < len; i++)
@@ -676,7 +674,7 @@ int check_domain(char *h, int len)
 	return 1;
 }
 
-int dpi_https_proto(flow_info_t *flow)
+static int dpi_https_proto(flow_info_t *flow)
 {
 	int i;
 	short url_len = 0;
@@ -732,7 +730,7 @@ int dpi_https_proto(flow_info_t *flow)
 	return -1;
 }
 
-void dpi_http_proto(flow_info_t *flow)
+static void dpi_http_proto(flow_info_t *flow)
 {
 	int i = 0;
 	int start = 0;
@@ -868,7 +866,7 @@ static void dump_flow_info(flow_info_t *flow)
 }
 
 
-char *k_memstr(char *data, char *str, int size)
+static char *k_memstr(char *data, char *str, int size)
 {
 	char *p;
 	char len = strlen(str);
@@ -880,7 +878,7 @@ char *k_memstr(char *data, char *str, int size)
 	return NULL;
 }
 
-int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
+static int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
 {
 	int i;
 	unsigned int pos = 0;
@@ -927,7 +925,7 @@ int af_match_by_pos(flow_info_t *flow, af_feature_node_t *node)
 	return AF_FALSE;
 }
 
-int af_match_by_url(flow_info_t *flow, af_feature_node_t *node)
+static int af_match_by_url(flow_info_t *flow, af_feature_node_t *node)
 {
 	char reg_url_buf[MAX_URL_MATCH_LEN] = {0};
 
@@ -973,7 +971,7 @@ int af_match_by_url(flow_info_t *flow, af_feature_node_t *node)
 	return AF_FALSE;
 }
 
-int af_match_one(flow_info_t *flow, af_feature_node_t *node)
+static int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 {
 	int ret = AF_FALSE;
 	if (!flow || !node)
@@ -1017,7 +1015,7 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 }
 
 
-int af_match_quic(flow_info_t *flow)
+static int af_match_quic(flow_info_t *flow)
 {
 	unsigned char *data;
 	unsigned char first_byte;
@@ -1055,7 +1053,7 @@ int af_match_quic(flow_info_t *flow)
 }
 
 
-int match_feature(flow_info_t *flow)
+static int match_feature(flow_info_t *flow)
 {
 	af_feature_node_t *n, *node;
 
@@ -1080,7 +1078,7 @@ int match_feature(flow_info_t *flow)
 }
 
 
-int match_app_filter_user(af_client_info_t *client){
+static int match_app_filter_user(af_client_info_t *client){
 	if (!g_user_mode){ // auto mode
 		if (af_whitelist_mac_find(client->mac)){
 			AF_LMT_DEBUG("match whitelist mac = " MAC_FMT "\n", MAC_ARRAY(client->mac));
@@ -1095,7 +1093,7 @@ int match_app_filter_user(af_client_info_t *client){
 }
 
 
-int match_app_filter_rule(int appid, af_client_info_t *client)
+static int match_app_filter_rule(int appid, af_client_info_t *client)
 {
 	if (!match_app_filter_user(client))
 		return AF_FALSE;
@@ -1136,7 +1134,7 @@ static int af_get_visit_index(af_client_info_t *node, int app_id)
 	return 0;
 }
 
-int af_update_client_app_info(af_client_info_t *node, int app_id, int drop)
+static int af_update_client_app_info(af_client_info_t *node, int app_id, int drop)
 {
 	int index = -1;
 	if (!node)
@@ -1159,7 +1157,7 @@ int af_update_client_app_info(af_client_info_t *node, int app_id, int drop)
 }
 
 int af_send_msg_to_user(char *pbuf, uint16_t len);
-int af_match_bcast_packet(flow_info_t *f)
+static __maybe_unused int af_match_bcast_packet(flow_info_t *f)
 {
 	if (!f)
 		return 0;
@@ -1168,7 +1166,7 @@ int af_match_bcast_packet(flow_info_t *f)
 	return 0;
 }
 
-int af_match_local_packet(flow_info_t *f)
+static int af_match_local_packet(flow_info_t *f)
 {
 	if (!f)
 		return 0;
@@ -1179,7 +1177,7 @@ int af_match_local_packet(flow_info_t *f)
 	return 0;
 }
 
-int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
+static int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
 {
 	char *host = NULL;
 	unsigned int len = 0;
@@ -1204,7 +1202,7 @@ int update_url_visiting_info(af_client_info_t *client, flow_info_t *flow)
 }
 
 
-int dpi_main(struct sk_buff *skb, flow_info_t *flow)
+static int dpi_main(struct sk_buff *skb, flow_info_t *flow)
 {
 	dpi_http_proto(flow);
 	dpi_https_proto(flow);
@@ -1213,7 +1211,7 @@ int dpi_main(struct sk_buff *skb, flow_info_t *flow)
 	return 0;
 }
 
-void af_get_smac(struct sk_buff *skb, u_int8_t *smac)
+static void af_get_smac(struct sk_buff *skb, u_int8_t *smac)
 {
 	struct ethhdr *ethhdr = NULL;
 	ethhdr = eth_hdr(skb);
@@ -1222,16 +1220,16 @@ void af_get_smac(struct sk_buff *skb, u_int8_t *smac)
 	else
 		memcpy(smac, &skb->cb[40], ETH_ALEN);
 }
-int is_ipv4_broadcast(uint32_t ip)
+static int is_ipv4_broadcast(uint32_t ip)
 {
 	return (ip & 0x00FFFFFF) == 0x00FFFFFF;
 }
 
-int is_ipv4_multicast(uint32_t ip)
+static int is_ipv4_multicast(uint32_t ip)
 {
 	return (ip & 0xF0000000) == 0xE0000000;
 }
-int af_check_bcast_ip(flow_info_t *f)
+static int af_check_bcast_ip(flow_info_t *f)
 {
 
 	if (0 == f->src || 0 == f->dst)
@@ -1252,9 +1250,8 @@ int af_check_bcast_ip(flow_info_t *f)
 	action: 0: accept, 1: drop
 	return: 0: no change, 1: change
 */
-u_int32_t check_app_action_changed(int action, u_int32_t app_id, af_client_info_t *client)
+static u_int32_t check_app_action_changed(int action, u_int32_t app_id, af_client_info_t *client)
 {
-	u_int8_t drop = 0;
 	int changed = 0;
 	u_int32_t max_jiffies = 30 * HZ;
 	u_int32_t interval_jiffies = jiffies - g_update_jiffies;
@@ -1273,7 +1270,7 @@ u_int32_t check_app_action_changed(int action, u_int32_t app_id, af_client_info_
 	return changed;
 }
 
-u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
+static u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *dev)
 {
 	flow_info_t flow;
 	af_conn_t *conn;
@@ -1446,18 +1443,16 @@ EXIT:
 }
 
 
-u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
+static u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 {
 	unsigned long long total_packets = 0;
 	flow_info_t flow;
-	u_int8_t smac[ETH_ALEN];
 	enum ip_conntrack_info ctinfo;
 	struct nf_conn *ct = NULL;
 	struct nf_conn_acct *acct;
 	af_client_info_t *client = NULL;
 	u_int32_t ret = NF_ACCEPT;
 	u_int32_t app_id = 0;
-	u_int8_t drop = 0;
 	u_int8_t malloc_data = 0;
 
 	if (!strstr(dev->name, g_lan_ifname))
@@ -1776,7 +1771,7 @@ static void oaf_timer_func(unsigned long ptr)
 	mod_timer(&oaf_timer, jiffies + OAF_TIMER_INTERVAL * HZ);
 }
 
-void init_oaf_timer(void)
+static void init_oaf_timer(void)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
 	timer_setup(&oaf_timer, oaf_timer_func, 0);
@@ -1787,7 +1782,7 @@ void init_oaf_timer(void)
 	AF_INFO("init oaf timer...ok");
 }
 
-void fini_oaf_timer(void)
+static void fini_oaf_timer(void)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 16, 0)
 	del_timer_sync(&oaf_timer);
@@ -1891,7 +1886,7 @@ static void oaf_msg_rcv(struct sk_buff *skb)
 	}
 }
 
-int netlink_oaf_init(void)
+static int netlink_oaf_init(void)
 {
 	struct netlink_kernel_cfg nl_cfg = {0};
 	nl_cfg.input = oaf_msg_rcv;
@@ -1958,4 +1953,3 @@ static void app_filter_fini(void)
 
 module_init(app_filter_init);
 module_exit(app_filter_fini);
-

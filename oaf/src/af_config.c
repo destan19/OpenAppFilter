@@ -75,7 +75,7 @@ clean
 	"op":3,
 }
 */
-int af_config_handle(char *config, unsigned int len)
+static int af_config_handle(char *config, unsigned int len)
 {
 	cJSON *config_obj = NULL;
 	cJSON *cmd_obj = NULL;

@@ -34,9 +34,6 @@ DEFINE_RWLOCK(af_client_lock);
 u32 total_client = 0;
 struct list_head af_client_list_table[MAX_AF_CLIENT_HASH_SIZE];
 
-int af_send_msg_to_user(char *pbuf, uint16_t len);
-extern char *ipv6_to_str(const struct in6_addr *addr, char *str);
-
 static void init_client_timer(af_client_info_t *client);
 static void stop_client_timer(af_client_info_t *client);
 
@@ -94,7 +91,7 @@ void af_client_list_reset_report_num(void)
 	AF_CLIENT_UNLOCK_W();
 }
 
-int get_mac_hash_code(unsigned char *mac)
+static int get_mac_hash_code(unsigned char *mac)
 {
 	if (!mac)
 		return 0;
@@ -222,7 +219,7 @@ void check_client_expire(void)
 }
 
 #define MAX_EXPIRED_VISIT_INFO_COUNT 10
-void flush_expired_visit_info(af_client_info_t *node)
+static void flush_expired_visit_info(af_client_info_t *node)
 {
 	int i;
 	int count = 0;
@@ -259,7 +256,7 @@ void flush_expired_visit_info(af_client_info_t *node)
 	}
 }
 
-int __af_visit_info_report(af_client_info_t *node)
+static int __af_visit_info_report(af_client_info_t *node)
 {
 	unsigned char mac_str[32] = {0};
 	unsigned char ip_str[32] = {0};
@@ -269,6 +266,8 @@ int __af_visit_info_report(af_client_info_t *node)
 	cJSON *visit_obj = NULL;
 	cJSON *visit_info_array = NULL;
 	cJSON *root_obj = NULL;
+
+	flush_expired_visit_info(node);
 
 	root_obj = cJSON_CreateObject();
 	if (!root_obj)
@@ -331,7 +330,7 @@ static inline int get_packet_dir(struct net_device *in)
 
 
 
-void af_update_client_status(af_client_info_t *node)
+static void af_update_client_status(af_client_info_t *node)
 {
 	if (node->last_flow.down_bytes > 0){
 		node->period_flow.down_bytes += (node->flow.down_bytes - node->last_flow.down_bytes);
@@ -471,8 +470,6 @@ static u_int32_t af_client_hook2(unsigned int hook,
 								 int (*okfn)(struct sk_buff *))
 {
 #endif
-	struct ethhdr *ethhdr = NULL;
-	unsigned char smac[ETH_ALEN];
 	af_client_info_t *nfc = NULL;
 	int pkt_dir = 0;
 	struct iphdr *iph = NULL;

@@ -264,7 +264,7 @@ static const struct proc_ops af_conn_fops = {
 
 #define AF_CONN_PROC_STR "af_conn"
 
-int af_conn_init_procfs(void)
+static int af_conn_init_procfs(void)
 {
     struct proc_dir_entry *pde;
     struct net *net = &init_net;
@@ -278,7 +278,7 @@ int af_conn_init_procfs(void)
     return 0;
 }
 
-void af_conn_remove_procfs(void)
+static void af_conn_remove_procfs(void)
 {
     struct net *net = &init_net;
     remove_proc_entry(AF_CONN_PROC_STR, net->proc_net);

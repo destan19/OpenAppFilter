@@ -6,6 +6,8 @@
 #include "app_filter.h"
 #include "af_utils.h"
 #include "af_log.h"
+#include "af_config.h"
+#include "af_rule_config.h"
 
 #define AF_MAX_APP_TYPE_NUM 32
 #define AF_MAX_APP_NUM 512
@@ -21,26 +23,8 @@ extern u_int32_t g_update_jiffies;
 
 char g_app_id_array[AF_MAX_APP_TYPE_NUM][AF_MAX_APP_NUM] = {0};
 
-void af_show_app_status(void)
-{
-	int i, j;
-	for (i = 0; i < AF_MAX_APP_TYPE_NUM; i++)
-	{
-		for (j = 0; j < AF_MAX_APP_NUM; j++)
-		{
-			af_rule_read_lock();
-			if (g_app_id_array[i][j] == AF_TRUE)
-			{
-				AF_DEBUG("%d, %d\n", i, j);
-			}
-			af_rule_read_unlock();
-		}
-	}
 
-	AF_DEBUG("\n\n\n");
-}
-
-int af_change_app_status(cJSON *data_obj, int status)
+static int af_change_app_status(cJSON *data_obj, int status)
 {
 	int i;
 	int id;

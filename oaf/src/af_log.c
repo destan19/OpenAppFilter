@@ -138,16 +138,16 @@ static struct ctl_table oaf_table[] = {
 };
 #define OAF_SYS_PROC_DIR "oaf"
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0))
 static struct ctl_table oaf_root_table[] = {
 	{
 		.procname	= OAF_SYS_PROC_DIR,
 		.mode		= 0555,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0))
 		.child		= oaf_table,
-#endif
 	},
 	{}
 };
+#endif
 static struct ctl_table_header *oaf_table_header;
 
 

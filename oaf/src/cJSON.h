@@ -80,6 +80,7 @@ extern cJSON *cJSON_CreateObject(void);
 extern void cJSON_Minify(char *json);
 // These utilities create an Array of count items.
 extern cJSON *cJSON_CreateIntArray(int *numbers,int count);
+extern cJSON *cJSON_CreateStringArray(const char **strings,int count);
 
 // Append item to the specified array/object.
 extern void   cJSON_AddItemToArray(cJSON *array, cJSON *item);

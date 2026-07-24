@@ -83,7 +83,7 @@ void dump_str(char *name, unsigned char *p, int len)
 	strncpy(buf, p, len);
 	printk("[%s]\n", buf);
 }
-int isprint_char(unsigned char c)
+static int isprint_char(unsigned char c)
 {
     if (c >= 0x20 && c <= 0x7e)
         return 1;
@@ -281,8 +281,10 @@ static int k_vsscanf(const char *buf, const char *fmt, va_list args)
 			break;
 		case 'i':
 			base = 0;
+			fallthrough;
 		case 'd':
 			is_sign = 1;
+			fallthrough;
 		case 'u':
 			break;
 		case '%':

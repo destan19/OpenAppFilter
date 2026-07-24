@@ -7,6 +7,7 @@
 #include "af_utils.h"
 #include "af_log.h"
 #include "cJSON.h"
+#include "af_config.h"
 #include "af_whitelist_config.h"
 #include "af_user_config.h"
 
@@ -89,7 +90,7 @@ af_mac_node_t *af_mac_add(unsigned char *mac)
 	return node;
 }
 
-int is_user_match_enable(void)
+static __maybe_unused int is_user_match_enable(void)
 {
 	return total_mac > 0;
 }
