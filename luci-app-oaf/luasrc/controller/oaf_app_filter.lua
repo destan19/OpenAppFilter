@@ -1,9 +1,9 @@
 module("luci.controller.oaf_app_filter", package.seeall)
 local utl = require "luci.util"
-local nixio = require "nixio"
 
 function index()
-	if not nixio.fs.access("/etc/config/appfilter") then
+	local fs = require "nixio.fs"
+	if not fs.access("/etc/config/appfilter") then
 		return
 	end
 	entry({"admin", "services", "oaf", "app_filter"}, alias("admin", "services", "oaf", "app_filter", "rules"), _("App Filter"), 30).dependent = true

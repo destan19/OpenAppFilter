@@ -1,6 +1,5 @@
 module("luci.controller.oaf_whitelist", package.seeall)
 
-local nixio = require "nixio"
 local util = require "luci.util"
 local jsonc = require "luci.jsonc"
 
@@ -30,9 +29,10 @@ local function get_record_whitelist_page(page, page_size)
 end
 
 function index()
-	local has_app_filter = nixio.fs.access("/etc/config/appfilter")
-	local has_access_control = nixio.fs.access("/etc/config/macfilter")
-	local has_record = nixio.fs.access("/etc/config/fwx_record")
+	local fs = require "nixio.fs"
+	local has_app_filter = fs.access("/etc/config/appfilter")
+	local has_access_control = fs.access("/etc/config/macfilter")
+	local has_record = fs.access("/etc/config/fwx_record")
 
 	if not has_app_filter and not has_access_control and not has_record then
 		return
