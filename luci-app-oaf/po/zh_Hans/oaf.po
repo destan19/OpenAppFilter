@@ -126,6 +126,17 @@ msgstr "刷新"
 
 msgid "Visiting"
 msgstr "正在访问"
+msgid "Band"
+msgstr "频段"
+
+msgid "Wireless Interface"
+msgstr "无线接口"
+
+msgid "Wireless Tx Rate"
+msgstr "无线发送速率"
+
+msgid "Wireless Rx Rate"
+msgstr "无线接收速率"
 
 msgid "Update the feature file successfully, please refresh the page"
 msgstr "更新特征库成功，请刷新页面!"
@@ -506,6 +517,9 @@ msgstr "暂无用户"
 msgid "Users in whitelist are not controlled"
 msgstr "白名单中的用户不受管控"
 
+msgid "Users in the whitelist are not subject to control. For terminals using random MAC addresses, you can use the whitelist mechanism together with filtering rules: select All Users in a filtering rule, and the rule will apply to all new users."
+msgstr "白名单中的用户不受管控。对于使用随机MAC地址的终端，可以通过白名单机制配合过滤规则实现控制：在过滤规则中选择全部用户，该规则会针对所有新用户生效。"
+
 msgid "Whitelist Users"
 msgstr "白名单用户"
 
@@ -817,3 +831,1131 @@ msgstr "禁用硬件加速（HNAT/ECM）和流加速，以确保应用过滤功�
 
 msgid "Current hardware acceleration module is not disabled, which may affect filtering functionality. For better filtering results, please disable the acceleration module in Advanced Settings."
 msgstr "当前未关闭加速模块，可能影响过滤功能，为了更好的过滤效果，请在高级设置中关闭加速模块。"
+
+msgid "Version"
+msgstr "版本"
+
+msgid "Service Version"
+msgstr "服务版本"
+
+msgid "OAF Status"
+msgstr "OAF状态"
+
+msgid "Engine Version"
+msgstr "引擎版本"
+
+msgid "Internet Audit"
+msgstr "上网审计"
+
+msgid "Feature Library"
+msgstr "特征库"
+
+msgid "Feature Library Type"
+msgstr "特征库类型"
+
+msgid "Feature Format"
+msgstr "特征码格式"
+
+msgid "App Count"
+msgstr "应用个数"
+
+msgid "App Record Count"
+msgstr "应用记录数"
+
+msgid "Enabled"
+msgstr "开启"
+
+msgid "Disabled"
+msgstr "关闭"
+
+msgid "Lite"
+msgstr "Lite"
+
+msgid "Plus"
+msgstr "Plus"
+
+msgid "Free"
+msgstr "免费版"
+
+msgid "Premium"
+msgstr "高级版"
+
+msgid "Last 30 Days Traffic"
+msgstr "近30天流量"
+
+msgid "Traffic Statistics"
+msgstr "流量统计"
+
+msgid "Today"
+msgstr "今日"
+
+msgid "Last 30 Days"
+msgstr "近30天"
+
+msgid "Active Terminals"
+msgstr "活跃终端"
+
+msgid "Active Users"
+msgstr "活跃用户"
+
+msgid "Online App"
+msgstr "在线应用"
+
+msgid "Offline App"
+msgstr "离线应用"
+
+msgid "Online User"
+msgstr "在线用户"
+
+msgid "Offline User"
+msgstr "离线用户"
+
+msgid "Access Control Rules"
+msgstr "上网控制规则"
+
+msgid "Access Time"
+msgstr "访问时间"
+
+msgid "Active Apps"
+msgstr "活跃APP"
+
+msgid "Active Terminals Top8"
+msgstr "活跃终端Top8"
+
+msgid "Active URL"
+msgstr "活跃URL"
+
+msgid "App Duration Statistics"
+msgstr "App时长统计"
+
+msgid "App ID"
+msgstr "APP ID"
+
+msgid "App Usage Distribution"
+msgstr "APP 使用时长分布"
+
+msgid "Boot Space"
+msgstr "Boot空间"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Connections"
+msgstr "连接数"
+
+msgid "Current App"
+msgstr "当前APP"
+
+msgid "Day"
+msgstr "天"
+
+msgid "Destination IP"
+msgstr "目的IP地址"
+
+msgid "Destination Port"
+msgstr "目的端口"
+
+msgid "Device"
+msgstr "终端"
+
+msgid "Device Model"
+msgstr "设备型号"
+
+msgid "Disk Space"
+msgstr "磁盘空间"
+
+msgid "DNS"
+msgstr "DNS"
+
+msgid "Downstream"
+msgstr "下行"
+
+msgid "Downstream Rate"
+msgstr "下行速率"
+
+msgid "Downstream Traffic"
+msgstr "下行流量"
+
+msgid "Duplex"
+msgstr "双工"
+
+msgid "Expanded"
+msgstr "扩容版"
+
+msgid "Firmware Version"
+msgstr "固件版本"
+
+msgid "Gateway"
+msgstr "网关"
+
+msgid "Got it"
+msgstr "知道了"
+
+msgid "Hour"
+msgstr "小时"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "Internet Duration"
+msgstr "上网时长"
+
+msgid "Internet Traffic"
+msgstr "上网流量"
+
+msgid "Kernel Version"
+msgstr "内核版本"
+
+msgid "Last Hour"
+msgstr "近1小时"
+
+msgid "Mask"
+msgstr "掩码"
+
+msgid "Matched Domain"
+msgstr "匹配域名"
+
+msgid "Memory"
+msgstr "内存"
+
+msgid "Minute"
+msgstr "分"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "Network"
+msgstr "网络"
+
+msgid "Net Time"
+msgstr "上网时长"
+
+msgid "Net Traffic"
+msgstr "上网流量"
+
+msgid "No Data"
+msgstr "暂无数据"
+
+msgid "Port Status"
+msgstr "网口状态"
+
+msgid "Protocol"
+msgstr "协议"
+
+msgid "Permission"
+msgstr "权限"
+
+msgid "Quick Guide"
+msgstr "设置向导"
+
+msgid "Real-time Traffic"
+msgstr "实时流量"
+
+msgid "Rx Bytes"
+msgstr "接收字节"
+
+msgid "Rx Error Packets"
+msgstr "接收错误包数"
+
+msgid "Rx Packets"
+msgstr "接收包数"
+
+msgid "Some modules may affect filtering and identification. If it does not work, please disable related functions such as software and hardware acceleration, ad filtering, mwan3, QoS, etc."
+msgstr "某些模块可能会影响过滤和识别。如果不生效，请关闭软件/硬件加速、广告过滤、mwan3、QoS 等相关功能。"
+
+msgid "Source IP"
+msgstr "源IP地址"
+
+msgid "Source Port"
+msgstr "源端口"
+
+msgid "Speed"
+msgstr "速率"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "System Info"
+msgstr "系统信息"
+
+msgid "Temp Space"
+msgstr "临时空间"
+
+msgid "Temperature"
+msgstr "温度"
+
+msgid "Tip"
+msgstr "提示"
+
+msgid "Tip: Click here to switch modes."
+msgstr "提示：点击这里可以切换模式。"
+
+msgid "Today Traffic"
+msgstr "今日流量"
+
+msgid "Tx Bytes"
+msgstr "发送字节"
+
+msgid "Tx Error Packets"
+msgstr "发送错误包数"
+
+msgid "URL"
+msgstr "URL"
+
+msgid "Tx Packets"
+msgstr "发送包数"
+
+msgid "Unknown"
+msgstr "未知"
+
+msgid "Upload"
+msgstr "上传"
+
+msgid "Upstream"
+msgstr "上行"
+
+msgid "Upstream Rate"
+msgstr "上行速率"
+
+msgid "Upstream Traffic"
+msgstr "上行流量"
+
+msgid "Uptime"
+msgstr "运行时间"
+
+msgid "User"
+msgstr "用户"
+
+msgid "User Traffic Top8"
+msgstr "用户流量Top8"
+
+msgid "Access Control"
+msgstr "上网控制"
+
+msgid "Added to blacklist"
+msgstr "已加入黑名单"
+
+msgid "All Users"
+msgstr "全部用户"
+
+msgid "App Restricted"
+msgstr "应用受限"
+
+msgid "Are you sure you want to join the blacklist? After joining, this terminal will be disconnected from the Internet."
+msgstr "确定要加入黑名单吗？加入后该终端将会断网。"
+
+msgid "Back"
+msgstr "返回"
+
+msgid "Back to User List"
+msgstr "返回终端列表"
+
+msgid "Blacklist"
+msgstr "黑名单"
+
+msgid "Block"
+msgstr "拉黑"
+
+msgid "Collecting data..."
+msgstr "正在采集数据..."
+
+msgid "Common App"
+msgstr "常用APP"
+
+msgid "Confirm"
+msgstr "确认"
+
+msgid "Current Status"
+msgstr "当前状态"
+
+msgid "Daily Duration"
+msgstr "每日时长"
+
+msgid "Daily Flow"
+msgstr "每日流量"
+
+msgid "Detail"
+msgstr "详情"
+
+msgid "Disconnected"
+msgstr "未联网"
+
+msgid "Edit Remark"
+msgstr "修改备注"
+
+msgid "Effective Condition"
+msgstr "生效条件"
+
+msgid "Failed to update remark"
+msgstr "备注修改失败"
+
+msgid "First Visit"
+msgstr "开始访问时间"
+
+msgid "Flow"
+msgstr "流量"
+
+msgid "Function Module"
+msgstr "功能模块"
+
+msgid "Hit Detail"
+msgstr "命中详情"
+
+msgid "Internet Permission"
+msgstr "联网权限"
+
+msgid "Internet Permission Detail"
+msgstr "联网权限详情"
+
+msgid "IPv6"
+msgstr "IPv6"
+
+msgid "Joined Internet Blacklist"
+msgstr "命中上网黑名单"
+
+msgid "Last Visit"
+msgstr "最后访问时间"
+
+msgid "Limit"
+msgstr "限制"
+
+msgid "Matched"
+msgstr "已匹配"
+
+msgid "Matched app filter whitelist, all app filter rules are ineffective."
+msgstr "匹配到应用过滤白名单，所有应用过滤规则不生效。"
+
+msgid "Matched MAC filter whitelist, all MAC filter rules are ineffective."
+msgstr "匹配到MAC过滤白名单，所有MAC过滤规则不生效。"
+
+msgid "Matched Rule"
+msgstr "匹配规则"
+
+msgid "Missing MAC parameter"
+msgstr "缺少MAC参数"
+
+msgid "Mode"
+msgstr "模式"
+
+msgid "Next Page"
+msgstr "下一页"
+
+msgid "No app usage in this period"
+msgstr "该时段无APP使用记录"
+
+msgid "No parental control rules"
+msgstr "暂无行为管理规则"
+
+msgid "No records"
+msgstr "暂无记录"
+
+msgid "Not effective today"
+msgstr "今日不生效"
+
+msgid "Not Matched"
+msgstr "未匹配"
+
+msgid "Offline Event"
+msgstr "离线"
+
+msgid "Online Event"
+msgstr "上线"
+
+msgid "Online/Offline Records"
+msgstr "上下线记录"
+
+msgid "Operation failed"
+msgstr "操作失败"
+
+msgid "Operation succeeded"
+msgstr "设置成功"
+
+msgid "Parental Control Rules"
+msgstr "行为管理规则"
+
+msgid "Prev Page"
+msgstr "上一页"
+
+msgid "Rate"
+msgstr "速率"
+
+msgid "Records"
+msgstr "条记录"
+
+msgid "Remark updated successfully"
+msgstr "备注修改成功"
+
+msgid "Removed from blacklist"
+msgstr "已解除黑名单"
+
+msgid "Restricted Apps"
+msgstr "受限应用"
+
+msgid "Rule"
+msgstr "规则"
+
+msgid "Rule Detail"
+msgstr "规则详情"
+
+msgid "Rule Name"
+msgstr "规则名称"
+
+msgid "Rule Type"
+msgstr "规则类型"
+
+msgid "s"
+msgstr "秒"
+
+msgid "Selected User"
+msgstr "指定终端"
+
+msgid "Session Count"
+msgstr "会话数"
+
+msgid "Sessions"
+msgstr "会话"
+
+msgid "Showing"
+msgstr "显示"
+
+msgid "Signal"
+msgstr "信号强度"
+
+msgid "Terminal"
+msgstr "终端"
+
+msgid "Terminal Detail"
+msgstr "终端详情"
+
+msgid "Thu"
+msgstr "周四"
+
+msgid "Time"
+msgstr "时间"
+
+msgid "Time Rule"
+msgstr "时间规则"
+
+msgid "Today Downstream Traffic"
+msgstr "今日下行流量"
+
+msgid "Today Internet Duration"
+msgstr "今日上网时长"
+
+msgid "Today Online Duration"
+msgstr "今日在线时长"
+
+msgid "Today Top Apps"
+msgstr "今日常用APP"
+
+msgid "Today Top Apps Statistics (24 Hours)"
+msgstr "今日常用APP统计（24小时）"
+
+msgid "Today Traffic Statistics (24 Hours)"
+msgstr "今日流量统计（24小时）"
+
+msgid "Today Upstream Traffic"
+msgstr "今日上行流量"
+
+msgid "Today's Status"
+msgstr "今日状态"
+
+msgid "Traffic"
+msgstr "流量"
+
+msgid "Type"
+msgstr "类型"
+
+msgid "Unblock"
+msgstr "解除"
+
+msgid "Unlimited today"
+msgstr "今日不限"
+
+msgid "Unrestricted"
+msgstr "无限制"
+
+msgid "User Detail"
+msgstr "终端详情"
+
+msgid "Visit Records"
+msgstr "访问记录"
+
+msgid "Visiting URL"
+msgstr "正在访问URL"
+
+msgid "0 apps"
+msgstr "0个应用"
+
+msgid "Access Control Whitelist"
+msgstr "上网控制白名单"
+
+msgid "Add Duration Rule"
+msgstr "添加时长规则"
+
+msgid "Add failed"
+msgstr "添加失败"
+
+msgid "Add Flow Rule"
+msgstr "添加流量规则"
+
+msgid "Add Rule"
+msgstr "添加规则"
+
+msgid "Add success"
+msgstr "添加成功"
+
+msgid "Add Time Rule"
+msgstr "添加时间规则"
+
+msgid "App Filter Whitelist"
+msgstr "应用过滤白名单"
+
+msgid "Apps"
+msgstr "应用"
+
+msgid "Are you sure you want to delete this rule?"
+msgstr "确定要删除这条规则吗？"
+
+msgid "Are you sure you want to remove this device from whitelist?"
+msgstr "确定要从白名单中移除此设备吗？"
+
+msgid "Auto mode"
+msgstr "自动模式"
+
+msgid "Daily Traffic"
+msgstr "每日流量"
+
+msgid "Delete failed"
+msgstr "删除失败"
+
+msgid "Delete success"
+msgstr "删除成功"
+
+msgid "Device nickname"
+msgstr "设备昵称"
+
+msgid "Disconnect Mode"
+msgstr "断网模式"
+
+msgid "Duration (minutes)"
+msgstr "时长（分钟）"
+
+msgid "Duration Rules"
+msgstr "时长规则"
+
+msgid "Edit"
+msgstr "编辑"
+
+msgid "Edit Rule"
+msgstr "编辑规则"
+
+msgid "Enable Rule"
+msgstr "启用规则"
+
+msgid "Enter rule name"
+msgstr "输入规则名称"
+
+msgid "Failed to add rule"
+msgstr "添加规则失败"
+
+msgid "Failed to delete rule"
+msgstr "删除规则失败"
+
+msgid "Failed to update rule"
+msgstr "更新规则失败"
+
+msgid "Filter QUIC"
+msgstr "过滤QUIC协议"
+
+msgid "Flow (MB)"
+msgstr "流量（MB）"
+
+msgid "Flow Rules"
+msgstr "流量规则"
+
+msgid "Hover to view time chart"
+msgstr "悬停查看时间图表"
+
+msgid "In auto mode, all new devices will be managed, including those with random MAC addresses"
+msgstr "自动模式下，所有新设备都将被管理，包括随机MAC地址的设备"
+
+msgid "In manual mode, only specified devices will be managed"
+msgstr "手动模式下，仅管理指定的设备"
+
+msgid "Loading app list..."
+msgstr "加载应用列表..."
+
+msgid "MAC"
+msgstr "MAC地址"
+
+msgid "Maximum 16 time rules allowed"
+msgstr "最大只能添加16条规则"
+
+msgid "Maximum 32 rules allowed. Please delete some rules before adding new ones."
+msgstr "最多只能添加32条规则，请先删除一些规则后再添加新规则。"
+
+msgid "Mode switched successfully"
+msgstr "模式切换成功"
+
+msgid "Network error"
+msgstr "网络错误"
+
+msgid "Nickname"
+msgstr "昵称"
+
+msgid "No available devices to add"
+msgstr "没有可添加的设备"
+
+msgid "No rules configured"
+msgstr "未配置规则"
+
+msgid "No whitelist entries yet"
+msgstr "暂无白名单条目"
+
+msgid "No."
+msgstr "序号"
+
+msgid "Operation"
+msgstr "操作"
+
+msgid "Please add at least one time rule"
+msgstr "请至少添加一条时间规则"
+
+msgid "Please enter rule name"
+msgstr "请输入规则名称"
+
+msgid "Please enter valid duration minutes"
+msgstr "请输入有效的时长分钟数"
+
+msgid "Please enter valid flow MB"
+msgstr "请输入有效的流量MB值"
+
+msgid "Please select a user"
+msgstr "请选择用户"
+
+msgid "Please select at least one app"
+msgstr "请至少选择一个应用"
+
+msgid "Please select at least one device"
+msgstr "请至少选择一个设备"
+
+msgid "Remove"
+msgstr "移除"
+
+msgid "Rule added successfully"
+msgstr "规则添加成功"
+
+msgid "Rule deleted successfully"
+msgstr "规则删除成功"
+
+msgid "Rule Mode"
+msgstr "规则模式"
+
+msgid "Rule updated successfully"
+msgstr "规则更新成功"
+
+msgid "Select Apps"
+msgstr "选择应用"
+
+msgid "Select User"
+msgstr "选择用户"
+
+msgid "Setting success"
+msgstr "设置成功"
+
+msgid "Single User"
+msgstr "单个用户"
+
+msgid "Some apps need QUIC disabled to take effect, such as taobao, youtube, etc. This may also affect other apps. Please choose this switch according to actual conditions."
+msgstr "少部分应用需要禁用QUIC协议才会有效果，比如taobao,youtube等，注意也可能影响其他应用，根据实际情况选择开关"
+
+msgid "T"
+msgstr "时间"
+
+msgid "Unknown error"
+msgstr "未知错误"
+
+msgid "Whitelist"
+msgstr "白名单"
+
+msgid "A maximum of 15 payload matches is allowed"
+msgstr "每个特征最多允许15个负载匹配项"
+
+msgid "A maximum of 16 features is allowed"
+msgstr "最多允许16个特征"
+
+msgid "A maximum of 64 custom applications is allowed"
+msgstr "最多允许添加64个自定义应用"
+
+msgid "A valid subscription is required"
+msgstr "Key没有权限"
+
+msgid "Add Application"
+msgstr "添加应用"
+
+msgid "Add Feature"
+msgstr "添加特征"
+
+msgid "After enabled, related acceleration modules will be automatically disabled, including hardware acceleration, software acceleration and others, to prevent filtering failures caused by acceleration. It is recommended to restart the device after modification."
+msgstr "启用后会自动关闭相关的加速模块，包括硬件加速、软件加速等，以防止加速导致过滤失效。修改后建议重启设备。"
+
+msgid "App"
+msgstr "应用"
+
+msgid "App records minimum duration"
+msgstr "应用记录最小时长"
+
+msgid "App Valid Time"
+msgstr "应用有效时长"
+
+msgid "Application Count"
+msgstr "应用个数"
+
+msgid "Application Features"
+msgstr "应用特征"
+
+msgid "Application Name"
+msgstr "应用名称"
+
+msgid "Applying"
+msgstr "正在应用"
+
+msgid "Are you sure you want to clean all history data? This action cannot be undone."
+msgstr "确认要清理全部历史数据吗？该操作不可恢复。"
+
+msgid "Are you sure you want to delete this application?"
+msgstr "确定要删除这个应用吗？"
+
+msgid "At least one match field must be configured for each feature"
+msgstr "每个特征至少需要配置一个匹配字段"
+
+msgid "Auto Disable Acceleration"
+msgstr "自动关闭加速"
+
+msgid "Base Data Path"
+msgstr "基础数据目录"
+
+msgid "Base data path cannot be empty or /"
+msgstr "基础数据目录不能为空或 /"
+
+msgid "Base data path maximum length is 64 characters"
+msgstr "基础数据目录最大长度为 64 个字符"
+
+msgid "Bypass mode cannot count downstream traffic because traffic is directly forwarded to terminals at Layer 2 through the gateway."
+msgstr "旁路模式无法统计下行流量，因为流量是通过网关直接二层转发到了终端。"
+
+msgid "Category"
+msgstr "分类"
+
+msgid "Chinese"
+msgstr "中文"
+
+msgid "Clean"
+msgstr "清除"
+
+msgid "Clean failed"
+msgstr "清理失败"
+
+msgid "Click Update List to get the latest feature libraries"
+msgstr "点击更新列表可以获取最新的特征库"
+
+msgid "Click Update List to load available feature libraries"
+msgstr "点击更新列表加载可用特征库"
+
+msgid "Current Version Number"
+msgstr "当前版本号"
+
+msgid "Custom Applications"
+msgstr "自定义应用"
+
+msgid "Data cleaned successfully"
+msgstr "数据清理成功"
+
+msgid "days"
+msgstr "天"
+
+msgid "Destination port must be a single port or port range between 1 and 65535"
+msgstr "目的端口必须是1到65535之间的单个端口或端口范围"
+
+msgid "Domain"
+msgstr "域名"
+
+msgid "Downloading"
+msgstr "正在下载"
+
+msgid "Edit Application"
+msgstr "编辑应用"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Enable Access Control"
+msgstr "启用上网控制"
+
+msgid "English"
+msgstr "英文"
+
+msgid "Extracting"
+msgstr "正在解压"
+
+msgid "Feature"
+msgstr "特征"
+
+msgid "Feature Count"
+msgstr "特征数量"
+
+msgid "Feature library format error. Please use the feature library for this version."
+msgstr "特征库格式错误，请使用对应版本的特征库"
+
+msgid "Feature library update failed"
+msgstr "特征库更新失败"
+
+msgid "Feature library update timeout"
+msgstr "特征库更新超时"
+
+msgid "Feature library updated successfully"
+msgstr "特征库更新成功"
+
+msgid "Features"
+msgstr "特征"
+
+msgid "Filter"
+msgstr "过滤"
+
+msgid "Hide"
+msgstr "隐藏"
+
+msgid "History Data Path"
+msgstr "历史数据目录"
+
+msgid "History data path cannot be empty or /"
+msgstr "历史数据目录不能为空或 /"
+
+msgid "History data path maximum length is 64 characters"
+msgstr "历史数据目录最大长度为 64 个字符"
+
+msgid "History Data Size"
+msgstr "历史数据大小"
+
+msgid "History data size limit"
+msgstr "历史数据大小限制"
+
+msgid "History data size must be an integer between 1 and 1024 MB"
+msgstr "历史数据大小必须是 1-1024 MB 的整数"
+
+msgid "History Data Usage"
+msgstr "历史数据占用"
+
+msgid "History Records"
+msgstr "历史记录"
+
+msgid "In bypass mode, it is recommended to disable IPv6 on terminals to prevent terminals from forwarding directly to the main router through IPv6."
+msgstr "旁路模式下建议关闭终端的IPv6，防止终端走IPv6直接转发到主路由。"
+
+msgid "Internet record retention time"
+msgstr "上网记录保留时间"
+
+msgid "Invalid application name"
+msgstr "应用名称无效"
+
+msgid "Invalid domain"
+msgstr "域名无效"
+
+msgid "Invalid LAN interface name"
+msgstr "无效的LAN接口名称"
+
+msgid "Invalid payload match format"
+msgstr "负载匹配格式无效"
+
+msgid "Invalid subscription key"
+msgstr "Key无效"
+
+msgid "Invalid URI"
+msgstr "URI无效"
+
+msgid "LAN interface name for terminal detection. Default is bridge interface (br-lan). If LAN port is changed to physical interface, please modify to the corresponding name, such as eth0."
+msgstr "用于终端探测的LAN接口名称，系统默认为桥接接口(br-lan)。如果将LAN口修改为物理接口，请修改为对应的名称，例如eth0。"
+
+msgid "Language"
+msgstr "语言"
+
+msgid "Leave blank for no restriction"
+msgstr "留空表示不限制"
+
+msgid "Load failed"
+msgstr "加载失败"
+
+msgid "Matches hexadecimal Layer 7 payload content at specified positions. Format: pos:value,pos:value, for example 00:0a,02:ab. Position 0 is the first byte."
+msgstr "匹配七层协议内容中指定位置的十六进制值，格式为pos:value,pos:value，例如00:0a,02:ab，位置0表示第一个字节。"
+
+msgid "Official Website"
+msgstr "官网"
+
+msgid "No apps"
+msgstr "暂无应用"
+
+msgid "No custom applications"
+msgstr "暂无自定义应用"
+
+msgid "Online Feature Library Update"
+msgstr "在线特征库更新"
+
+msgid "Online Records"
+msgstr "在线记录"
+
+msgid "Online Update"
+msgstr "在线更新"
+
+msgid "Payload Match"
+msgstr "负载匹配"
+
+msgid "Payload position must be a signed integer"
+msgstr "负载位置必须是有符号整数"
+
+msgid "Please select a category"
+msgstr "请选择分类"
+
+msgid "Position"
+msgstr "位置"
+
+msgid "Record Time"
+msgstr "记录时间"
+
+msgid "Release Date"
+msgstr "发布日期"
+
+msgid "Reset"
+msgstr "重置"
+
+msgid "Save failed"
+msgstr "保存失败"
+
+msgid "Saved successfully"
+msgstr "保存成功"
+
+msgid "Search"
+msgstr "查询"
+
+msgid "Select TCP or UDP."
+msgstr "选择TCP或UDP协议。"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Show"
+msgstr "显示"
+
+msgid "Subscription service is unavailable"
+msgstr "订阅服务暂不可用"
+
+msgid "Subscription Key"
+msgstr "订阅Key"
+
+msgid "Supports a single destination port or port range, for example 80 or 80-443."
+msgstr "支持单个目的端口或端口范围，例如80或80-443。"
+
+msgid "Switch"
+msgstr "切换"
+
+msgid "Switched successfully"
+msgstr "切换成功"
+
+msgid "TCP Connection Reset"
+msgstr "TCP连接重置"
+
+msgid "After enabled, OAF sends TCP RST for filtered TCP connections."
+msgstr "开启后，OAF会为命中过滤规则的TCP连接发送RST重置。"
+
+msgid "Terminal MAC"
+msgstr "终端MAC"
+
+msgid "The downloaded file is too large"
+msgstr "下载文件过大"
+
+msgid "The feature library is used to describe app features, and determines the effectiveness of app filtering and internet usage records"
+msgstr "特征库用于描述应用特征，决定应用过滤和上网记录的效果"
+
+msgid "The HTTP request URI. HTTPS does not support URI matching."
+msgstr "HTTP的请求URI，HTTPS不支持URI匹配。"
+
+msgid "The subscription device limit has been reached"
+msgstr "订阅设备数超过限制"
+
+msgid "The user's basic data and real-time data are stored in this directory, such as online duration, traffic usage and other information. The default is a temporary directory and will not be retained after reboot. You can change it to a persistent directory, such as /etc/oaf."
+msgstr "用户的基础数据和实时数据存放在该目录，比如上网时长、上网流量等信息，默认为临时目录重启不会保存，可以自行修改为持久目录，比如/etc/oaf等。"
+
+msgid "to obtain the advanced feature library update Key."
+msgstr "可获取高级特征库更新Key"
+
+msgid "Too many requests. Please try again later."
+msgstr "访问过于频繁，请稍后再试"
+
+msgid "Update List"
+msgstr "更新列表"
+
+msgid "Updated successfully"
+msgstr "更新成功"
+
+msgid "Updating list, please wait..."
+msgstr "正在更新列表，请稍候..."
+
+msgid "Use this feature library version now?"
+msgstr "确定立即使用该版本的特征库吗？"
+
+msgid "User's App record data will be stored in this directory."
+msgstr "用户的应用记录会存储在该目录。"
+
+msgid "Validating"
+msgstr "正在校验"
+
+msgid "Value"
+msgstr "值"
+
+msgid "Visit"
+msgstr "访问"
+
+msgid "When the Key is empty, the free version can be used. After setting the Key, the premium version can be used. The premium version supports more applications, is updated regularly, and the latest supported application list can be viewed on the official website."
+msgstr "Key为空可以使用免费版本，设置Key后可以使用高级版本，高级版本支持的应用更多，定期更新，最新支持的应用列表可以在官网查看。"
+
+msgid "Parental Control"
+msgstr "OAF行为管理"
+
+msgid "Dashboard"
+msgstr "仪表板"
+
+msgid "About"
+msgstr "关于"
+
+msgid "OAF is a powerful parental control software. FanchmWrt integrates OAF by default and includes more plugins developed by the author."
+msgstr "OAF是一款强大的行为管理软件。FanchmWrt中默认集成了OAF，并且包含了更多作者开发的插件。"
+
+msgid "OAF already supports mobile app management. Mobile management is more convenient."
+msgstr "OAF已经支持手机App管理，手机管理更方便。"
+
+msgid "Go to download"
+msgstr "去下载"
+
+msgid "Author"
+msgstr "作者"
+
+msgid "GitHub Source"
+msgstr "GitHub源码"
+
+msgid "Record Whitelist"
+msgstr "上网记录白名单"
+
+msgid "Feature library checksum verification failed"
+msgstr "特征库文件校验失败"
+
+msgid "Please enter a valid Key. You can apply for a Key on the official website."
+msgstr "请输入正确的Key，Key可以通过官网申请"
+
+msgid "Enter the Key to use this feature library version"
+msgstr "输入Key后可以使用该版本特征库"
+
+msgid "Invalid Key. Please get the correct Key from the official website and enable the advanced feature library permission."
+msgstr "无效的Key，请通过官网获取正确的Key，并开通高级版特征库权限"
+
+msgid "No data"
+msgstr "暂无数据"

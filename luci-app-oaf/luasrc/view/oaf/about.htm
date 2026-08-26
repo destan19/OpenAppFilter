@@ -1,0 +1,128 @@
+<%+header%>
+<link rel="stylesheet" href="<%=resource%>/oaf/css/common.css">
+
+<div class="oaf-about-page">
+    <section class="oaf-about-card">
+        <div class="oaf-about-brand">OpenAppFilter</div>
+        <p class="oaf-about-intro">
+            <%:OAF is a powerful parental control software. FanchmWrt integrates OAF by default and includes more plugins developed by the author.%>
+        </p>
+
+        <div class="oaf-about-info">
+            <div class="oaf-about-row">
+                <div class="oaf-about-label"><%:Author%></div>
+                <div class="oaf-about-value">destan19(TT)</div>
+            </div>
+            <div class="oaf-about-row">
+                <div class="oaf-about-label">OAF</div>
+                <div class="oaf-about-value">
+                    <a href="http://www.openappfilter.com" target="_blank" rel="noopener noreferrer">www.openappfilter.com</a>
+                </div>
+            </div>
+            <div class="oaf-about-row">
+                <div class="oaf-about-label">FanchmWrt</div>
+                <div class="oaf-about-value">
+                    <a href="http://www.fanchmwrt.com" target="_blank" rel="noopener noreferrer">www.fanchmwrt.com</a>
+                </div>
+            </div>
+            <div class="oaf-about-row">
+                <div class="oaf-about-label"><%:GitHub Source%></div>
+                <div class="oaf-about-value">
+                    <a href="https://github.com/destan19/OpenAppFilter" target="_blank" rel="noopener noreferrer">https://github.com/destan19/OpenAppFilter</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="oaf-about-copyright">
+            Copyright © 2026 FanchmWrt. All rights reserved.
+        </div>
+    </section>
+</div>
+
+<style>
+.oaf-about-page {
+    padding: 10px;
+}
+
+.oaf-about-card {
+    padding: 22px;
+    border: 1px solid var(--border-color-low, #e5e7eb);
+    border-radius: 8px;
+    background: var(--background-color-high, #fff);
+    color: var(--text-color-high, #333);
+    max-width: 860px;
+}
+
+.oaf-about-brand {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 6px;
+}
+
+.oaf-about-intro {
+    margin: 0 0 20px;
+    color: var(--text-color-high, #333);
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.oaf-about-info {
+    display: grid;
+    gap: 10px;
+    max-width: 760px;
+    margin-bottom: 22px;
+}
+
+.oaf-about-row {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color-low, #e5e7eb);
+    border-radius: 6px;
+    background: var(--background-color-low, #f5f5f5);
+    font-size: 15px;
+}
+
+.oaf-about-label {
+    color: var(--text-color-medium, #6b7280);
+    font-weight: 600;
+}
+
+.oaf-about-value {
+    min-width: 0;
+    color: var(--text-color-high, #333);
+    word-break: break-word;
+}
+
+.oaf-about-value a {
+    color: var(--primary-color, #2563eb);
+    text-decoration: none;
+}
+
+.oaf-about-value a:hover {
+    text-decoration: underline;
+}
+
+.oaf-about-copyright {
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color-low, #e5e7eb);
+    color: var(--text-color-medium, #6b7280);
+    font-size: 14px;
+}
+
+@media (max-width: 600px) {
+    .oaf-about-card {
+        padding: 16px;
+    }
+
+    .oaf-about-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+}
+</style>
+
+<%+footer%>

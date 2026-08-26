@@ -1,2 +1,4 @@
-oaf-objs := app_filter.o af_utils.o  af_config.o regexp.o cJSON.o af_log.o af_client.o af_client_fs.o af_conntrack.o af_rule_config.o af_user_config.o af_whitelist_config.o
+oaf-objs := fwx_main.o fwx_utils.o  regexp.o k_json.o  fwx_log.o fwx_client.o fwx_client_fs.o 
+oaf-objs += fwx_conntrack.o  fwx_mac.o fwx_config.o fwx_mac_filter.o 
+oaf-objs += fwx_app_filter.o
 obj-m += oaf.o

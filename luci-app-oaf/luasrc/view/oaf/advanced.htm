@@ -1,0 +1,462 @@
+<%
+local nfs = require "nixio.fs"
+local has_app_filter = nfs.access("/etc/config/appfilter")
+local has_access_control = nfs.access("/etc/config/macfilter")
+%>
+<%+header%>
+<link rel="stylesheet" href="<%=resource%>/oaf/css/common.css">
+<script src="<%=resource%>/oaf/jquery-3.7.1.min.js"></script>
+<script src="<%=resource%>/oaf/common.js"></script>
+
+<div class="settings-page">
+    <div class="settings-heading"><%:Settings%></div>
+
+    <section class="settings-panel">
+        <button type="button" class="settings-panel-header" aria-expanded="true" aria-controls="basic-settings-panel">
+            <span><%:Basic Settings%></span>
+            <span class="settings-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="settings-panel-body" id="basic-settings-panel">
+            <div class="form-row">
+                <label class="form-label" for="work-mode"><%:Work Mode%></label>
+                <select id="work-mode">
+                    <option value="0"><%:Gateway Mode%></option>
+                    <option value="1"><%:Bypass Mode%></option>
+                </select>
+            </div>
+
+            <ol class="work-mode-warning" id="work-mode-warning">
+                <li><%:Bypass mode cannot count downstream traffic because traffic is directly forwarded to terminals at Layer 2 through the gateway.%></li>
+                <li><%:In bypass mode, it is recommended to disable IPv6 on terminals to prevent terminals from forwarding directly to the main router through IPv6.%></li>
+            </ol>
+
+            <div class="form-row">
+                <label class="form-label" for="lan-ifname"><%:LAN Interface%></label>
+                <div class="settings-field">
+                    <input id="lan-ifname" type="text" placeholder="br-lan" class="input-short">
+                    <div class="field-error" id="lan-ifname-error"></div>
+                    <div class="form-desc-inline"><%:LAN interface name for terminal detection. Default is bridge interface (br-lan). If LAN port is changed to physical interface, please modify to the corresponding name, such as eth0.%></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label class="form-label" for="tcp-rst"><%:TCP Connection Reset%></label>
+                <div class="settings-field">
+                    <label class="switch">
+                        <input type="checkbox" id="tcp-rst">
+                        <span class="slider"></span>
+                    </label>
+                    <div class="form-desc-inline"><%:After enabled, OAF sends TCP RST for filtered TCP connections.%></div>
+                </div>
+            </div>
+
+            <% if has_app_filter then %>
+            <div class="form-row">
+                <label class="form-label" for="app-filter-enable"><%:Enable App Filter%></label>
+                <label class="switch">
+                    <input type="checkbox" id="app-filter-enable">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <% end %>
+
+            <% if has_access_control then %>
+            <div class="form-row">
+                <label class="form-label" for="access-control-enable"><%:Enable Access Control%></label>
+                <label class="switch">
+                    <input type="checkbox" id="access-control-enable">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <% end %>
+        </div>
+    </section>
+
+    <section class="settings-panel">
+        <button type="button" class="settings-panel-header" aria-expanded="true" aria-controls="audit-settings-panel">
+            <span><%:Internet Audit%></span>
+            <span class="settings-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="settings-panel-body" id="audit-settings-panel">
+            <div class="form-row">
+                <label class="form-label" for="rec-enable"><%:Enable%></label>
+                <label class="switch">
+                    <input type="checkbox" id="rec-enable">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="form-row" id="data-size-group" style="display:none;">
+                <label class="form-label"><%:History Data Usage%></label>
+                <div class="data-size-field">
+                    <span id="data-size-display"></span>
+                    <button type="button" class="btn btn-secondary data-clean-btn" id="clean-history"><%:Clean%></button>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label class="form-label" for="rec-keep"><%:Record Time%></label>
+                <div class="settings-field">
+                    <select id="rec-keep">
+                        <option value="1">1 <%:days%></option>
+                        <option value="2">2 <%:days%></option>
+                        <option value="3">3 <%:days%></option>
+                        <option value="4">4 <%:days%></option>
+                        <option value="5">5 <%:days%></option>
+                        <option value="6">6 <%:days%></option>
+                        <option value="7">7 <%:days%></option>
+                        <option value="10">10 <%:days%></option>
+                        <option value="15">15 <%:days%></option>
+                        <option value="30">30 <%:days%></option>
+                    </select>
+                    <div class="form-desc-inline"><%:Internet record retention time%></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label class="form-label" for="rec-valid"><%:App Valid Time%></label>
+                <div class="settings-field">
+                    <select id="rec-valid">
+                        <option value="1">1 <%:minutes%></option>
+                        <option value="2">2 <%:minutes%></option>
+                        <option value="3">3 <%:minutes%></option>
+                        <option value="4">4 <%:minutes%></option>
+                        <option value="5">5 <%:minutes%></option>
+                        <option value="10">10 <%:minutes%></option>
+                        <option value="15">15 <%:minutes%></option>
+                        <option value="20">20 <%:minutes%></option>
+                        <option value="30">30 <%:minutes%></option>
+                        <option value="60">60 <%:minutes%></option>
+                    </select>
+                    <div class="form-desc-inline"><%:App records minimum duration%></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label class="form-label" for="rec-history-size"><%:History Data Size%></label>
+                <div class="settings-field">
+                    <div class="size-field">
+                        <input type="text" id="rec-history-size">
+                        <span class="unit">MB</span>
+                    </div>
+                    <div class="form-desc-inline"><%:History data size limit%></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label class="form-label" for="rec-history-path"><%:History Data Path%></label>
+                <div class="settings-field">
+                    <input type="text" id="rec-history-path">
+                    <div class="form-desc-inline"><%:User's App record data will be stored in this directory.%></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label class="form-label" for="rec-base-path"><%:Base Data Path%></label>
+                <div class="settings-field">
+                    <input type="text" id="rec-base-path">
+                    <div class="form-desc-inline"><%:The user's basic data and real-time data are stored in this directory, such as online duration, traffic usage and other information. The default is a temporary directory and will not be retained after reboot. You can change it to a persistent directory, such as /etc/fwx.%></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="settings-panel">
+        <button type="button" class="settings-panel-header" aria-expanded="true" aria-controls="advanced-settings-panel">
+            <span><%:Advanced Settings%></span>
+            <span class="settings-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="settings-panel-body" id="advanced-settings-panel">
+            <div class="form-row">
+                <label class="form-label" for="disable-hnat"><%:Auto Disable Acceleration%></label>
+                <div class="settings-field">
+                    <label class="switch">
+                        <input type="checkbox" id="disable-hnat">
+                        <span class="slider"></span>
+                    </label>
+                    <div class="form-desc-inline"><%:After enabled, related acceleration modules will be automatically disabled, including hardware acceleration, software acceleration and others, to prevent filtering failures caused by acceleration. It is recommended to restart the device after modification.%></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="settings-actions">
+        <button class="btn btn-secondary" type="button" id="settings-refresh"><%:Refresh%></button>
+        <button class="btn" type="button" id="settings-save" disabled><%:Save%></button>
+    </div>
+    <div class="status-tip" id="settings-tip"></div>
+</div>
+
+<style>
+.settings-page{max-width:860px;margin:0 auto 16px;padding:0 10px}.settings-heading{font-size:20px;font-weight:600;margin:8px 0 14px}.settings-panel{border:1px solid var(--border-color-low,#e5e7eb);border-radius:7px;margin-bottom:12px;background:var(--background-color-high,transparent);overflow:hidden}.settings-panel-header{width:100%;border:0;border-bottom:1px solid var(--border-color-low,#e5e7eb);background:var(--background-color-low,rgba(0,0,0,.025));color:inherit;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:16px;font-weight:600;text-align:left;cursor:pointer}.settings-panel-header.collapsed{border-bottom-color:transparent}.settings-chevron{width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .15s ease;margin:0 4px 4px 12px}.settings-panel-header.collapsed .settings-chevron{transform:rotate(-45deg);margin-bottom:0}.settings-panel-body{padding:16px}.settings-panel-body .form-row{align-items:flex-start;margin-bottom:16px}.settings-panel-body .switch{margin-top:2px;flex:none}.settings-field{flex:1;min-width:0}.settings-field>input,.settings-field>select{width:360px;max-width:100%}.form-desc-inline{margin-top:5px;font-size:12px;line-height:1.5;color:var(--text-color-medium,#6b7280)}.field-error{display:none;color:#f87171;font-size:12px;margin-top:4px}.work-mode-warning{display:none;margin:0 0 16px 150px;padding:10px 14px 10px 30px;border:1px solid rgba(239,68,68,.4);border-radius:6px;background:rgba(239,68,68,.08);color:#dc2626;font-size:13px;line-height:1.6}.work-mode-warning li{margin:2px 0}.data-size-field,.size-field{display:flex;align-items:center;gap:10px}.data-clean-btn{min-width:64px}.size-field input{width:320px!important}.size-field .unit{color:var(--text-color-medium,#6b7280)}.settings-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:4px}.settings-page>.status-tip{text-align:right}.settings-panel-header:focus-visible{outline:2px solid #3b82f6;outline-offset:-2px}[data-darkmode="true"] .work-mode-warning{border-color:rgba(248,113,113,.55);background:rgba(127,29,29,.26);color:#fca5a5}
+@media(max-width:600px){.settings-page{padding:0 4px}.settings-panel-header{padding:11px 12px}.settings-panel-body{padding:13px 12px}.settings-panel-body .form-row{display:block}.settings-panel-body .form-label{display:block;width:auto;margin-bottom:7px}.work-mode-warning{margin-left:0}.settings-field>input,.settings-field>select,.settings-panel-body>.form-row>select{width:100%}.size-field input{width:100%!important;min-width:0}.settings-actions{padding-right:2px}}
+</style>
+
+<script type="text/javascript">//<![CDATA[
+(function() {
+    var text = {
+        saved: '<%:Saved successfully%>',
+        saveFailed: '<%:Save failed%>',
+        loading: '<%:Loading...%>',
+        loadFailed: '<%:Load failed%>',
+        invalidLan: '<%:Invalid LAN interface name%>',
+        invalidSize: '<%:History data size must be an integer between 1 and 1024 MB%>',
+        emptyHistoryPath: '<%:History data path cannot be empty or /%>',
+        longHistoryPath: '<%:History data path maximum length is 64 characters%>',
+        emptyBasePath: '<%:Base data path cannot be empty or /%>',
+        longBasePath: '<%:Base data path maximum length is 64 characters%>',
+        cleanConfirm: '<%:Are you sure you want to clean all history data? This action cannot be undone.%>',
+        cleanSuccess: '<%:Data cleaned successfully%>',
+        cleanFailed: '<%:Clean failed%>'
+    };
+    var api = {
+        workModeGet: '<%=url("admin/services/oaf/api/system/get_work_mode")%>',
+        workModeSet: '<%=url("admin/services/oaf/api/system/set_work_mode")%>',
+        systemGet: '<%=url("admin/services/oaf/api/system/get_system_info")%>',
+        systemSet: '<%=url("admin/services/oaf/api/system/set_system_info")%>',
+        tcpRstGet: '<%=url("admin/services/oaf/api/system/get_tcp_rst")%>',
+        tcpRstSet: '<%=url("admin/services/oaf/api/system/set_tcp_rst")%>',
+        appFilterGet: '<%=url("admin/services/oaf/api/app_filter/get_app_filter_adv")%>',
+        appFilterSet: '<%=url("admin/services/oaf/api/app_filter/set_app_filter_adv")%>',
+        accessControlGet: '<%=url("admin/services/oaf/api/mac_filter/get_mac_filter_adv")%>',
+        accessControlSet: '<%=url("admin/services/oaf/api/mac_filter/set_mac_filter_adv")%>',
+        advancedGet: '<%=url("admin/services/oaf/api/system/get_advanced_settings")%>',
+        advancedSet: '<%=url("admin/services/oaf/api/system/set_advanced_settings")%>',
+        recordGet: '<%=url("admin/services/oaf/api/internet_audit/get_record_base")%>',
+        recordSet: '<%=url("admin/services/oaf/api/internet_audit/set_record_base")%>',
+        recordAction: '<%=url("admin/services/oaf/api/internet_audit/record_action")%>'
+    };
+    var currentThemeMode = 0;
+    var settingsLoaded = false;
+
+    function isSuccess(resp) {
+        return !!resp && (resp.code === 0 || resp.code === 2000);
+    }
+
+    function showResult(message, success) {
+        if (typeof showCommonModal === 'function') {
+            showCommonModal(message || '', 2000, success ? 'success' : 'error');
+        }
+    }
+
+    function runTasks(tasks, done) {
+        var remaining = tasks.length;
+        var success = true;
+
+        if (!remaining) {
+            done(true);
+            return;
+        }
+        tasks.forEach(function(task) {
+            task(function(ok) {
+                success = success && !!ok;
+                remaining--;
+                if (!remaining) done(success);
+            });
+        });
+    }
+
+    function loadTask(url, applyData) {
+        return function(done) {
+            $.getJSON(url).done(function(resp) {
+                if (!isSuccess(resp) || !resp.data) {
+                    done(false);
+                    return;
+                }
+                done(applyData(resp.data) !== false);
+            }).fail(function() {
+                done(false);
+            });
+        };
+    }
+
+    function postTask(url, data) {
+        return function(done) {
+            $.ajax({url:url,method:'POST',dataType:'json',data:data}).done(function(resp) {
+                done(isSuccess(resp));
+            }).fail(function() {
+                done(false);
+            });
+        };
+    }
+
+    function updateWorkModeWarning(value) {
+        $('#work-mode-warning').toggle(parseInt(value, 10) === 1);
+    }
+
+    function applyRecordData(data) {
+        $('#rec-enable').prop('checked', data.enable == 1);
+        $('#rec-keep').val(data.record_time || 0);
+        $('#rec-valid').val(data.app_valid_time || 0);
+        $('#rec-history-size').val(data.history_data_size || '');
+        $('#rec-history-path').val(data.history_data_path || '');
+        $('#rec-base-path').val(data.base_data_path || data.terminal_data_path || '');
+
+        if (data.status && data.status.data_size !== undefined) {
+            var size = data.status.data_size || 0;
+            var unit = data.status.data_size_unit || 'KB';
+            var display = size + unit;
+            if (unit === 'KB' && size >= 1024) {
+                var mb = size / 1024;
+                display = (mb % 1 === 0 ? mb.toFixed(0) : mb.toFixed(1)) + 'MB';
+            }
+            $('#data-size-display').text(display);
+            $('#data-size-group').show();
+        } else {
+            $('#data-size-group').hide();
+        }
+    }
+
+    function refreshAll() {
+        var tasks = [];
+
+        settingsLoaded = false;
+        $('#settings-refresh,#settings-save').prop('disabled', true);
+        $('#settings-tip').text(text.loading);
+        tasks.push(loadTask(api.workModeGet, function(data) {
+            var value = parseInt(data.work_mode, 10) === 1 ? '1' : '0';
+            $('#work-mode').val(value);
+            updateWorkModeWarning(value);
+        }));
+        tasks.push(loadTask(api.systemGet, function(data) {
+            var fwx = data.fwx;
+            if (!fwx) return false;
+            $('#lan-ifname').val(fwx.lan_ifname || 'br-lan');
+            currentThemeMode = fwx.theme_mode == 1 ? 1 : 0;
+        }));
+        tasks.push(loadTask(api.tcpRstGet, function(data) {
+            $('#tcp-rst').prop('checked', data.tcp_rst != 0);
+        }));
+        <% if has_app_filter then %>
+        tasks.push(loadTask(api.appFilterGet, function(data) {
+            $('#app-filter-enable').prop('checked', data.enable == 1);
+        }));
+        <% end %>
+        <% if has_access_control then %>
+        tasks.push(loadTask(api.accessControlGet, function(data) {
+            $('#access-control-enable').prop('checked', data.enable == 1);
+        }));
+        <% end %>
+        tasks.push(loadTask(api.advancedGet, function(data) {
+            $('#disable-hnat').prop('checked', data.disable_hnat == 1);
+        }));
+        tasks.push(loadTask(api.recordGet, applyRecordData));
+
+        runTasks(tasks, function(success) {
+            settingsLoaded = success;
+            $('#settings-refresh').prop('disabled', false);
+            $('#settings-save').prop('disabled', !success);
+            $('#settings-tip').text(success ? '' : text.loadFailed);
+        });
+    }
+
+    function validateSettings() {
+        var lanIfname = $.trim($('#lan-ifname').val() || '');
+        var historySize = $.trim($('#rec-history-size').val() || '');
+        var historyPath = $.trim($('#rec-history-path').val() || '');
+        var basePath = $.trim($('#rec-base-path').val() || '');
+
+        $('#lan-ifname-error').hide();
+        $('#lan-ifname').css('border-color', '');
+        if (!/^[a-zA-Z0-9-]{2,16}$/.test(lanIfname)) {
+            $('#lan-ifname-error').text(text.invalidLan).show();
+            $('#lan-ifname').css('border-color', '#f87171');
+            return null;
+        }
+        if (historySize) {
+            var size = Number(historySize);
+            if (!/^\d+$/.test(historySize) || isNaN(size) || size < 1 || size > 1024) {
+                showResult(text.invalidSize, false);
+                return null;
+            }
+        }
+        if (!historyPath || historyPath === '/') {
+            showResult(text.emptyHistoryPath, false);
+            return null;
+        }
+        if (historyPath.length > 64) {
+            showResult(text.longHistoryPath, false);
+            return null;
+        }
+        if (!basePath || basePath === '/') {
+            showResult(text.emptyBasePath, false);
+            return null;
+        }
+        if (basePath.length > 64) {
+            showResult(text.longBasePath, false);
+            return null;
+        }
+        return {lanIfname:lanIfname,historySize:historySize,historyPath:historyPath,basePath:basePath};
+    }
+
+    function saveAll() {
+        var values;
+        var tasks = [];
+
+        if (!settingsLoaded) {
+            showResult(text.loadFailed, false);
+            return;
+        }
+        values = validateSettings();
+        if (!values) return;
+
+        tasks.push(postTask(api.workModeSet, {work_mode:$('#work-mode').val() || '0'}));
+        tasks.push(postTask(api.systemSet, {lan_ifname:values.lanIfname,theme_mode:currentThemeMode}));
+        tasks.push(postTask(api.tcpRstSet, {tcp_rst:$('#tcp-rst').is(':checked') ? 1 : 0}));
+        <% if has_app_filter then %>
+        tasks.push(postTask(api.appFilterSet, {enable:$('#app-filter-enable').is(':checked') ? 1 : 0}));
+        <% end %>
+        <% if has_access_control then %>
+        tasks.push(postTask(api.accessControlSet, {enable:$('#access-control-enable').is(':checked') ? 1 : 0}));
+        <% end %>
+        tasks.push(postTask(api.advancedSet, {disable_hnat:$('#disable-hnat').is(':checked') ? 1 : 0}));
+        tasks.push(postTask(api.recordSet, {
+            enable:$('#rec-enable').is(':checked') ? 1 : 0,
+            record_time:parseInt($('#rec-keep').val(), 10) || 0,
+            app_valid_time:parseInt($('#rec-valid').val(), 10) || 0,
+            history_data_size:values.historySize,
+            history_data_path:values.historyPath,
+            base_data_path:values.basePath
+        }));
+
+        $('#settings-refresh,#settings-save').prop('disabled', true);
+        runTasks(tasks, function(success) {
+            $('#settings-refresh,#settings-save').prop('disabled', false);
+            updateWorkModeWarning($('#work-mode').val());
+            showResult(success ? text.saved : text.saveFailed, success);
+        });
+    }
+
+    function cleanHistory() {
+        if (!window.confirm(text.cleanConfirm)) return;
+        $('#clean-history').prop('disabled', true);
+        $.ajax({url:api.recordAction,method:'POST',dataType:'json',data:{action:'clean_all_data'}}).done(function(resp) {
+            if (isSuccess(resp)) {
+                showResult(text.cleanSuccess, true);
+                loadTask(api.recordGet, applyRecordData)(function() {});
+            } else {
+                showResult(text.cleanFailed, false);
+            }
+        }).fail(function() {
+            showResult(text.cleanFailed, false);
+        }).always(function() {
+            $('#clean-history').prop('disabled', false);
+        });
+    }
+
+    $('.settings-panel-header').on('click', function() {
+        var header = $(this);
+        var panel = $('#' + header.attr('aria-controls'));
+        var expanded = header.attr('aria-expanded') === 'true';
+        header.attr('aria-expanded', expanded ? 'false' : 'true').toggleClass('collapsed', expanded);
+        panel.stop(true, true).slideToggle(120);
+    });
+    $('#work-mode').on('change', function() { updateWorkModeWarning(this.value); });
+    $('#settings-refresh').on('click', refreshAll);
+    $('#settings-save').on('click', saveAll);
+    $('#clean-history').on('click', cleanHistory);
+    $(refreshAll);
+})();
+//]]></script>
+
+<%+footer%>

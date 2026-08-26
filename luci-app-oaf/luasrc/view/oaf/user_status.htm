@@ -1,0 +1,1974 @@
+﻿<link rel="stylesheet" href="<%=resource%>/oaf/css/common.css">
+<% local dsp=require "luci.dispatcher" -%>
+
+<script type="text/javascript" src="<%=resource%>/oaf/jquery-3.7.1.min.js"></script>
+<script type="text/javascript" src="<%=resource%>/oaf/oaf_icon.js"></script>
+<script type="text/javascript" src="<%=resource%>/oaf/echarts.min.js?v=5.0"></script>
+
+	<script type="text/javascript">//<![CDATA[
+		const FWX_ECHART_RENDERER = 'svg';
+		let visit_time_data = []; // Use mock data for chart display
+		let user_list_data = {
+			total_num: 0,
+			list: [
+				
+			]
+		}
+		let cur_page = 1;
+		let page_size = 15;
+		let total_num = 0;
+		let total_page = 1;
+		let app_class_name_map = {};
+		let app_class_map_loaded = false;
+		let user_session_enable = false;
+		let user_rssi_enable = false;
+		let view_mode = 'list';
+
+		function load_view_mode() {
+			var mobileDefault = false;
+			try {
+				mobileDefault = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+			} catch (e) {
+				mobileDefault = false;
+			}
+			view_mode = mobileDefault ? 'card' : 'list';
+			try {
+				var cached = window.localStorage.getItem('fwx_user_view_mode');
+				if (cached === 'card' || cached === 'list') {
+					view_mode = cached;
+				}
+			} catch (e) {
+			}
+		}
+
+		function save_view_mode(mode) {
+			try {
+				window.localStorage.setItem('fwx_user_view_mode', mode);
+			} catch (e) {
+			}
+		}
+
+		function update_view_mode_buttons() {
+			var $listBtn = $('#view_mode_list_btn');
+			var $cardBtn = $('#view_mode_card_btn');
+			if ($listBtn.length === 0 || $cardBtn.length === 0) return;
+			$listBtn.toggleClass('is-active', view_mode === 'list');
+			$cardBtn.toggleClass('is-active', view_mode === 'card');
+		}
+
+		function apply_view_mode() {
+			var $tableWrap = $('#user_table_wrapper');
+			var $cardWrap = $('#user_status_cards');
+			if ($tableWrap.length === 0 || $cardWrap.length === 0) return;
+			$tableWrap.css('display', view_mode === 'card' ? 'none' : 'block');
+			$cardWrap.css('display', view_mode === 'card' ? 'flex' : 'none');
+			update_view_mode_buttons();
+		}
+
+		function switch_view_mode(mode) {
+			if (mode !== 'list' && mode !== 'card') return;
+			view_mode = mode;
+			save_view_mode(mode);
+			apply_view_mode();
+		}
+
+		function bind_view_mode_events() {
+			$(document).on('click', '.view-mode-btn', function() {
+				var mode = $(this).data('mode');
+				switch_view_mode(mode);
+			});
+		}
+
+		function get_card_row_layout($cards) {
+			var cardWidth = 400;
+			var cardGap = 14;
+			var maxColumns = 5;
+			var availableWidth = $cards.parent().width() || $cards.width() || document.documentElement.clientWidth || cardWidth;
+			var columns = Math.floor((availableWidth + cardGap) / (cardWidth + cardGap));
+			columns = Math.max(1, Math.min(maxColumns, columns));
+			var rowWidth = columns * cardWidth + (columns - 1) * cardGap;
+			return {
+				columns: columns,
+				rowWidth: rowWidth
+			};
+		}
+
+		function applyCapabilityColumnVisibility() {
+			var sessionHeaderEl = document.getElementById('session_count_header');
+			var rssiHeaderEl = document.getElementById('rssi_header');
+			var loadingCellEl = document.getElementById('user_status_loading_cell');
+			if (sessionHeaderEl) {
+				sessionHeaderEl.style.display = user_session_enable ? 'table-cell' : 'none';
+			}
+			if (rssiHeaderEl) {
+				rssiHeaderEl.style.display = user_rssi_enable ? 'table-cell' : 'none';
+			}
+			if (loadingCellEl) {
+				loadingCellEl.colSpan = 11 + (user_session_enable ? 1 : 0) + (user_rssi_enable ? 1 : 0);
+			}
+		}
+
+		function loadSystemBaseInfo(callback) {
+			new XHR().get("<%=url('admin/services/oaf/api/get_system_base_info')%>", {}, function(x, data) {
+				user_session_enable = !!(data && parseInt(data.user_session_enable, 10) === 1);
+				user_rssi_enable = !!(data && Object.prototype.hasOwnProperty.call(data, 'wireless_support'));
+				applyCapabilityColumnVisibility();
+				if (callback) callback();
+			});
+		}
+
+		function loadAppClassNameMap(callback) {
+			if (app_class_map_loaded) {
+				if (callback) callback();
+				return;
+			}
+			new XHR().get("<%=url('admin/services/oaf/api/get_class_list')%>", {}, function(x, data) {
+				var classMap = {};
+				var classPayload = data || {};
+				if (!Array.isArray(classPayload.class_list) && classPayload.data && Array.isArray(classPayload.data.class_list)) {
+					classPayload = classPayload.data;
+				}
+				var classList = Array.isArray(classPayload.class_list) ? classPayload.class_list : [];
+				classList.forEach(function(item) {
+					var className = item && item.name ? item.name : '';
+					var hasMapped = false;
+					var classId = parseInt(item && item.id, 10);
+					if (!isNaN(classId) && classId > 0) {
+						classMap[classId] = className || ('Class-' + classId);
+						hasMapped = true;
+					}
+					if (!hasMapped && Array.isArray(item && item.app_list)) {
+						item.app_list.forEach(function(appItem) {
+							var parts = String(appItem || '').split(',');
+							var appId = parseInt(parts[0], 10);
+							if (!isNaN(appId) && appId > 0) {
+								var derivedClassId = Math.floor(appId / 1000);
+								if (derivedClassId > 0 && !classMap[derivedClassId]) {
+									classMap[derivedClassId] = className || ('Class-' + derivedClassId);
+								}
+							}
+						});
+					}
+				});
+				app_class_name_map = classMap;
+				app_class_map_loaded = true;
+				if (callback) callback();
+			});
+		}
+
+		function getAllUsersData(page) {
+			new XHR().get("<%=url('admin/services/oaf/api/get_all_users')%>", {flag: 3, page: page, page_size: page_size},
+				function (x, data) {
+					user_list_data = data.data;
+					total_num = data.data.total_num || 0;
+					total_page = data.data.total_page || 1;
+					cur_page = data.data.page || 1;
+					render_user_list(user_list_data);
+					render_pagination();
+				}
+			);
+		}
+
+		$(function() {
+			cur_page = 1;
+			bind_view_mode_events();
+			load_view_mode();
+			applyCapabilityColumnVisibility();
+			apply_view_mode();
+			loadAppClassNameMap();
+			loadSystemBaseInfo(function() {
+				getAllUsersData(cur_page);
+				setInterval(function() {
+					console.log("get user data");
+					getAllUsersData(cur_page);
+				}, 3000);
+			});
+		});
+
+		function showSuccessMessage(message = '<%:Operation succeeded%>') {
+			const $modal = $('#modal');
+			const $messageElement = $modal.find('p');
+			$messageElement.text(message);
+			$modal.css('display', 'flex');
+			setTimeout(() => {
+				$modal.css('display', 'none');
+			}, 1000);
+		}
+
+		function toggleBlacklist(mac, inBlacklist) {
+			if (!inBlacklist && !confirm('<%:Are you sure you want to join the blacklist? After joining, this terminal will be disconnected from the Internet.%>')) {
+				return;
+			}
+			var apiUrl = inBlacklist ? "<%=url('admin/services/oaf/api/del_mac_blacklist')%>" : "<%=url('admin/services/oaf/api/add_mac_blacklist')%>";
+			new XHR().post(apiUrl, {mac: mac}, function(x, data) {
+				if (data && data.code === 0) {
+					showSuccessMessage(inBlacklist ? '<%:Removed from blacklist%>' : '<%:Added to blacklist%>');
+					getAllUsersData(cur_page);
+				} else {
+					showSuccessMessage('<%:Operation failed%>');
+				}
+			}, function() {
+				showSuccessMessage('<%:Operation failed%>');
+			});
+		}
+
+		
+
+		function generateMockData() {
+			return [
+				{ app_id: "App1", visit_time: 3600 },
+				{ app_id: "App2", visit_time: 1800 },
+				{ app_id: "App3", visit_time: 2400 },
+				{ app_id: "App4", visit_time: 1200 },
+				{ app_id: "App5", visit_time: 3000 }
+			];
+		}
+
+		function generateUserListData() {
+			return {
+				total_num: 5,
+				list: [
+					{
+						hostname: "Device1",
+						mac: "00:11:22:33:44:55",
+						ip: "192.168.1.2",
+						applist: [{ name: "App1" }, { name: "App2" }],
+						online: 1
+					}
+				]
+			};
+		}
+
+		function generateVisitListData() {
+			return {
+				list: [
+					{
+						appname: "App1",
+						hostname: "Device1",
+						mac: "00:11:22:33:44:55",
+						first_time: "2023-10-01 10:00:00",
+						total_time: 3600,
+						latest_action: 0
+					}
+			
+				]
+			};
+		}
+
+		function formatRate(bytesPerSec) {
+			if (!bytesPerSec || bytesPerSec < 1024) {
+				return Math.round(bytesPerSec || 0) + ' B/s';
+			} else if (bytesPerSec < 1024 * 1024) {
+				return Math.round(bytesPerSec / 1024) + ' KB/s';
+			} else {
+				return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
+			}
+		}
+
+		function formatRssi(rssi) {
+			var rssiNum = parseInt(rssi, 10);
+			if (isNaN(rssiNum) || rssiNum === 0) {
+				return '<span>--</span>';
+			}
+			var color = '#ef4444';
+			if (rssiNum >= -60) {
+				color = '#22c55e';
+			} else if (rssiNum >= -75) {
+				color = '#f59e0b';
+			}
+			return '<span style="color: ' + color + ';">' + rssiNum + ' dBm</span>';
+		}
+
+		function truncateDeviceName(str, maxLen) {
+			if (!str) return str;
+			var len = 0;
+			var truncated = '';
+			for (var i = 0; i < str.length; i++) {
+				var charCode = str.charCodeAt(i);
+				if (charCode > 127) {
+					len += 2;
+				} else {
+					len += 1;
+				}
+				if (len > maxLen) {
+					return truncated + '...';
+				}
+				truncated += str[i];
+			}
+			return str;
+		}
+
+		function formatTraffic(bytes) {
+			if (!bytes || bytes < 1024) {
+				return (bytes || 0) + ' B';
+			} else if (bytes < 1024 * 1024) {
+				return Math.round(bytes / 1024) + ' KB';
+			} else if (bytes < 1024 * 1024 * 1024) {
+				return Math.round(bytes / (1024 * 1024)) + ' MB';
+			} else {
+				return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+			}
+		}
+
+		function showTrafficTooltip(event, upTraffic, downTraffic) {
+			let $tooltip = $('#traffic-tooltip');
+			if ($tooltip.length === 0) {
+				$tooltip = $('<div id="traffic-tooltip"></div>').appendTo('body');
+				$tooltip.css({
+					position: 'absolute',
+					backgroundColor: '#2d2d2d',
+					color: '#fff',
+					padding: '8px 12px',
+					borderRadius: '4px',
+					fontSize: '12px',
+					zIndex: 10000,
+					pointerEvents: 'none',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+					whiteSpace: 'pre-line'
+				});
+			}
+			$tooltip.html('<%:Upstream%>: ' + upTraffic + '\n<%:Downstream%>: ' + downTraffic);
+			const rect = event.target.getBoundingClientRect();
+			$tooltip.css({
+				left: (rect.left + rect.width / 2 - $tooltip.outerWidth() / 2) + 'px',
+				top: (rect.top - $tooltip.outerHeight() - 8) + 'px',
+				display: 'block'
+			});
+		}
+
+			function hideTrafficTooltip(event) {
+				let $tooltip = $('#traffic-tooltip');
+				if ($tooltip.length) {
+					$tooltip.css('display', 'none');
+				}
+			}
+
+			function escapeHtml(str) {
+				if (str === undefined || str === null) return '';
+				return String(str)
+					.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;')
+					.replace(/"/g, '&quot;')
+					.replace(/'/g, '&#39;');
+			}
+
+			function normalizePcStatusKey(statusKey) {
+				if (statusKey === 'app_limited' || statusKey === 'mac_blocked') {
+					return statusKey;
+				}
+				return 'unlimited';
+			}
+
+			function applyWhitelistPcStatus(statusKey, item) {
+				var normalized = normalizePcStatusKey(statusKey);
+				var afWhitelist = item && parseInt(item.af_whitelist, 10) === 1;
+				var mfWhitelist = item && parseInt(item.mf_whitelist, 10) === 1;
+				if (afWhitelist && normalized === 'app_limited') {
+					return 'unlimited';
+				}
+				if (mfWhitelist && normalized === 'mac_blocked') {
+					return 'unlimited';
+				}
+				return normalized;
+			}
+
+			function formatPcStatus(statusKey) {
+				var statusTextMap = {
+					unlimited: '<%:Unrestricted%>',
+					app_limited: '<%:App Restricted%>',
+					mac_blocked: '<%:Disconnected%>'
+				};
+				return statusTextMap[normalizePcStatusKey(statusKey)];
+			}
+
+			var _iconStatusCache = {};
+			function appLetterColor(name) {
+				return window.OAFIcon ? window.OAFIcon.hashColor(name) : '#3b82f6';
+			}
+
+			function buildDeviceIconHtml(name, mac) {
+				var displayName = (name || mac || '?').trim();
+				if (!displayName || displayName === '--') {
+					displayName = (mac || '?').trim();
+				}
+				var firstChar = displayName.charAt(0).toUpperCase();
+				return '<span class="user-device-icon" style="background:' + appLetterColor(displayName) + ';">' +
+					escapeHtml(firstChar || '?') + '</span>';
+			}
+
+			function buildAppIconEl(app, isCurrent) {
+				var appName = app && app.name ? app.name : '';
+				var appId = app && app.id !== undefined && app.id !== null ? String(app.id).trim() : '';
+				var iconSrc = appId ? '<%=resource%>/oaf/app_icons/' + encodeURIComponent(appId) + '.png' : '';
+				var iconDisabled = app && (app.icon === 0 || app.icon === '0' || app.hasIcon === false);
+				if (appId && iconDisabled) {
+					_iconStatusCache[appId] = 'failed';
+				}
+				if (appId && !iconDisabled && _iconStatusCache[appId] === 'loaded') {
+					return $('<span>').addClass('user-app-icon-wrap').toggleClass('user-app-icon-current', !!isCurrent).attr('title', appName).css({
+						width:'20px', height:'20px', borderRadius:'5px', marginRight:'4px',
+						display:'inline-block', flexShrink:0, verticalAlign:'middle', overflow:'hidden', position:'relative'
+					}).append($('<img>').addClass('user-app-icon-img').attr({src:iconSrc, alt:appName})
+						.css({width:'100%', height:'100%', borderRadius:'5px', display:'block', objectFit:'cover'}));
+				}
+				var $wrap = $('<span>').addClass('user-app-icon-wrap').toggleClass('user-app-icon-current', !!isCurrent).attr('title', appName).css({
+					width:'20px', height:'20px', borderRadius:'5px', marginRight:'4px',
+					display:'inline-flex', alignItems:'center', justifyContent:'center',
+					background: appLetterColor(appName), color:'#fff',
+					fontSize:'11px', fontWeight:'700', flexShrink:0,
+					border:'1px solid rgba(255,255,255,0.1)',
+					boxShadow:'0 1px 3px rgba(0,0,0,0.3)', verticalAlign:'middle', position:'relative',
+					overflow:'hidden'
+				}).text((appName || '?').charAt(0).toUpperCase());
+				if (appId && !iconDisabled && _iconStatusCache[appId] !== 'failed') {
+					var loader = new Image();
+					loader.onload = (function($el, src, alt, id) {
+						return function() {
+							_iconStatusCache[id] = 'loaded';
+							$el.empty().css({
+								background:'', color:'', fontSize:'', fontWeight:'',
+								border:'', boxShadow:'',
+								display:'inline-block', alignItems:'', justifyContent:''
+							}).append($('<img>').addClass('user-app-icon-img').attr({src:src, alt:alt})
+								.css({width:'100%', height:'100%', borderRadius:'5px', display:'block', objectFit:'cover'}));
+						};
+					})($wrap, iconSrc, appName, appId);
+					loader.onerror = (function(id) { return function() { _iconStatusCache[id] = 'failed'; }; })(appId);
+					loader.src = iconSrc;
+				}
+				return $wrap;
+			}
+
+			function buildDisplayAppList(applist, currentAppId, currentAppName, currentAppIcon) {
+				var result = [];
+				var used = {};
+				var normalizedName = (currentAppName || '').trim();
+				var currentId = currentAppId !== undefined && currentAppId !== null ? String(currentAppId).trim() : '';
+				if ((!normalizedName || normalizedName === '--') && currentId && currentId !== '0') {
+					normalizedName = 'App' + currentId;
+				}
+				if (normalizedName && normalizedName !== '--') {
+					var currentKey = currentId && currentId !== '0' ? ('id:' + currentId) : ('name:' + normalizedName);
+					used[currentKey] = true;
+					result.push({ id: currentId, name: normalizedName, current: true, icon: currentAppIcon });
+				}
+				var commonCount = 0;
+				(applist || []).forEach(function(app) {
+					if (commonCount >= 5 || result.length >= 6 || !app) return;
+					var appId = app.id !== undefined && app.id !== null ? String(app.id).trim() : '';
+					var appName = app.name || '';
+					var key = appId && appId !== '0' ? ('id:' + appId) : ('name:' + appName);
+					if (used[key]) return;
+					used[key] = true;
+					result.push({ id: appId, name: appName, current: false, icon: app.icon });
+					commonCount++;
+				});
+				return result;
+			}
+
+			function formatWeekdayList(weekdays) {
+				const dayMap = ['<%:Sun%>', '<%:Mon%>', '<%:Tue%>', '<%:Wed%>', '<%:Thu%>', '<%:Fri%>', '<%:Sat%>'];
+				if (!Array.isArray(weekdays) || weekdays.length === 0) {
+					return '--';
+				}
+				return weekdays.map(function(wd) {
+					var idx = parseInt(wd, 10);
+					if (isNaN(idx) || idx < 0 || idx > 6) return '';
+					return dayMap[idx];
+				}).filter(Boolean).join(',');
+			}
+
+			function formatTimeRuleText(rule) {
+				if (!rule) return '--';
+				var weekdays = formatWeekdayList(rule.weekdays);
+				if (rule.start_time && rule.end_time) {
+					return weekdays + ' ' + rule.start_time + '-' + rule.end_time;
+				}
+				if (rule.duration_minutes) {
+					return weekdays + ' <%:Daily Duration%> ' + rule.duration_minutes + 'm';
+				}
+				if (rule.flow_mb) {
+					return weekdays + ' <%:Daily Flow%> ' + rule.flow_mb + ' MB';
+				}
+				return weekdays;
+			}
+
+			function getModeText(mode) {
+				return parseInt(mode, 10) === 1 ? '<%:All Users%>' : '<%:Selected User%>';
+			}
+
+			function formatRuleTimeText(rule) {
+				var timeList = [];
+				if (Array.isArray(rule.time_rules)) {
+					timeList = rule.time_rules.map(formatTimeRuleText);
+				} else if (Array.isArray(rule.duration_rules)) {
+					timeList = rule.duration_rules.map(formatTimeRuleText);
+				} else if (Array.isArray(rule.flow_rules)) {
+					timeList = rule.flow_rules.map(formatTimeRuleText);
+				}
+				return timeList.length > 0 ? timeList.join('<br/>') : '--';
+			}
+
+			function formatAppCategoryStats(rule) {
+				var stats = Array.isArray(rule.category_stats) ? rule.category_stats : [];
+				if (stats.length === 0) {
+					return '--';
+				}
+				return stats.map(function(item) {
+					var classId = parseInt(item && item.id, 10);
+					var count = parseInt(item && item.count, 10) || 0;
+					if (isNaN(classId) || classId <= 0) return '';
+					var className = app_class_name_map[classId] || ('Class-' + classId);
+					return escapeHtml(className) + '(' + count + ')';
+				}).filter(Boolean).join(', ');
+			}
+
+			function buildRuleRows(ruleType, rule) {
+				if (!rule) {
+					return '<div class="pc-rule-row"><div class="pc-rule-label"><%:Rule Detail%></div><div class="pc-rule-value"><%:No records%></div></div>';
+				}
+				var rows = [];
+				rows.push('<div class="pc-rule-row"><div class="pc-rule-label"><%:Rule Type%></div><div class="pc-rule-value">' + (ruleType === 'appfilter' ? '<%:App Filter%>' : '<%:Access Control%>') + '</div></div>');
+				rows.push('<div class="pc-rule-row"><div class="pc-rule-label"><%:Rule Name%></div><div class="pc-rule-value">' + escapeHtml(rule.rule_name || ('<%:Rule%>' + (rule.rule_id || ''))) + '</div></div>');
+				rows.push('<div class="pc-rule-row"><div class="pc-rule-label"><%:Mode%></div><div class="pc-rule-value">' + getModeText(rule.mode) + '</div></div>');
+
+				if (ruleType === 'appfilter') {
+					var categories = formatAppCategoryStats(rule);
+					rows.push('<div class="pc-rule-row"><div class="pc-rule-label"><%:Restricted Apps%></div><div class="pc-rule-value">' + categories + '</div></div>');
+					rows.push('<div class="pc-rule-row"><div class="pc-rule-label"><%:Time Rule%></div><div class="pc-rule-value">' + formatRuleTimeText(rule) + '</div></div>');
+				} else {
+					var matchTypeMap = {
+						time_range: '<%:Time Range%>',
+						duration: '<%:Duration%>',
+						flow: '<%:Flow%>',
+						blacklist: '<%:Blacklist%>'
+					};
+					var matchType = matchTypeMap[rule.match_type] || '<%:Time Range%>';
+					var hitDetail = '--';
+					if (rule.match_type === 'duration') {
+						hitDetail = '<%:Used%>: ' + (rule.used_minutes || 0) + 'm / <%:Limit%>: ' + (rule.limit_minutes || 0) + 'm';
+					} else if (rule.match_type === 'flow') {
+						hitDetail = '<%:Used%>: ' + (rule.used_mb || 0) + ' MB / <%:Limit%>: ' + (rule.limit_mb || 0) + ' MB';
+					} else if (rule.match_type === 'blacklist') {
+						hitDetail = '<%:Joined Internet Blacklist%>';
+					}
+					rows.push('<div class="pc-rule-row"><div class="pc-rule-label"><%:Type%></div><div class="pc-rule-value">' + matchType + '</div></div>');
+					rows.push('<div class="pc-rule-row"><div class="pc-rule-label"><%:Hit Detail%></div><div class="pc-rule-value">' + hitDetail + '</div></div>');
+					rows.push('<div class="pc-rule-row"><div class="pc-rule-label"><%:Time Rule%></div><div class="pc-rule-value">' + formatRuleTimeText(rule) + '</div></div>');
+				}
+
+				return rows.join('');
+			}
+
+            function pickOneMatchedRule(detail) {
+                var statusKey = applyWhitelistPcStatus(detail.pc_status_key || detail.pc_status, detail);
+                var appRules = (detail && parseInt(detail.af_whitelist, 10) === 1) ? [] : (Array.isArray(detail.appfilter_rules) ? detail.appfilter_rules : []);
+                var macRules = (detail && parseInt(detail.mf_whitelist, 10) === 1) ? [] : (Array.isArray(detail.macfilter_rules) ? detail.macfilter_rules : []);
+                var sortByRuleId = function(a, b) {
+                    var aId = parseInt(a && a.rule_id, 10) || 0;
+                    var bId = parseInt(b && b.rule_id, 10) || 0;
+                    return aId - bId;
+                };
+                var appRule = appRules.length > 0 ? appRules.slice().sort(sortByRuleId)[0] : null;
+                var sortedMacRules = macRules.length > 0 ? macRules.slice().sort(sortByRuleId) : [];
+                var macRule = sortedMacRules.length > 0 ? sortedMacRules[0] : null;
+                var blacklistMacRule = null;
+                for (var i = 0; i < sortedMacRules.length; i++) {
+                    if (sortedMacRules[i] && sortedMacRules[i].match_type === 'blacklist') {
+                        blacklistMacRule = sortedMacRules[i];
+                        break;
+                    }
+                }
+
+                if (statusKey === 'app_limited') {
+                    if (appRule) return { type: 'appfilter', rule: appRule };
+                }
+                if (statusKey === 'mac_blocked') {
+                    if (blacklistMacRule) return { type: 'macfilter', rule: blacklistMacRule };
+                    if (macRule) return { type: 'macfilter', rule: macRule };
+                }
+                if (blacklistMacRule) return { type: 'macfilter', rule: blacklistMacRule };
+                if (macRule) return { type: 'macfilter', rule: macRule };
+                if (appRule) return { type: 'appfilter', rule: appRule };
+                return { type: '', rule: null };
+            }
+
+			function showParentalControlDetail(mac) {
+				new XHR().get("<%=url('admin/services/oaf/api/get_parental_control_detail')%>", {mac: mac}, function(x, data) {
+					var detail = data || {};
+					loadAppClassNameMap(function() {
+						var matched = pickOneMatchedRule(detail);
+						var statusKey = applyWhitelistPcStatus(detail.pc_status_key || detail.pc_status, detail);
+						$('#pcDetailMac').text(mac || '--');
+						$('#pcDetailStatus').text(formatPcStatus(statusKey));
+						$('#pcRuleDetailBody').html(buildRuleRows(matched.type, matched.rule));
+						$('#pcDetailModal').css('display', 'flex');
+					});
+				});
+			}
+
+		function render_user_list(data) {
+			const $tb = $('#user_status_table');
+			const $cards = $('#user_status_cards');
+			const user_list = data.list;
+			if (user_list && $tb.length && $cards.length) {
+				$tb.find('tr:gt(0)').remove();
+				$cards.empty();
+				var cardLayout = get_card_row_layout($cards);
+				var cardIndex = 0;
+				var $cardRow = null;
+				for (var i = 0; i < user_list.length; i++) {
+					var nickname = (user_list[i].nickname || "").trim();
+					var hostname = (user_list[i].hostname || "").trim();
+					var mac = user_list[i].mac || "--";
+					var list_display_name = nickname || hostname || "--";
+					var list_full_name = list_display_name;
+					var list_truncated_name = truncateDeviceName(list_display_name, 16);
+					var card_title = nickname || hostname || mac || "--";
+					var card_identity_name = nickname || hostname || "";
+					var card_info_line = card_identity_name ? (card_identity_name + ' (' + mac + ')') : mac;
+
+					const $tr = $('<tr class="tr"></tr>');
+					if (user_list[i].online != 1) {
+						$tr.css('color', '#A9A9A9');
+					}
+					$tr.append(`<td class="td user-col-device">
+						<div class="user-device-info">
+							${buildDeviceIconHtml(list_display_name, mac)}
+							<div class="user-device-text">
+								<div class="user-device-name" title="${escapeHtml(list_full_name)}">${escapeHtml(list_truncated_name)}</div>
+								<div class="user-device-mac" title="${escapeHtml(mac)}">${escapeHtml(mac)}</div>
+							</div>
+						</div>
+					</td>`);
+					$tr.append(`<td class="td user-col-ip">${user_list[i].ip}</td>`);
+					var upRate = formatRate(user_list[i].up_rate || 0);
+					$tr.append('<td class="td user-col-up-rate"><span style="color: #60a5fa;">' + upRate + '</span></td>');
+					var downRate = formatRate(user_list[i].down_rate || 0);
+					$tr.append('<td class="td user-col-down-rate"><span style="color: #22c55e;">' + downRate + '</span></td>');
+					if (user_rssi_enable) {
+						$tr.append('<td class="td user-col-signal">' + formatRssi(user_list[i].rssi) + '</td>');
+					}
+					if (user_session_enable) {
+						var sessionDisplay = '--';
+						if (parseInt(user_list[i].online, 10) === 1) {
+							var sessionNum = parseInt(user_list[i].session, 10);
+							sessionDisplay = isNaN(sessionNum) ? '0' : String(sessionNum);
+						}
+						$tr.append('<td class="td user-col-sessions">' + sessionDisplay + '</td>');
+					}
+					var todayUpBytes = user_list[i].today_up_bytes || 0;
+					var todayDownBytes = user_list[i].today_down_bytes || 0;
+					var totalTraffic = todayUpBytes + todayDownBytes;
+					var upTrafficStr = formatTraffic(todayUpBytes);
+					var downTrafficStr = formatTraffic(todayDownBytes);
+					var totalTrafficStr = formatTraffic(totalTraffic);
+					var cellId = 'traffic-cell-' + i;
+					$tr.append('<td class="td user-col-traffic"><span id="' + cellId + '" style="position: relative;" onmouseenter="showTrafficTooltip(event, \'' + upTrafficStr + '\', \'' + downTrafficStr + '\')" onmouseleave="hideTrafficTooltip(event)">' + totalTrafficStr + '</span></td>');
+					var todayActiveTimeStr = get_display_time(user_list[i].today_active_time || 0);
+					$tr.append('<td class="td user-col-net-time">' + todayActiveTimeStr + '</td>');
+					var $appsTd = $('<td class="td user-col-apps">');
+					var applist = Array.isArray(user_list[i].applist) ? user_list[i].applist : [];
+					var isOnline = parseInt(user_list[i].online, 10) === 1;
+					var current_app = isOnline ? (user_list[i].app || "--") : "--";
+					var current_app_id = isOnline ? (user_list[i].app_id || 0) : 0;
+					var displayApplist = buildDisplayAppList(applist, current_app_id, current_app, user_list[i].app_icon);
+					if (displayApplist.length === 0) {
+						$appsTd.text('--');
+					} else {
+						displayApplist.forEach(function(app) { $appsTd.append(buildAppIconEl(app, app.current)); });
+					}
+					$tr.append($appsTd);
+						var current_url = isOnline ? (user_list[i].url || "--") : "--";
+						var display_url = current_url;
+						if (current_url !== "--" && current_url.length > 20) {
+							display_url = current_url.substring(0, 20) + "...";
+						}
+						$tr.append(`<td class="td user-col-url"><span title="${current_url}">${display_url}</span></td>`);
+						var pcStatusKey = applyWhitelistPcStatus(user_list[i].pc_status_key || user_list[i].pc_status, user_list[i]);
+						var pcStatus = formatPcStatus(pcStatusKey);
+						var pcStatusHtml = '<span>' + escapeHtml(pcStatus) + '</span>';
+						if (pcStatusKey === "unlimited") {
+							pcStatusHtml = '<span class="pc-status-unrestricted">' + escapeHtml(pcStatus) + '</span>';
+						} else if (pcStatusKey === "mac_blocked" || pcStatusKey === "app_limited") {
+							pcStatusHtml = '<a href="javascript:void(0);" class="pc-status-link" onclick="showParentalControlDetail(\'' + user_list[i].mac + '\')">' + escapeHtml(pcStatus) + '</a>';
+						}
+						$tr.append('<td class="td user-col-permission">' + pcStatusHtml + '</td>');
+						var statusHtml = '<span class="user-status-label offline"><%:Offline%></span>';
+						if (user_list[i].online == 1) {
+							if (user_list[i].active == 1) {
+								statusHtml = '<span class="user-status-label active"><%:Active%></span>';
+							} else {
+								statusHtml = '<span class="user-status-label online"><%:Online%></span>';
+							}
+						}
+					$tr.append('<td class="td user-col-status">' + statusHtml + '</td>');
+					var inBlacklist = parseInt(user_list[i].in_blacklist, 10) === 1;
+					var blacklistText = inBlacklist ? '<%:Unblock%>' : '<%:Block%>';
+					var blacklistClass = inBlacklist ? 'cbi-button cbi-button-add user-unblock-btn' : 'cbi-button cbi-button-remove user-block-btn';
+					$tr.append(`
+						<td class="td user-col-actions">
+							<button type="button" class="cbi-button cbi-button-add" onclick="window.location.href='<%=url("admin/services/oaf/users/detail")%>?mac=' + encodeURIComponent('${user_list[i].mac}')" style="margin-right: 5px;"><%:Detail%></button>
+							<button type="button" class="${blacklistClass}" onclick="toggleBlacklist('${user_list[i].mac}', ${inBlacklist ? 1 : 0})">${blacklistText}</button>
+						</td>
+					`);
+					$tb.append($tr);
+
+					var onlineBadge = '<span class="user-card-status offline"><%:Offline%></span>';
+					if (user_list[i].online == 1) {
+						if (user_list[i].active == 1) {
+							onlineBadge = '<span class="user-card-status active"><%:Active%></span>';
+						} else {
+							onlineBadge = '<span class="user-card-status online"><%:Online%></span>';
+						}
+					}
+					var ipText = user_list[i].ip || '--';
+					var currentUrlText = current_url || '--';
+					var sessionInfo = '';
+					if (user_session_enable) {
+						var sessionNumCard = parseInt(user_list[i].session, 10);
+						var sessionDisplayCard = parseInt(user_list[i].online, 10) === 1 ? (isNaN(sessionNumCard) ? '0' : String(sessionNumCard)) : '--';
+						sessionInfo = '<div class="user-card-line"><span class="user-card-label"><%:Session Count%></span><span class="user-card-value">' + sessionDisplayCard + '</span></div>';
+					}
+					var rssiInfo = '';
+					if (user_rssi_enable) {
+						rssiInfo = '<div class="user-card-line"><span class="user-card-label"><%:Signal%></span><span class="user-card-value">' + formatRssi(user_list[i].rssi) + '</span></div>';
+					}
+					var $card = $(`
+						<div class="user-card">
+							<div class="user-card-head">
+								<div class="user-card-device">
+									${buildDeviceIconHtml(card_title, mac)}
+									<div class="user-card-title-wrap">
+										<div class="user-card-title" title="${escapeHtml(card_info_line)}">${escapeHtml(card_info_line)}</div>
+										<div class="user-card-ip" title="${escapeHtml(ipText)}">${escapeHtml(ipText)}</div>
+									</div>
+								</div>
+								${onlineBadge}
+							</div>
+							<div class="user-card-body">
+								<div class="user-card-line"><span class="user-card-label" title="<%:Today Traffic%>"><%:Internet Traffic%></span><span class="user-card-value">${totalTrafficStr}</span></div>
+								<div class="user-card-line"><span class="user-card-label" title="<%:Today Internet Duration%>"><%:Internet Duration%></span><span class="user-card-value">${todayActiveTimeStr}</span></div>
+								<div class="user-card-line"><span class="user-card-label"><%:Rate%></span><span class="user-card-value user-card-rate"><span class="user-card-up">&uarr; ${upRate}</span><span class="user-card-down">&darr; ${downRate}</span></span></div>
+								${sessionInfo}
+								${rssiInfo}
+								<div class="user-card-line user-card-apps"><span class="user-card-label"><%:Common App%></span><span class="user-card-value user-card-apps-icons"></span></div>
+								<div class="user-card-line"><span class="user-card-label"><%:Visiting URL%></span><span class="user-card-value user-card-url" title="${escapeHtml(currentUrlText)}">${escapeHtml(currentUrlText)}</span></div>
+								<div class="user-card-line"><span class="user-card-label"><%:Internet Permission%></span><span class="user-card-value">${pcStatusHtml}</span></div>
+							</div>
+							<div class="user-card-actions">
+								<button type="button" class="cbi-button cbi-button-add" onclick="window.location.href='<%=url("admin/services/oaf/users/detail")%>?mac=' + encodeURIComponent('${user_list[i].mac}')"><%:Detail%></button>
+								<button type="button" class="${blacklistClass}" onclick="toggleBlacklist('${user_list[i].mac}', ${inBlacklist ? 1 : 0})">${blacklistText}</button>
+							</div>
+						</div>
+					`);
+					if (cardIndex % cardLayout.columns === 0) {
+						$cardRow = $('<div class="user-card-row"></div>').css('max-width', cardLayout.rowWidth + 'px');
+						$cards.append($cardRow);
+					}
+					$cardRow.append($card);
+					cardIndex++;
+					var $cardAppsEl = $card.find('.user-card-apps-icons');
+					if (displayApplist.length === 0) {
+						$cardAppsEl.text('--');
+					} else {
+						displayApplist.forEach(function(app) { $cardAppsEl.append(buildAppIconEl(app, app.current)); });
+					}
+				}
+				apply_view_mode();
+			}
+		}
+
+		function render_pagination() {
+			const $paginationDiv = $('#pagination');
+			if ($paginationDiv.length === 0) return;
+			
+			if (total_page <= 1) {
+				$paginationDiv.html('');
+				return;
+			}
+			
+			let html = '<div style="display: flex; justify-content: center; align-items: center; margin: 20px 0; gap: 5px;">';
+			
+			if (cur_page > 1) {
+				html += '<button type="button" class="cbi-button" onclick="goToPage(' + (cur_page - 1) + ')" style="min-width: 60px;"><%:Prev Page%></button>';
+			} else {
+				html += '<button type="button" class="cbi-button" disabled style="min-width: 60px; opacity: 0.5;"><%:Prev Page%></button>';
+			}
+			
+			var startPage = Math.max(1, cur_page - 2);
+			var endPage = Math.min(total_page, cur_page + 2);
+			
+			if (startPage > 1) {
+				html += '<button type="button" class="cbi-button" onclick="goToPage(1)" style="min-width: 40px;">1</button>';
+				if (startPage > 2) {
+					html += '<span style="padding: 0 5px;">...</span>';
+				}
+			}
+			
+			for (var i = startPage; i <= endPage; i++) {
+				if (i === cur_page) {
+					html += '<button type="button" class="cbi-button cbi-button-action" style="min-width: 40px; font-weight: bold;">' + i + '</button>';
+				} else {
+					html += '<button type="button" class="cbi-button" onclick="goToPage(' + i + ')" style="min-width: 40px;">' + i + '</button>';
+				}
+			}
+			
+			if (endPage < total_page) {
+				if (endPage < total_page - 1) {
+					html += '<span style="padding: 0 5px;">...</span>';
+				}
+				html += '<button type="button" class="cbi-button" onclick="goToPage(' + total_page + ')" style="min-width: 40px;">' + total_page + '</button>';
+			}
+			
+			if (cur_page < total_page) {
+				html += '<button type="button" class="cbi-button" onclick="goToPage(' + (cur_page + 1) + ')" style="min-width: 60px;"><%:Next Page%></button>';
+			} else {
+				html += '<button type="button" class="cbi-button" disabled style="min-width: 60px; opacity: 0.5;"><%:Next Page%></button>';
+			}
+			
+			var startRecord = (cur_page - 1) * page_size + 1;
+			var endRecord = Math.min(cur_page * page_size, total_num);
+			html += '<span style="margin-left: 20px; color: #999;"><%:Total%> ' + total_num + ' <%:Records%>, <%:Showing%> ' + startRecord + '-' + endRecord + ' </span>';
+			
+			html += '</div>';
+			$paginationDiv.html(html);
+		}
+		
+		function goToPage(page) {
+			if (page < 1 || page > total_page || page === cur_page) {
+				return;
+			}
+			cur_page = page;
+			getAllUsersData(cur_page);
+		}
+
+		function render_visit_list_table(data) {
+			const $tb = $('#visit_list_table');
+			var visit_list = data.list;
+			if (visit_list && $tb.length) {
+				$tb.find('tr:gt(0)').remove();
+				for (var i = 0; i < visit_list.length; i++) {
+					var action_status = visit_list[i].act == 1 ? "<%:Filtered%>" : "<%:Unfiltered%>";
+					var hostname = visit_list[i].hostname == "" || visit_list[i].hostname == "*" ? "--" : visit_list[i].hostname;
+					const $tr = $('<tr class="tr"></tr>');
+
+					(function(app) {
+						var vName = app.name || '';
+						var vId = String(app.id || '');
+						var vSrc = vId ? '<%=resource%>/oaf/app_icons/' + encodeURIComponent(vId) + '.png' : '';
+						var vIconDisabled = app && (app.icon === 0 || app.icon === '0' || app.hasIcon === false);
+						if (vId && vIconDisabled) {
+							_iconStatusCache[vId] = 'failed';
+						}
+						var $vtd = $('<td class="td">');
+						var $vdiv = $('<div>').css({height:'24px', display:'flex', alignItems:'center'});
+						var $vicon;
+						if (vId && !vIconDisabled && _iconStatusCache[vId] === 'loaded') {
+							$vicon = $('<img>').attr({src:vSrc, alt:vName}).css({
+								width:'20px', height:'20px', borderRadius:'5px',
+								marginRight:'4px', objectFit:'cover', display:'block'
+							});
+						} else {
+							$vicon = $('<span>').css({
+								width:'20px', height:'20px', borderRadius:'5px', marginRight:'4px',
+								display:'inline-flex', alignItems:'center', justifyContent:'center',
+								background: appLetterColor(vName), color:'#fff',
+								fontSize:'11px', fontWeight:'700', flexShrink:0
+							}).text((vName || '?').charAt(0).toUpperCase());
+							if (vId && !vIconDisabled && _iconStatusCache[vId] !== 'failed') {
+								var vLoader = new Image();
+								vLoader.onload = (function($el, src, alt, id) {
+									return function() {
+										_iconStatusCache[id] = 'loaded';
+										$el.replaceWith($('<img>').attr({src:src, alt:alt}).css({
+											width:'20px', height:'20px', borderRadius:'5px',
+											marginRight:'4px', objectFit:'cover', display:'block',
+											border:'none', boxShadow:'none'
+										}));
+									};
+								})($vicon, vSrc, vName, vId);
+								vLoader.onerror = (function(id) { return function() { _iconStatusCache[id] = 'failed'; }; })(vId);
+								vLoader.src = vSrc;
+							}
+						}
+						$vdiv.append($vicon).append($('<span>').text(vName));
+						$vtd.append($vdiv);
+						$tr.append($vtd);
+					})(visit_list[i]);
+
+					var first_time_str = new Date(visit_list[i].ft * 1000).toLocaleString();
+					var latest_time_str = new Date(visit_list[i].lt * 1000).toLocaleString();
+
+					$tr.append('<td class="td">' + first_time_str + '</td>');
+					$tr.append('<td class="td">' + latest_time_str + '</td>');
+					var hour = parseInt(visit_list[i].tt / 3600);
+					var seconds = visit_list[i].tt % 3600;
+					var min = parseInt(seconds / 60)
+					var total_time_str;
+					if (visit_list[i].act == 1)
+						total_time_str = "-"
+					else {
+						if (hour > 0)
+							total_time_str = hour + "h " + min + "m"
+						else {
+							if (min == 0)
+								min = 1;
+							total_time_str = min + "m"
+						}
+					}
+
+					$tr.append('<td class="td">' + total_time_str + '</td>');
+					$tr.append('<td class="td">' + action_status + '</td>');
+
+					$tb.append($tr);
+				}
+			}
+		}
+
+
+		function showDetails(mac) {
+			var $modal = $('#detailsModal');
+			$modal.css('display', 'flex');
+
+			new XHR().get("<%=url('admin/services/oaf/api/dev_visit_time')%>/" + mac, null,
+				function (x, st) {
+					visit_time_data = st;
+					console.log("visit_time_data = " + visit_time_data);
+					display_app_visit_view(visit_time_data);
+				}
+			);
+
+			new XHR().get("<%=url('admin/services/oaf/api/dev_visit_list')%>/" + mac, null,
+				function (x, st) {
+					visit_list_data = st;
+					console.log("visit_list_data = " + visit_list_data);
+					render_visit_list_table(visit_list_data);
+				}
+			);
+		}
+
+		function showModifyNickname(mac) {
+			var $modal = $('#nicknameModal');
+			$modal.css('display', 'flex');
+			$('#nicknameMac').val(mac);
+			$('#nicknameMacDisplay').text(mac);
+			$('#nicknameInput').val('');
+		}
+
+		function validateNickname(nickname) {
+			const invalidChars = /[\s'"]/;
+			return !invalidChars.test(nickname) && nickname.length <= 32;
+		}
+
+		function submitNicknameChange() {
+			var mac = $('#nicknameMac').val();
+			var nickname = $('#nicknameInput').val();
+
+			if (!validateNickname(nickname)) {
+				alert('<%:Please enter a valid remark%>');
+				return;
+			}
+
+			new XHR().post("<%=url('admin/services/oaf/api/set_nickname')%>", 
+			{ mac: mac, nickname: nickname },
+			function(x, data) {
+				console.log('Nickname updated successfully');
+				closeModal('nicknameModal');
+				showSuccessMessage('<%:Operation succeeded%>');
+				getAllUsersData(cur_page);
+			});
+		}
+
+		function closeModal(modalId) {
+			var $modal = $('#' + modalId);
+			if ($modal.length) {
+				$modal.css('display', 'none');
+			}
+		}
+
+		function showTabContent(tabId) {
+			var $tabs = $('.tab-body');
+			var $tabItems = $('.tab-item');
+
+			$tabs.removeClass('active');
+			$tabItems.removeClass('active');
+
+			$('#' + tabId).addClass('active');
+			$('.tab-item[onclick="showTabContent(\'' + tabId + '\')"]').addClass('active');
+		}
+
+    function get_display_time(total_time) {
+        var hour = parseInt(total_time / 3600);
+        var seconds = total_time % 3600;
+        var min = parseInt(seconds / 60)
+        var seconds2 = seconds % 60;
+        var total_time_str;
+
+        if (hour > 0)
+            total_time_str = hour + "h " + min + "m"
+        else {
+            if (min == 0 && seconds2 != 0)
+                min = 1;
+            total_time_str = min + "m"
+        }
+        return total_time_str;
+    }
+
+    function display_app_visit_view(data) {
+        var $chartElement = $('#app_time_chart');
+        if ($chartElement.length === 0) {
+            console.error("Chart element not found");
+            return;
+        }
+        var myChart = echarts.init($chartElement.get(0), null, { renderer: FWX_ECHART_RENDERER });
+        if (!data) {
+            return;
+        }
+        
+        var themeTextColor = '#c9d1d9'; 
+        try {
+            var bodyStyle = window.getComputedStyle(document.body);
+            themeTextColor = bodyStyle.color || themeTextColor;
+        } catch(e) {
+        }
+		var total_time = 0
+		var app_stat_array = new Array();
+		if (data.length == 0){
+			var app_obj ={}
+			app_obj.name = "<%:Unknown App%>"
+			app_obj.value = 0
+			app_obj.legendname = app_obj.name
+			app_stat_array.push(app_obj)
+		}
+		else{
+			for (var i = 0; i < data.length; i++) {
+				var app_obj = {};
+				app_obj.value = data[i].t;
+				app_obj.legendname = data[i].name;
+				var tmp_time = get_display_time(data[i].t);
+				app_obj.name = data[i].name + "  " + tmp_time;
+				total_time += data[i].t
+				app_stat_array.push(app_obj);
+			}
+		}
+		console.log("hello")
+        var total_time_str = get_display_time(total_time);
+        
+        var palette = [
+            '#34d399',  // emerald-400 
+            '#22c55e',  // green-500 
+            '#06b6d4',  // cyan-500
+            '#60a5fa',  // blue-400 
+            '#a78bfa',  // violet-400 
+            '#f472b6',  // pink-400 
+            '#fb923c',  // orange-400 
+            '#fbbf24',  // amber-400 
+            '#10b981',  // emerald-500
+            '#3b82f6',  // blue-500
+            '#8b5cf6',  // violet-500 
+            '#ec4899'   // pink-500
+        ];
+        
+        var option = {
+			backgroundColor: 'transparent',
+			color: palette,
+			textStyle: {
+				color: themeTextColor  
+			},
+			grid:{
+			},
+            title: [
+                {
+                    text: "<%:App Time Statistics%>",
+                    textStyle: {
+                        fontSize: 16,
+                        color: themeTextColor  
+                    },
+                    left: "2%"
+                },
+                {
+                    text: '',
+                    subtext: total_time_str,
+                    textStyle: {
+                        fontSize: 15,
+                        color: themeTextColor  
+                    },
+                    subtextStyle: {
+                        fontSize: 15,
+                        color: themeTextColor 
+                    },
+                    textAlign: "center",
+                    x: '34.5%',
+                    y: '44%',
+                }],
+            tooltip: {
+                trigger: 'item',
+                formatter: function (parms) {
+                    var total_time = get_display_time(parms.data.value);
+                    var str = parms.seriesName + "</br>" +
+                        parms.marker + "" + parms.data.legendname + "</br>" +
+                        "<%:Visit Time%>: " + total_time + "</br>" +
+                        "<%:Percentage%>: " + parms.percent + "%";
+                    return str;
+                }
+            },
+            legend: {
+                type: "scroll",
+                orient: 'vertical',
+                left: '75%',
+                align: 'left',
+                top: 'middle',
+                textStyle: {
+                    color: themeTextColor  // 使用主题文字颜色
+                },
+                height: 250
+            },
+            series: [
+                {
+                    name: "<%:Visit Time%>",
+                    type: 'pie',
+                    radius: ['58%', '70%'],
+                    center: ['35%', '50%'], // 饼图的中心位置,调整离开左侧的距离
+                    clockwise: false,
+                    avoidLabelOverlap: true,
+                    itemStyle: {
+                        borderRadius: 1,
+                        borderColor: "#fff",
+                        borderWidth: 1,
+                    },
+                    label: {
+                        show: true,
+                        position: 'outside',
+                        formatter: '{b}: {c} ({d}%)',
+                        normal: {
+                            show: true,
+                            position: 'outter',
+                            formatter: function (parms) {
+                                return parms.data.legendname
+                            }
+                        }
+                    },
+                    labelLine: {
+                        show: true,
+                        length: 8,
+                        length2: 7,
+                        smooth: true,
+                    },
+                    data: app_stat_array
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+    }
+
+//]]></script>
+
+<div class="user-status-content" style="max-height: 1000px; overflow-y: auto; overflow-x: auto; padding-right: 20px;">
+
+	<div class="cbi-section cbi-tblsection">
+
+		<div class="user-view-toolbar">
+			<button type="button" id="view_mode_list_btn" class="view-mode-btn" data-mode="list" title="List Mode" aria-label="List Mode">
+				<span class="view-mode-icon view-mode-icon-list"></span>
+			</button>
+			<button type="button" id="view_mode_card_btn" class="view-mode-btn" data-mode="card" title="Card Mode" aria-label="Card Mode">
+				<span class="view-mode-icon view-mode-icon-card"></span>
+			</button>
+		</div>
+
+		<div id="user_table_wrapper" class="user-table-wrapper">
+
+		<table class="table cbi-section-table" id="user_status_table">
+			<tr class="tr">
+				<th class="th user-col-device">
+					<%:Device%>
+				</th>
+				<th class="th user-col-ip">
+					<%:IP%>
+				</th>
+				<th class="th user-col-up-rate">
+					<%:Up Rate%>
+				</th>
+				<th class="th user-col-down-rate">
+					<%:Down Rate%>
+				</th>
+				<th class="th user-col-signal" id="rssi_header" style="display: none;">
+					<%:Signal%>
+				</th>
+				<th class="th user-col-sessions" id="session_count_header" style="display: none;">
+					<%:Sessions%>
+				</th>
+					<th class="th user-col-traffic" title="<%:Today Traffic%>">
+						<%:Net Traffic%>
+					</th>
+					<th class="th user-col-net-time" title="<%:Today Internet Duration%>">
+						<%:Net Time%>
+					</th>
+				<th class="th user-col-apps">
+					<%:Apps%>
+				</th>
+					<th class="th user-col-url">
+						<%:URL%>
+					</th>
+					<th class="th user-col-permission">
+						<%:Permission%>
+					</th>
+					<th class="th user-col-status">
+						<%:Status%>
+					</th>
+					<th class="th user-col-actions">
+						<%:Actions%>
+				</th>
+			</tr>
+				<tr class="tr">
+					<td class="td" id="user_status_loading_cell" colspan="11"><em><br />
+							<%:Collecting data...%>
+						</em></td>
+				</tr>
+		</table>
+
+		</div>
+
+		<div id="user_status_cards" class="user-card-grid" style="display: none;"></div>
+		
+		<div id="pagination" style="margin-top: 20px;"></div>
+		
+	</div>
+</div>
+<div id="detailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; justify-content: center; align-items: center;">
+    <div class="modal-content" style="background: var(--background-color-high, #ffffff); color: var(--text-color-high, #333); padding: 20px; border-radius: 5px; width: 750px; height: 500px; max-height: 90vh; overflow-y: auto; position: relative; border: 1px solid var(--border-color-low, #e5e7eb);">
+        <button type="button" onclick="closeModal('detailsModal')" class="modal-close" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-color-high, #333); font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px; line-height: 30px;">&times;</button>
+        <h4 style="margin: 0 0 20px 0; color: inherit;"><%:Terminal Detail%></h4>
+        
+        <ul class="tab-list">
+            <li class="tab-item active" onclick="showTabContent('tab2')"><%:App Statistics%></li>
+			<li class="tab-item" onclick="showTabContent('tab3')"><%:Visit Records%></li>
+        </ul>
+
+        <div id="tab2" class="tab-body active">
+			<div class="pie-chart">
+				<div id="app_time_chart" style="width:100%;height: 350px;">
+				</div>
+			</div>
+        </div>
+
+		<div id="tab3" class="tab-body">
+			<div style="max-height: 350px; overflow-y: auto;padding-right: 20px;"> <!-- Added container with fixed height and overflow -->
+				<table class="table cbi-section-table" id="visit_list_table">
+					<tr class="tr table-titles">
+						<th class="th">
+							<%:App Name%>
+						</th>
+			
+						<th class="th">
+							<%:First Visit%>
+						</th>
+
+						<th class="th">
+							<%:Last Visit%>
+						</th>
+						<th class="th">
+							<%:Duration%>
+						</th>
+						<th class="th">
+							<%:Filter Status%>
+						</th>
+					</tr>
+					<tr class="tr">
+						<td class="td" colspan="8"><em><br />
+								<%:Collecting data...%>
+							</em></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+
+    </div>
+</div>
+
+<div id="nicknameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; justify-content: center; align-items: center;">
+    <div class="modal-content" style="background: var(--background-color-high, #ffffff); color: var(--text-color-high, #333); padding: 20px; border-radius: 5px; width: 400px; position: relative; border: 1px solid var(--border-color-low, #e5e7eb);">
+        <button type="button" onclick="closeModal('nicknameModal')" class="modal-close" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-color-high, #333); font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px; line-height: 30px;">&times;</button>
+        <h4 style="margin: 0 0 20px 0; color: inherit;"><%:Edit Remark%></h4>
+        <p style="margin-bottom: 10px;"><span class="field-label"><%:MAC Address%>:</span> <span id="nicknameMacDisplay">--</span></p>
+        <input type="hidden" id="nicknameMac" value="">
+        <p style="margin-bottom: 10px;"><span class="field-label"><%:Remark%>:</span> <input type="text" id="nicknameInput" style="padding: 5px; background: inherit; color: inherit; border: 1px solid var(--border-color-medium, #d1d5db); width: 200px; border-radius: 4px;"></p>
+        <div style="display: flex; justify-content: flex-end;">
+			<button type="button" class="cbi-button cbi-button-add" onclick="closeModal('nicknameModal')"><%:Cancel%></button>
+            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()" style="margin-right: 10px;"><%:Confirm%></button>
+        </div>
+	    </div>
+</div>
+
+<div id="pcDetailModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; justify-content: center; align-items: center;">
+	<div class="modal-content" style="background: var(--background-color-high, #ffffff); color: var(--text-color-high, #333); padding: 20px; border-radius: 5px; width: 880px; max-height: 90vh; overflow-y: auto; position: relative; border: 1px solid var(--border-color-low, #e5e7eb);">
+		<button type="button" onclick="closeModal('pcDetailModal')" class="modal-close" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-color-high, #333); font-size: 24px; cursor: pointer; padding: 0; width: 30px; height: 30px; line-height: 30px;">&times;</button>
+		<h4 style="margin: 0 0 15px 0; color: inherit;"><%:Internet Permission Detail%></h4>
+		<div style="margin-bottom: 12px;">
+			<%:Terminal%>: <span id="pcDetailMac">--</span>
+			&nbsp;&nbsp;<%:Current Status%>: <span id="pcDetailStatus"><%:Unrestricted%></span>
+		</div>
+		<div>
+			<h5 style="margin: 0 0 8px 0;"><%:Matched Rule%></h5>
+			<div id="pcRuleDetailBody" class="pc-rule-detail"></div>
+		</div>
+	</div>
+</div>
+
+<div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
+	<div style="background-color: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px; text-align: center; width: 100px; height: 70px; color: white; display: flex; justify-content: center; align-items: center;">
+		<p style="margin: 0;color:white;"><%:Operation succeeded%></p>
+	</div>
+</div>
+<style>
+	.user-status-content .cbi-tblsection {
+		margin-top: 0;
+		padding-top: 0;
+	}
+
+    .tab-container {
+        margin-top: 20px;
+    }
+    .tab-list {
+        display: flex;
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        border-bottom: 1px solid var(--border-color-medium, #d1d5db);
+    }
+    .tab-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        border: 1px solid var(--border-color-medium, #d1d5db);
+        border-bottom: none;
+        background-color: var(--background-color-low, #f5f5f5);
+        border-radius: 5px 5px 0 0;
+        margin-right: 6px;
+        transition: all 0.2s ease;
+        color: #475569;
+        font-size: 13px;
+    }
+    .tab-item.active {
+        font-weight: 600;
+		background-color: var(--background-color-high, #ffffff);
+        border-color: var(--border-color-medium, #d1d5db);
+        color: var(--text-color-high, #333);
+    }
+    .tab-item:hover {
+        background-color: var(--background-color-medium, #eeeeee);
+        color: var(--text-color-high, #333);
+    }
+
+	.tab-body {
+		margin-top: 5px;
+		display: none;
+		padding: 25px;
+	}
+	.tab-body.active {
+		display: block;
+	}
+
+	.pie-chart {
+		width: 600px;
+	}
+
+	.field-label {
+		font-weight: bold;
+		color: #ccc;
+		width: 75px; /* Set a fixed width for all labels */
+		display: inline-block; /* Ensure the width is applied */
+	}
+	.field-value {
+		color: #4CAF50;
+	}
+	
+	.modal-close:hover {
+		color: #ccc;
+	}
+	.info-container {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-left: 20px;
+	}
+	.info-row {
+		display: flex;
+	}
+	.info-column {
+		width: 50%;
+		text-align: left;
+	}
+	.info-column p {
+		margin-bottom: 20px;
+	}
+
+		#user_status_table .th,
+		#user_status_table .td {
+			padding-left: 10px !important;
+			padding-right: 10px !important;
+		}
+
+		.pc-status-link {
+			color: #f59e0b;
+			text-decoration: none;
+			cursor: pointer;
+			font-weight: 600;
+		}
+
+		.pc-status-link:hover {
+			color: #f97316;
+			text-decoration: none;
+		}
+
+		.pc-status-unrestricted {
+			color: #22c55e;
+			font-weight: 600;
+		}
+
+		.pc-rule-detail {
+			border: 1px solid var(--border-color-low, #e5e7eb);
+			border-radius: 6px;
+			padding: 10px 12px;
+		}
+
+		.pc-rule-row {
+			display: flex;
+			padding: 6px 0;
+			border-bottom: 1px dashed var(--border-color-low, #e5e7eb);
+		}
+
+		.pc-rule-row:last-child {
+			border-bottom: none;
+		}
+
+		.pc-rule-label {
+			width: 130px;
+			color: #475569;
+			flex-shrink: 0;
+		}
+
+		.pc-rule-value {
+			flex: 1;
+			word-break: break-word;
+		}
+
+	#visit_list_table .td {
+		padding: 4px 8px !important; /* 调整访问记录表格的行高 */
+		height: 28px !important; /* 设置固定行高 */
+		vertical-align: middle !important; /* 垂直居中对齐 */
+	}
+
+	#visit_list_table .th {
+		padding: 6px 8px !important; /* 调整表头行高 */
+		height: 32px !important; /* 设置固定表头行高 */
+		vertical-align: middle !important; /* 垂直居中对齐 */
+	}
+
+	.user-view-toolbar {
+		display: flex;
+		justify-content: flex-end;
+		align-items: center;
+		gap: 6px;
+		margin: 0 0 10px;
+	}
+
+	.view-mode-btn {
+		width: 23px;
+		height: 23px;
+		border: 1px solid var(--border-color-medium, #d1d5db);
+		background: var(--background-color-high, #fff);
+		color: #475569;
+		border-radius: 6px;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s ease;
+	}
+
+	.view-mode-btn:hover {
+		color: #0f172a;
+		border-color: var(--border-color-high, #9ca3af);
+	}
+
+	.view-mode-btn.is-active {
+		color: #2563eb;
+		background: rgba(59, 130, 246, 0.12);
+		border-color: rgba(59, 130, 246, 0.45);
+	}
+
+	[data-darkmode="true"] .view-mode-btn {
+		color: var(--text-color-medium, #cbd5e1);
+	}
+
+	[data-darkmode="true"] .view-mode-btn:hover {
+		color: var(--text-color-high, #f8fafc);
+	}
+
+	.view-mode-icon {
+		position: relative;
+		display: block;
+		width: 11px;
+		height: 11px;
+	}
+
+	.view-mode-icon-list::before {
+		content: "";
+		position: absolute;
+		left: 1px;
+		top: 2px;
+		width: 9px;
+		height: 1px;
+		border-radius: 2px;
+		background: currentColor;
+		box-shadow: 0 4px 0 currentColor, 0 8px 0 currentColor;
+	}
+
+	.view-mode-icon-card::before,
+	.view-mode-icon-card::after {
+		content: "";
+		position: absolute;
+		width: 5px;
+		height: 5px;
+		border-radius: 1px;
+		background: currentColor;
+	}
+
+	.view-mode-icon-card::before {
+		left: 1px;
+		top: 1px;
+	}
+
+	.view-mode-icon-card::after {
+		right: 1px;
+		bottom: 1px;
+	}
+	.user-table-wrapper {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	#user_status_table {
+		table-layout: auto !important;
+		width: 100% !important;
+		min-width: 1280px;
+	}
+
+	#user_status_table .th,
+	#user_status_table .td {
+		box-sizing: border-box;
+		text-align: left !important;
+	}
+
+	#user_status_table .user-col-device { min-width: 155px; width: 14%; text-align: left !important; }
+	#user_status_table .user-col-ip { min-width: 110px; width: 8%; }
+	#user_status_table .user-col-up-rate { min-width: 90px; width: 7%; }
+	#user_status_table .user-col-down-rate { min-width: 90px; width: 7%; }
+	#user_status_table .user-col-signal { min-width: 88px; width: 6%; }
+	#user_status_table .user-col-sessions { min-width: 88px; width: 6%; }
+	#user_status_table .user-col-traffic { min-width: 100px; width: 7%; }
+	#user_status_table .user-col-net-time { min-width: 100px; width: 7%; }
+	#user_status_table .user-col-apps { min-width: 125px; width: 10%; }
+	#user_status_table .user-col-url { min-width: 145px; width: 11%; }
+	#user_status_table .user-col-permission { min-width: 96px; width: 7%; }
+	#user_status_table .user-col-status { min-width: 72px; width: 5%; }
+	#user_status_table .user-col-actions { min-width: 180px; width: 12%; }
+	#user_status_table .user-col-actions .cbi-button { margin-left: 0; }
+
+	#user_status_table .th,
+	#user_status_table .td {
+		white-space: nowrap;
+		word-break: keep-all;
+	}
+
+	#user_status_table .th {
+		white-space: normal;
+		word-break: normal;
+		overflow-wrap: break-word;
+		line-height: 1.25;
+		vertical-align: middle;
+	}
+
+	.user-device-info {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		gap: 6px;
+		min-width: 0;
+		text-align: left;
+	}
+
+	.user-device-icon {
+		width: 32px;
+		height: 32px;
+		border-radius: 7px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex: 0 0 32px;
+		color: #fff;
+		font-size: 14px;
+		font-weight: 700;
+		line-height: 1;
+		border: 1px solid rgba(148, 163, 184, 0.25);
+		box-sizing: border-box;
+		overflow: hidden;
+	}
+
+	[data-darkmode="true"] .user-device-icon {
+		border-color: rgba(148, 163, 184, 0.35);
+	}
+	.user-device-text {
+		min-width: 112px;
+		line-height: 1.35;
+		text-align: left;
+	}
+
+	.user-device-name,
+	.user-device-mac {
+		display: block;
+		text-align: left;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.user-device-mac {
+		font-size: 12px;
+		opacity: 0.82;
+		overflow: visible;
+		text-overflow: clip;
+	}
+
+	.user-app-icon-current::before {
+		content: "";
+		position: absolute;
+		top: -2px;
+		right: -2px;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: #22c55e;
+		border: 1px solid rgba(255, 255, 255, 0.95);
+		box-sizing: border-box;
+		z-index: 2;
+	}
+
+	.user-app-icon-current {
+		overflow: visible !important;
+	}
+
+	.user-card-grid {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 14px;
+		margin-top: 6px;
+		width: 100%;
+		margin-left: auto;
+		margin-right: auto;
+		box-sizing: border-box;
+	}
+
+	.user-card-row {
+		display: flex;
+		justify-content: flex-start;
+		gap: 14px;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.user-card {
+		border: 1px solid rgba(0, 0, 0, 0.12);
+		border-radius: 12px;
+		background: transparent;
+		padding: 14px;
+		box-shadow: none;
+		display: flex;
+		flex: 0 0 400px;
+		flex-direction: column;
+		gap: 10px;
+		width: 400px;
+		max-width: 400px;
+		box-sizing: border-box;
+	}
+
+	[data-darkmode="true"] .user-card {
+		border-color: rgba(255, 255, 255, 0.15);
+	}
+
+	.user-card-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 10px;
+	}
+
+	.user-card-device {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+	}
+
+	.user-card-title-wrap {
+		min-width: 0;
+	}
+
+	.user-card-title {
+		font-weight: 700;
+		font-size: 15px;
+		color: #0f172a;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.user-card-subtitle {
+		margin-top: 4px;
+		font-size: 12px;
+		color: #475569;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.user-card-ip {
+		margin-top: 2px;
+		font-size: 12px;
+		color: #475569;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.user-card-status {
+		padding: 2px 8px;
+		border-radius: 999px;
+		font-size: 12px;
+		font-weight: 600;
+		flex-shrink: 0;
+	}
+
+	.user-card-status.online {
+		color: #22c55e;
+		background: rgba(34, 197, 94, 0.18);
+	}
+
+	.user-card-status.active {
+		color: var(--primary-color-high, #1976d2);
+		background: rgba(25, 118, 210, 0.16);
+	}
+
+	.user-card-status.offline {
+		color: #6b7280;
+		background: rgba(148, 163, 184, 0.22);
+	}
+
+	.user-status-label {
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	.user-status-label.online {
+		color: #22c55e;
+	}
+
+	.user-status-label.active {
+		color: var(--primary-color-high, #1976d2);
+	}
+
+	.user-status-label.offline {
+		color: #6b7280;
+	}
+
+	.user-card-body {
+		display: flex;
+		flex-direction: column;
+		gap: 7px;
+	}
+
+	.user-card-line {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.user-card-label {
+		flex-shrink: 0;
+		font-size: 12px;
+		color: #475569;
+	}
+
+	.user-card-value {
+		text-align: right;
+		word-break: break-all;
+		color: #0f172a;
+	}
+
+	.user-card-up {
+		color: #2563eb;
+		font-weight: 600;
+	}
+
+	.user-card-down {
+		color: #16a34a;
+		font-weight: 600;
+	}
+
+	.user-card-rate {
+		display: inline-flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 8px;
+		white-space: nowrap;
+	}
+
+	.user-card-apps .user-card-value .user-app-icon-wrap {
+		margin-left: 0;
+		margin-right: 0 !important;
+	}
+
+	.user-card-apps .user-card-value .user-app-icon-wrap + .user-app-icon-wrap {
+		margin-left: 4px;
+	}
+
+	.user-card-apps .user-card-value .user-app-icon-img {
+		margin: 0 !important;
+		border-radius: 5px;
+	}
+
+	.user-card-empty {
+		color: var(--text-color-medium, #9ca3af);
+	}
+
+	.user-card-url {
+		max-width: 220px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		display: inline-block;
+	}
+
+	.user-card-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		margin-top: 2px;
+	}
+
+	.user-block-btn {
+		background: #ef4444 !important;
+		border-color: #dc2626 !important;
+		color: #fff !important;
+	}
+
+	.user-block-btn:hover {
+		background: #dc2626 !important;
+		border-color: #b91c1c !important;
+		color: #fff !important;
+	}
+
+	@media (max-width: 768px) {
+		.user-view-toolbar {
+			justify-content: flex-start;
+		}
+
+		.user-table-wrapper {
+			min-width: 100%;
+			overflow-x: auto;
+		}
+
+		#user_status_table {
+			min-width: 1280px !important;
+		}
+
+		#user_table_wrapper #user_status_table.table.cbi-section-table {
+			display: table !important;
+			width: 100% !important;
+			table-layout: auto !important;
+		}
+
+		#user_table_wrapper #user_status_table .tr {
+			display: table-row !important;
+			flex-direction: initial !important;
+			flex-wrap: nowrap !important;
+			align-items: initial !important;
+			margin: 0 !important;
+			padding: 0 !important;
+			border-top: none !important;
+		}
+
+		#user_status_table .th,
+		#user_status_table .td {
+			display: table-cell !important;
+			flex: none !important;
+			text-align: left !important;
+			font-size: 12px;
+			padding-left: 6px !important;
+			padding-right: 6px !important;
+			white-space: nowrap !important;
+			word-break: keep-all !important;
+			word-wrap: normal !important;
+			overflow-wrap: normal !important;
+			text-overflow: clip !important;
+			overflow: visible !important;
+		}
+
+		#user_status_table .th {
+			white-space: normal !important;
+			word-break: normal !important;
+			word-wrap: break-word !important;
+			overflow-wrap: break-word !important;
+			line-height: 1.25 !important;
+			vertical-align: middle !important;
+		}
+
+		.user-card-grid {
+			display: flex;
+		}
+
+		.user-card-row {
+			max-width: none !important;
+		}
+
+		.user-card {
+			flex-basis: 100%;
+			max-width: none;
+			width: 100%;
+			box-sizing: border-box;
+			padding: 12px;
+		}
+
+		.user-card-url {
+			max-width: 100%;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.user-card-line {
+			flex-wrap: nowrap;
+			align-items: center;
+			gap: 6px;
+		}
+
+		.user-card-label {
+			max-width: 46%;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.user-card-value {
+			flex: 1 1 auto;
+			min-width: 0;
+			text-align: right;
+		}
+	}
+
+</style>

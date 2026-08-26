@@ -1,0 +1,437 @@
+<%+header%>
+<link rel="stylesheet" href="<%=resource%>/oaf/css/common.css">
+<script src="<%=resource%>/oaf/jquery-3.7.1.min.js"></script>
+<script src="<%=resource%>/oaf/oaf_icon.js"></script>
+
+<div style="padding: 8px;">
+    <div class="cbi-section">
+        <ul class="tab-list">
+            <li class="tab-item active" data-tab="online-records"><%:Online Records%></li>
+            <li class="tab-item" data-tab="history-records"><%:History Records%></li>
+        </ul>
+
+        <div id="tab-online-records" class="tab-body active">
+            <table class="table cbi-section-table" id="online-record-table" style="table-layout: fixed; width: 100%;">
+                <colgroup>
+                    <col class="record-app-col">
+                    <col class="record-mac-col">
+                    <col class="record-hostname-col">
+                    <col class="record-nickname-col">
+                    <col class="record-time-col">
+                    <col class="record-time-col">
+                    <col class="record-duration-col">
+                    <col class="record-status-col">
+                    <col class="record-status-col">
+                </colgroup>
+                <tr class="tr table-titles">
+                    <th class="th"><%:App%></th>
+                    <th class="th">MAC</th>
+                    <th class="th"><%:Hostname%></th>
+                    <th class="th"><%:Nickname%></th>
+                    <th class="th"><%:First Visit%></th>
+                    <th class="th"><%:Last Visit%></th>
+                    <th class="th"><%:Duration%></th>
+                    <th class="th"><%:Online%></th>
+                    <th class="th"><%:Filter Status%></th>
+                </tr>
+                <tr class="tr">
+                    <td class="td" colspan="9"><em><br /><%:Loading...%></em></td>
+                </tr>
+            </table>
+            <div id="online-pagination" style="margin-top: 12px;"></div>
+        </div>
+
+        <div id="tab-history-records" class="tab-body">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 12px 0;">
+                <input id="q-history-mac" class="cbi-input-text" type="text" placeholder="<%:Terminal MAC%>" style="width:200px;">
+                <input id="q-history-start" class="cbi-input-text" type="datetime-local" style="width:210px;">
+                <input id="q-history-end" class="cbi-input-text" type="datetime-local" style="width:210px;">
+                <button type="button" class="cbi-button cbi-button-action" id="btn-history-search"><%:Search%></button>
+                <button type="button" class="cbi-button" id="btn-history-reset"><%:Reset%></button>
+            </div>
+
+            <table class="table cbi-section-table" id="history-record-table" style="table-layout: fixed; width: 100%;">
+                <colgroup>
+                    <col class="record-app-col">
+                    <col class="record-mac-col">
+                    <col class="record-hostname-col">
+                    <col class="record-nickname-col">
+                    <col class="record-time-col">
+                    <col class="record-time-col">
+                    <col class="record-duration-col">
+                    <col class="record-status-col">
+                    <col class="record-status-col">
+                </colgroup>
+                <tr class="tr table-titles">
+                    <th class="th"><%:App%></th>
+                    <th class="th">MAC</th>
+                    <th class="th"><%:Hostname%></th>
+                    <th class="th"><%:Nickname%></th>
+                    <th class="th"><%:First Visit%></th>
+                    <th class="th"><%:Last Visit%></th>
+                    <th class="th"><%:Duration%></th>
+                    <th class="th"><%:Online%></th>
+                    <th class="th"><%:Filter Status%></th>
+                </tr>
+                <tr class="tr">
+                    <td class="td" colspan="9"><em><br /><%:Loading...%></em></td>
+                </tr>
+            </table>
+            <div id="history-pagination" style="margin-top: 12px;"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+.tab-list {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-bottom: 1px solid var(--border-color-medium, #d1d5db);
+}
+.tab-item {
+    padding: 3px 16px;
+    cursor: pointer;
+    border: 1px solid var(--border-color-medium, #d1d5db);
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    margin-right: 2px;
+    background-color: var(--background-color-low, #f5f5f5);
+    color: var(--text-color-medium, #6b7280);
+}
+.tab-item.active {
+    font-weight: bold;
+    background-color: var(--background-color-high, #ffffff);
+    color: var(--text-color-high, #333);
+}
+.tab-item:hover {
+    background-color: var(--background-color-medium, #eeeeee);
+}
+.tab-body {
+    margin-top: 6px;
+    display: none;
+}
+.tab-body.active {
+    display: block;
+}
+#online-record-table .th, #history-record-table .th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+#online-record-table .td, #history-record-table .td {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    line-height: 1.55;
+}
+#online-record-table,
+#history-record-table {
+    --record-app-col-width: 138px;
+    --record-app-cell-padding: 14px;
+    --record-app-icon-size: 22px;
+    --record-app-icon-gap: 7px;
+}
+#online-record-table .record-app-col,
+#history-record-table .record-app-col {
+    width: var(--record-app-col-width);
+}
+#online-record-table .record-mac-col,
+#history-record-table .record-mac-col {
+    width: 15%;
+}
+#online-record-table .record-hostname-col,
+#history-record-table .record-hostname-col,
+#online-record-table .record-nickname-col,
+#history-record-table .record-nickname-col {
+    width: 11%;
+}
+#online-record-table .record-time-col,
+#history-record-table .record-time-col {
+    width: 15%;
+}
+#online-record-table .record-duration-col,
+#history-record-table .record-duration-col {
+    width: 8%;
+}
+#online-record-table .record-status-col,
+#history-record-table .record-status-col {
+    width: 6%;
+}
+#online-record-table .td:nth-child(5),
+#online-record-table .td:nth-child(6),
+#history-record-table .td:nth-child(5),
+#history-record-table .td:nth-child(6) {
+    white-space: nowrap;
+}
+.record-app-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--record-app-icon-gap);
+    min-width: 0;
+    width: calc(var(--record-app-col-width) - var(--record-app-cell-padding));
+}
+.record-app-cell .record-app-name {
+    min-width: 0;
+    max-width: calc(var(--record-app-col-width) - var(--record-app-cell-padding) - var(--record-app-icon-size) - var(--record-app-icon-gap));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+</style>
+
+<script type="text/javascript">
+//<![CDATA[
+(function() {
+    var text = {
+        filtered: '<%:Filtered%>',
+        unfiltered: '<%:Unfiltered%>',
+        online: '<%:Online%>',
+        offline: '<%:Offline%>',
+        noData: '<%:No Data%>',
+        previous: '<%:Previous%>',
+        next: '<%:Next%>',
+        total: '<%:Total%>',
+        records: '<%:Records%>'
+    };
+    var online_state = { page: 1, page_size: 15, total_num: 0, total_page: 1 };
+    var history_state = { page: 1, page_size: 15, total_num: 0, total_page: 1 };
+    var history_loaded = false;
+
+    function pad2(n) {
+        n = parseInt(n || 0, 10);
+        return n < 10 ? ("0" + n) : ("" + n);
+    }
+
+    function format_time(ts) {
+        var t = parseInt(ts || 0, 10);
+        if (!t) return "--";
+        var d = new Date(t * 1000);
+        if (isNaN(d.getTime())) return "--";
+        return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + " "
+            + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    }
+
+    function format_duration(sec) {
+        var s = parseInt(sec || 0, 10);
+        if (s < 0) s = 0;
+        var h = Math.floor(s / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        var r = s % 60;
+        if (h > 0) return h + "h" + (m > 0 ? " " + m + "m" : "");
+        if (m > 0) return m + "m" + (r > 0 ? " " + r + "s" : "");
+        return r + "s";
+    }
+
+    function get_ts_from_input(selector) {
+        var v = $(selector).val();
+        if (!v) return 0;
+        var ms = new Date(v).getTime();
+        if (!ms || ms < 0) return 0;
+        return Math.floor(ms / 1000);
+    }
+
+    function render_filter_status(act) {
+        return parseInt(act || 0, 10) === 1
+            ? '<span style="color:#F44336;">' + text.filtered + '</span>'
+            : '<span style="color:#22c55e;">' + text.unfiltered + '</span>';
+    }
+
+    function render_online_status(online) {
+        return parseInt(online || 0, 10) === 1
+            ? '<span style="color:#22c55e;">' + text.online + '</span>'
+            : '<span style="color:#F44336;">' + text.offline + '</span>';
+    }
+
+    function app_display_name(app_id, app_name) {
+        var id = app_id === undefined || app_id === null ? "" : String(app_id);
+        var name = $.trim(app_name || "");
+        if (!name || name === "--" || name === "Unknown" || name === "Unknown App") {
+            return id && id !== "0" ? ("App" + id) : "--";
+        }
+        return name;
+    }
+
+    function render_app_cell($cell, app_id, app_name, app_icon) {
+        var id = app_id === undefined || app_id === null ? "" : String(app_id);
+        var name = app_display_name(id, app_name);
+        var $wrap = $('<div>').addClass('record-app-cell').attr('title', name);
+        var $icon = window.OAFIcon
+            ? window.OAFIcon.createAppIcon(id, name, '<%=resource%>', { size: '22px', radius: '5px', icon: app_icon })
+            : $('<span>').text('');
+
+        $wrap.append($icon).append($('<span>').addClass('record-app-name').text(name));
+        $cell.empty().append($wrap);
+    }
+
+    function render_table(table_id, list) {
+        var $tb = $("#" + table_id);
+        $tb.find("tr:gt(0)").remove();
+        if (!Array.isArray(list) || list.length === 0) {
+            $tb.append('<tr class="tr"><td class="td" colspan="9"><em><br />' + text.noData + '</em></td></tr>');
+            return;
+        }
+        list.forEach(function(item) {
+            var app_id = item.id || item.appid || "";
+            var app_name = app_display_name(app_id, item.name || item.appname || "");
+            var mac = item.mac || "--";
+            var hostname = item.hostname || "--";
+            var nickname = item.nickname || "--";
+            var ft = item.ft || item.first_time || 0;
+            var lt = item.lt || item.latest_time || 0;
+            var tt = item.tt || item.total_time || 0;
+            var act = item.act || item.latest_action || 0;
+            var online = item.online || 0;
+
+            var $row = $('<tr>').addClass('tr');
+            var $appCell = $('<td>').addClass('td record-app-td');
+
+            render_app_cell($appCell, app_id, app_name, item.icon);
+            $row
+                .append($appCell)
+                .append($('<td>').addClass('td').attr('title', mac).text(mac))
+                .append($('<td>').addClass('td').attr('title', hostname).text(hostname))
+                .append($('<td>').addClass('td').attr('title', nickname).text(nickname))
+                .append($('<td>').addClass('td').text(format_time(ft)))
+                .append($('<td>').addClass('td').text(format_time(lt)))
+                .append($('<td>').addClass('td').text(format_duration(tt)))
+                .append($('<td>').addClass('td').html(render_online_status(online)))
+                .append($('<td>').addClass('td').html(render_filter_status(act)));
+            $tb.append($row);
+        });
+    }
+
+    function render_pagination(container_id, state, go_fn) {
+        var $p = $("#" + container_id);
+        if (state.total_page <= 1) {
+            $p.html("");
+            return;
+        }
+
+        var $wrap = $('<div>').css({
+            display: 'flex',
+            gap: '6px',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexWrap: 'wrap'
+        });
+        var $prev = $('<button type="button">').addClass('cbi-button').text(text.previous).prop('disabled', state.page <= 1);
+        var $next = $('<button type="button">').addClass('cbi-button').text(text.next).prop('disabled', state.page >= state.total_page);
+        var $pageText = $('<span>').text(state.page + ' / ' + state.total_page);
+        var $jumpInput = $('<input type="number">')
+            .addClass('cbi-input-text')
+            .attr({ min: 1, max: state.total_page })
+            .css({ width: '72px', height: '28px', boxSizing: 'border-box' })
+            .val(state.page);
+        var $jumpBtn = $('<button type="button">').addClass('cbi-button').text('Go');
+        var $total = $('<span>').css('color', 'var(--text-color-medium, #999)')
+            .text(text.total + ' ' + state.total_num + ' ' + text.records);
+
+        function jump_to_input_page() {
+            var target = parseInt($jumpInput.val(), 10);
+            if (isNaN(target)) {
+                target = state.page;
+            }
+            target = Math.max(1, Math.min(state.total_page, target));
+            $jumpInput.val(target);
+            if (target !== state.page) {
+                go_fn(target);
+            }
+        }
+
+        $prev.on("click", function() {
+            if (state.page > 1) go_fn(state.page - 1);
+        });
+        $next.on("click", function() {
+            if (state.page < state.total_page) go_fn(state.page + 1);
+        });
+        $jumpBtn.on("click", jump_to_input_page);
+        $jumpInput.on("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                jump_to_input_page();
+            }
+        });
+
+        $wrap.append($prev, $pageText, $next, $jumpInput, $jumpBtn, $total);
+        $p.empty().append($wrap);
+    }
+
+    function load_online_records() {
+        new XHR().get("<%=url('admin/services/oaf/api/app_record/get_active_app_records')%>", {
+            page: online_state.page,
+            page_size: online_state.page_size
+        }, function(x, data) {
+            var resp = data || {};
+            online_state.total_num = parseInt(resp.total_num || 0, 10);
+            online_state.total_page = parseInt(resp.total_page || 1, 10);
+            online_state.page = parseInt(resp.page || online_state.page, 10);
+            online_state.page_size = parseInt(resp.page_size || online_state.page_size, 10);
+            render_table("online-record-table", resp.list || []);
+            render_pagination("online-pagination", online_state, function(p) {
+                online_state.page = p;
+                load_online_records();
+            });
+        });
+    }
+
+    function load_history_records() {
+        new XHR().get("<%=url('admin/services/oaf/api/app_record/get_app_history_records')%>", {
+            mac: $("#q-history-mac").val() || "",
+            start_time: get_ts_from_input("#q-history-start"),
+            end_time: get_ts_from_input("#q-history-end"),
+            page: history_state.page,
+            page_size: history_state.page_size
+        }, function(x, data) {
+            var resp = data || {};
+            history_state.total_num = parseInt(resp.total_num || 0, 10);
+            history_state.total_page = parseInt(resp.total_page || 1, 10);
+            history_state.page = parseInt(resp.page || history_state.page, 10);
+            history_state.page_size = parseInt(resp.page_size || history_state.page_size, 10);
+            render_table("history-record-table", resp.list || []);
+            render_pagination("history-pagination", history_state, function(p) {
+                history_state.page = p;
+                load_history_records();
+            });
+        });
+    }
+
+    function switch_tab(tab_id) {
+        $(".tab-item").removeClass("active");
+        $('.tab-item[data-tab="' + tab_id + '"]').addClass("active");
+        $(".tab-body").removeClass("active");
+        $("#tab-" + tab_id).addClass("active");
+
+        if (tab_id === "history-records" && !history_loaded) {
+            history_loaded = true;
+            load_history_records();
+        }
+    }
+
+    $(".tab-item").on("click", function() {
+        var tab_id = $(this).attr("data-tab");
+        if (!tab_id) return;
+        switch_tab(tab_id);
+    });
+
+    $("#btn-history-search").on("click", function() {
+        history_state.page = 1;
+        load_history_records();
+    });
+
+    $("#btn-history-reset").on("click", function() {
+        $("#q-history-mac").val("");
+        $("#q-history-start").val("");
+        $("#q-history-end").val("");
+        history_state.page = 1;
+        load_history_records();
+    });
+
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'history') {
+        switch_tab('history-records');
+    }
+    load_online_records();
+})();
+//]]>
+</script>
+<%+footer%>

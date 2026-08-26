@@ -1,0 +1,2307 @@
+<link rel="stylesheet" href="<%=resource%>/oaf/css/common.css">
+<script src="<%=resource%>/oaf/common.js"></script>
+<script src="<%=resource%>/oaf/jquery-3.7.1.min.js"></script>
+<script src="<%=resource%>/oaf/oaf_icon.js"></script>
+
+<style>
+    /* 规则列表样式 */
+    .rules-list {
+        margin-top: 20px;
+    }
+
+    .rules-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .rules-toolbar h3 {
+        margin: 0;
+        min-width: 0;
+    }
+
+    .rules-toolbar #btn-add-rule {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: auto;
+        min-width: max-content;
+        white-space: nowrap;
+        line-height: 1.4;
+    }
+
+    .app-filter-tip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: -6px 0 14px;
+        padding: 10px 12px;
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        border-radius: 6px;
+        background: var(--background-color-low, #f5f5f5);
+        color: var(--text-color-high, #333);
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .app-filter-tip-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 16px;
+        height: 16px;
+        color: var(--primary-color, #2563eb);
+    }
+
+    .app-filter-tip-icon svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+    }
+
+    .app-filter-tip-text {
+        min-width: 0;
+    }
+
+    .app-filter-tip a {
+        margin-left: 8px;
+        color: var(--primary-color, #2563eb);
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .app-filter-tip a:hover {
+        text-decoration: underline;
+    }
+    
+    /* 模式列（第2列）缩小1/3 */
+    .rules-list .common-table th:nth-child(2),
+    .rules-list .common-table td:nth-child(2) {
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* 时间列（第3列）增加1/3宽度，移除文字截断限制 */
+    .rules-list .common-table th:nth-child(3),
+    .rules-list .common-table td:nth-child(3) {
+        max-width: 250px;
+    }
+
+    /* 确保校验提示弹层浮在添加/编辑对话框之上 */
+    .common-modal-mask {
+        z-index: 11000;
+    }
+    
+    .time-rules-display {
+        display: inline-block;
+        vertical-align: middle;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    
+    .more-time-btn {
+        display: inline-block;
+        margin-left: 5px;
+        padding: 2px 6px;
+        background: #4d4d4d;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        vertical-align: middle;
+    }
+    
+    .more-time-btn:hover {
+        background: #898a8a;
+    }
+    
+    .time-chart-inline {
+        display: inline-block;
+        vertical-align: top;
+        margin-right: 5px;
+    }
+    
+    .time-chart-inline .time-chart {
+        font-size: 7px;
+        gap: 0.5px;
+    }
+    
+    .time-chart-inline .time-chart-header {
+        padding: 1px 1px;
+        min-height: 23px;
+        font-size: 5px;
+    }
+    
+    .time-chart-inline .time-chart-time-label {
+        padding: 1px;
+        font-size: 4px;
+    }
+    
+    .time-chart-inline .time-chart-cell {
+        min-height: 12px;
+    }
+    
+    td {
+        max-width: 200px;
+        word-wrap: break-word;
+    }
+    
+    .time-chart-popup {
+        display: none;
+        position: fixed;
+        background: var(--background-color-high, #fff);
+        border: 1px solid var(--border-color-low, #d1d5db);
+        border-radius: 5px;
+        padding: 10px;
+        z-index: 10001;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        color: var(--text-color-high, #1f2937);
+        max-width: 90vw;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 80vh;
+    }
+    
+    .time-chart-popup.show {
+        display: block;
+    }
+    
+    .time-chart-tooltip {
+        position: fixed;
+        background: var(--background-color-high, #fff);
+        border: 1px solid var(--border-color-low, #d1d5db);
+        border-radius: 5px;
+        padding: 7px;
+        z-index: 10002;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        color: var(--text-color-high, #1f2937);
+        pointer-events: none;
+        max-width: 90vw;
+        overflow-x: auto;
+    }
+    
+    .time-chart-container {
+        margin-top: 7px;
+    }
+    
+    .time-chart {
+        display: grid;
+        grid-template-columns: 42px repeat(24, 26px);
+        gap: 1px;
+        font-size: 6px;
+        overflow-x: auto;
+        width: max-content;
+        max-width: 100%;
+    }
+    
+    .time-chart-header {
+        font-weight: bold;
+        text-align: center;
+        padding: 3px 1px;
+        background: var(--background-color-low, #f5f5f5);
+        color: var(--text-color-high, #1f2937);
+        writing-mode: horizontal-tb;
+        min-height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .time-chart-time-label {
+        text-align: center;
+        padding: 1px 3px;
+        background: var(--background-color-low, #f5f5f5);
+        color: var(--text-color-medium, #6b7280);
+        font-size: 6px;
+        writing-mode: horizontal-tb;
+        min-width: 33px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .time-chart-cell {
+        width: 100%;
+        height: 100%;
+        min-height: 17px;
+        min-width: 0;
+        background: var(--background-color-medium, #eeeeee);
+        border: 0.5px solid var(--border-color-low, #d1d5db);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .time-chart-cell-fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: #f59e0b;
+        border-right: 0.5px solid var(--border-color-low, #d1d5db);
+    }
+    
+    .time-chart-cell.active {
+        background: #f59e0b;
+    }
+    
+    .rule-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .btn-edit, .btn-delete {
+        padding: 5px 15px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    .btn-edit {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-edit:hover {
+        background: #0056b3;
+    }
+    
+    .btn-delete {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-delete:hover {
+        background: #c82333;
+    }
+    
+    /* 添加规则表单样式 */
+    .rule-form {
+        background: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 4px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #ccc;
+        font-size: 13px;
+    }
+
+    .form-group .oaf-check-item > label {
+        display: inline-flex;
+        align-items: center;
+        margin: 0;
+        line-height: 1.4;
+        white-space: nowrap;
+    }
+
+    .form-group .oaf-check-item > input[type="checkbox"] {
+        margin: 0;
+    }
+    
+    .form-group input[type="text"],
+    .form-group input[type="time"],
+    .form-group select {
+        width: 100%;
+        max-width: 300px;
+        padding: 8px;
+        background: #1e1e1e;
+        color: #fff;
+        border: 1px solid #555;
+        border-radius: 3px;
+    }
+    
+    /* 修复下拉框文字被遮挡的问题 */
+    .form-group select {
+        line-height: 1.8;
+        padding: 10px 8px;
+        min-height: 38px;
+        box-sizing: border-box;
+    }
+    
+    /* 确保下拉框选项文字不被遮挡 */
+    .form-group select option {
+        padding: 8px;
+        line-height: 1.5;
+    }
+    
+    .form-group input[type="radio"] {
+        margin-right: 5px;
+    }
+    
+    .radio-group {
+        display: flex;
+        gap: 20px;
+        margin-top: 5px;
+    }
+    
+    .radio-option {
+        display: flex;
+        align-items: center;
+    }
+
+    .radio-option input[type="radio"] {
+        flex: 0 0 auto;
+        margin: 0 5px 0 0;
+    }
+
+    .radio-option label {
+        margin: 0;
+        line-height: 1.4;
+    }
+    
+    .time-rules-container {
+        margin-top: 10px;
+    }
+    
+    .time-rule-item {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: #1e1e1e;
+        border-radius: 3px;
+        border: 1px solid #444;
+    }
+    
+    .time-rule-weekdays {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        flex: 0 0 auto;
+    }
+
+    .time-rule-weekday label {
+        white-space: nowrap;
+    }
+    
+    .time-rule-time {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex: 0 0 auto;
+    }
+    
+    .time-rule-time input[type="time"] {
+        width: 100px;
+        padding: 5px;
+        background: #2a2a2a;
+        color: #fff;
+        border: 1px solid #555;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+    
+    .time-rule-actions {
+        display: flex;
+        margin-left: auto;
+        flex: 0 0 auto;
+    }
+    
+    .btn-add-time, .btn-remove-time {
+        padding: 5px 10px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    .btn-add-time {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-remove-time {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .app-selection-container {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #555;
+        border-radius: 3px;
+        padding: 10px;
+        background: #1e1e1e;
+    }
+    
+    .category-section {
+        margin-bottom: 15px;
+    }
+    
+    .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        background: #2a2a2a;
+        border-radius: 3px;
+        margin-bottom: 5px;
+        cursor: pointer;
+    }
+    
+    .category-header-left {
+        display: flex;
+        align-items: center;
+        flex: 1;
+    }
+    
+    .category-name {
+        font-weight: bold;
+        color: #fff;
+    }
+    
+    .category-header-right {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .category-count {
+        color: #999;
+        font-size: 12px;
+    }
+    
+    .arrow {
+        width: 12px;
+        height: 12px;
+        background-image: url('<%=resource%>/oaf/icons/arrow.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        transition: transform 0.3s ease;
+        display: inline-block;
+        transform: rotate(0deg);
+        flex-shrink: 0;
+    }
+    
+    .arrow.expanded {
+        transform: rotate(90deg);
+    }
+    
+    .category-select-all-container {
+        display: none;
+        margin-top: 5px;
+        margin-bottom: 5px;
+        margin-left: 10px;
+        padding-left: 0;
+    }
+    
+    .category-select-all-container.show {
+        display: block !important;
+    }
+    
+    .category-select-all-container input[type="checkbox"] {
+        margin: 0 5px 0 0;
+        cursor: pointer;
+        vertical-align: middle;
+    }
+    
+    .category-select-all-container label {
+        margin: 0;
+        padding: 0;
+        cursor: pointer;
+        color: #ccc;
+        font-size: 13px;
+        vertical-align: middle;
+        display: inline;
+    }
+    
+    .app-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        padding: 10px;
+    }
+    
+    .app-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: calc(20% - 12px);
+        min-width: 120px;
+        max-width: 180px;
+        padding: 5px 0;
+        box-sizing: border-box;
+    }
+    
+    .app-item input[type="checkbox"] {
+        margin: 0;
+        flex-shrink: 0;
+    }
+    
+    .app-item label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin: 0;
+        cursor: pointer;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .app-item img {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        flex-shrink: 0;
+    }
+    .app-icon-letter {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #ffffff;
+        line-height: 1;
+        user-select: none;
+    }
+    
+    .app-item label span {
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+    }
+
+    /* 对话框样式 */
+    #add-rule-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    #add-rule-modal.show {
+        display: flex;
+    }
+    
+    #add-rule-modal .modal-content {
+        background-color: #2d2d2d;
+        color: #ffffff;
+        padding: 20px;
+        border-radius: 5px;
+        width: 900px;
+        max-width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
+    }
+    
+    #add-rule-modal .modal-content h3 {
+        margin: 0 0 20px 0;
+        color: #fff;
+    }
+    
+    #add-rule-modal .modal-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+    }
+    
+    #add-rule-modal .modal-close:hover {
+        color: #ccc;
+    }
+
+    #add-rule-modal .modal-content {
+        box-sizing: border-box;
+        width: 900px;
+        max-width: calc(100% - 24px);
+        max-height: calc(100vh - 24px);
+        background: var(--background-color-high, #fff);
+        color: var(--text-color-high, #1f2937);
+        border: 1px solid var(--border-color-low, #d1d5db);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+    }
+
+    #add-rule-modal .modal-content h3,
+    #add-rule-modal .modal-close,
+    #add-rule-modal .form-group label,
+    #add-rule-modal .category-name {
+        color: var(--text-color-high, #1f2937);
+    }
+
+    #add-rule-modal .modal-close:hover,
+    #add-rule-modal .category-count,
+    #add-rule-modal .category-select-all-container label {
+        color: var(--text-color-medium, #6b7280);
+    }
+
+    #add-rule-modal .rule-form {
+        background: transparent;
+        border-color: var(--border-color-low, #d1d5db);
+    }
+
+    #add-rule-modal .form-group input[type="text"],
+    #add-rule-modal .form-group input[type="time"],
+    #add-rule-modal .form-group select {
+        background: var(--background-color-high, #fff);
+        color: var(--text-color-high, #1f2937);
+        border-color: var(--border-color-medium, #d1d5db);
+    }
+
+    #add-rule-modal .form-group select option {
+        background: var(--background-color-high, #fff);
+        color: var(--text-color-high, #1f2937);
+    }
+
+    #add-rule-modal .time-rule-item,
+    #add-rule-modal .app-selection-container,
+    #add-rule-modal .category-header {
+        background: var(--background-color-low, #f5f5f5);
+        color: var(--text-color-high, #1f2937);
+        border-color: var(--border-color-low, #d1d5db);
+    }
+
+    #add-rule-modal .form-group > div[style*="color: #999"] {
+        color: var(--text-color-medium, #6b7280) !important;
+    }
+</style>
+
+<script type="text/javascript">//<![CDATA[
+$(document).ready(function() {
+    var _NoRulesConfigured = '<%:No rules configured%>';
+    var _Name = '<%:Name%>';
+    var _Mode = '<%:Mode%>';
+    var _TimeRules = '<%:Time Rules%>';
+    var _Apps = '<%:Apps%>';
+    var _Status = '<%:Status%>';
+    var _Actions = '<%:Actions%>';
+    var _AllUsers = '<%:All Users%>';
+    var _SingleUser = '<%:Single User%>';
+    var _Enabled = '<%:Enabled%>';
+    var _Disabled = '<%:Disabled%>';
+    var _Edit = '<%:Edit%>';
+    var _Delete = '<%:Delete%>';
+    var _HoverToViewTimeChart = '<%:Hover to view time chart%>';
+    var _AddNewRule = '<%:Add Rule%>';
+    var _EditRule = '<%:Edit Rule%>';
+    var _RuleName = '<%:Rule Name%>';
+    var _EnterRuleName = '<%:Enter rule name%>';
+    var _EnableRule = '<%:Enable Rule%>';
+    var _RuleMode = '<%:Rule Mode%>';
+    var _SelectUser = '<%:Select User%>';
+    var _AddTimeRule = '<%:Add Time Rule%>';
+    var _SelectApps = '<%:Select Apps%>';
+    var _Cancel = '<%:Cancel%>';
+    var _Save = '<%:Save%>';
+    var _FilterQUIC = '<%:Filter QUIC%>';
+    var _Remove = '<%:Remove%>';
+    var _SelectAll = '<%:Select All%>';
+    var _Selected = '<%:Selected%>';
+    var _LoadingAppList = '<%:Loading app list...%>';
+    var _PleaseEnterRuleName = '<%:Please enter rule name%>';
+    var _PleaseSelectUser = '<%:Please select a user%>';
+    var _PleaseAddTimeRule = '<%:Please add at least one time rule%>';
+    var _PleaseSelectApp = '<%:Please select at least one app%>';
+    var _RuleAddedSuccessfully = '<%:Rule added successfully%>';
+    var _RuleUpdatedSuccessfully = '<%:Rule updated successfully%>';
+    var _RuleDeletedSuccessfully = '<%:Rule deleted successfully%>';
+    var _FailedToAddRule = '<%:Failed to add rule%>';
+    var _FailedToUpdateRule = '<%:Failed to update rule%>';
+    var _FailedToDeleteRule = '<%:Failed to delete rule%>';
+    var _ConfirmDeleteRule = '<%:Are you sure you want to delete this rule?%>';
+    var _NetworkError = '<%:Network error%>';
+    var _UnknownError = '<%:Unknown error%>';
+    var _ZeroApps = '<%:0 apps%>';
+    var _MaxRulesReached = '<%:Maximum 32 rules allowed. Please delete some rules before adding new ones.%>';
+    var _MaxTimeRulesReached = '<%:Maximum 16 time rules allowed%>';
+    var _Sun = '<%:Sun%>';
+    var _Mon = '<%:Mon%>';
+    var _Tue = '<%:Tue%>';
+    var _Wed = '<%:Wed%>';
+    var _Thu = '<%:Thu%>';
+    var _Fri = '<%:Fri%>';
+    var _Sat = '<%:Sat%>';
+    var _Time = '<%:Time%>';
+    var _T = '<%:T%>';
+    var _FilterRules = '<%:Filter Rules%>';
+    var _AddRule = '<%:Add Rule%>';
+    
+    var allUsers = [];
+    var classList = [];
+    var rules = []; // 规则列表
+    var currentEditingRuleId = null; // 当前正在编辑的规则ID
+    var classListLoaded = false; // 标记分类列表是否已加载
+    var rulesLoaded = false; // 标记规则列表是否已加载
+    
+    init();
+
+    function init() {
+        loadAllUsers();
+        loadClassList();
+        loadRules();
+    }
+    
+    function checkAndRenderRulesList() {
+        if (classListLoaded && rulesLoaded) {
+            renderRulesList();
+        }
+    }
+    
+    function loadAllUsers() {
+        $.get("<%=url('admin/services/oaf/api/app_filter/get_all_users')%>", {flag: 2, page: 0}, function(data) {
+            if (data && data.data && Array.isArray(data.data.list)) {
+                allUsers = data.data.list;
+                console.log('Loaded users:', allUsers.length);
+            }
+        }).fail(function(xhr, status, error) {
+            console.error('Failed to load users:', error);
+        });
+    }
+    
+    function getCategoryAppList(category) {
+        return category && Array.isArray(category.app_list) ? category.app_list : [];
+    }
+
+    function normalizeClassList(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+        return list.map(function(category) {
+            category = category || {};
+            if (!Array.isArray(category.app_list)) {
+                category.app_list = [];
+            }
+            return category;
+        });
+    }
+
+    function loadClassList() {
+        $.get("<%=url('admin/services/oaf/api/app_filter/class_list')%>", function(data) {
+            if (data && data.class_list) {
+                classList = normalizeClassList(data.class_list);
+            }
+            classListLoaded = true;
+            if (rulesLoaded) {
+                renderRulesList();
+            }
+        }).fail(function() {
+            classListLoaded = true; 
+            if (rulesLoaded) {
+                renderRulesList();
+            }
+        });
+    }
+
+    function loadRules() {
+        $.get("<%=url('admin/services/oaf/api/app_filter/get_filter_rules')%>", function(data) {
+            if (data && data.code === 0 && Array.isArray(data.data)) {
+                rules = data.data;
+
+                rules = rules.map(function(rule) {
+
+                    if (rule.app_ids && !Array.isArray(rule.app_ids)) {
+                        rule.app_ids = [];
+                    } else if (!rule.app_ids) {
+                        rule.app_ids = [];
+                    } else {
+                        rule.app_ids = expandAppIds(rule.app_ids);
+                    }
+                    if (rule.time_rules && !Array.isArray(rule.time_rules)) {
+                        rule.time_rules = [];
+                    } else if (!rule.time_rules) {
+                        rule.time_rules = [];
+                    }
+                    if (rule.filter_quic === undefined || rule.filter_quic === null || isNaN(parseInt(rule.filter_quic, 10))) {
+                        rule.filter_quic = 0;
+                    } else {
+                        rule.filter_quic = parseInt(rule.filter_quic, 10) ? 1 : 0;
+                    }
+                    return rule;
+                });
+            } else {
+                rules = [];
+            }
+            rulesLoaded = true;
+
+            if (classListLoaded) {
+                renderRulesList();
+            }
+        }).fail(function() {
+            rules = [];
+            rulesLoaded = true; 
+            if (classListLoaded) {
+                renderRulesList();
+            }
+        });
+    }
+
+    function expandAppIds(appIds) {
+        var result = [];
+        var seen = {};
+        (appIds || []).forEach(function(item) {
+            if (typeof item === 'number') {
+                if (!seen[item]) {
+                    seen[item] = true;
+                    result.push(item);
+                }
+                return;
+            }
+            var s = String(item || '').trim();
+            if (!s) return;
+            var m = s.match(/^(\d+)-(\d+)$/);
+            if (m) {
+                var start = parseInt(m[1], 10);
+                var end = parseInt(m[2], 10);
+                if (!isNaN(start) && !isNaN(end) && start > 0 && end >= start) {
+                    for (var i = start; i <= end; i++) {
+                        if (!seen[i]) {
+                            seen[i] = true;
+                            result.push(i);
+                        }
+                    }
+                }
+                return;
+            }
+            var v = parseInt(s, 10);
+            if (!isNaN(v) && v > 0 && !seen[v]) {
+                seen[v] = true;
+                result.push(v);
+            }
+        });
+        return result.sort(function(a, b) { return a - b; });
+    }
+
+    function compressAppIds(appIds) {
+        var ids = Array.from(new Set((appIds || []).map(function(v) {
+            return parseInt(v, 10);
+        }).filter(function(v) {
+            return !isNaN(v) && v > 0;
+        }))).sort(function(a, b) { return a - b; });
+
+        if (ids.length === 0) return [];
+        var out = [];
+        var start = ids[0], prev = ids[0];
+        for (var i = 1; i < ids.length; i++) {
+            var cur = ids[i];
+            if (cur === prev + 1) {
+                prev = cur;
+                continue;
+            }
+            out.push(start === prev ? String(start) : (start + '-' + prev));
+            start = prev = cur;
+        }
+        out.push(start === prev ? String(start) : (start + '-' + prev));
+        return out;
+    }
+    
+    function getAppCategoriesByRule(rule) {
+        var categoryCount = {};
+        var normalizedAppIds = expandAppIds(rule && rule.app_ids ? rule.app_ids : []);
+        var appIdMap = {};
+        
+        if (normalizedAppIds.length === 0) {
+            return categoryCount;
+        }
+        normalizedAppIds.forEach(function(id) { appIdMap[id] = true; });
+        
+        classList.forEach(function(category) {
+            var count = 0;
+            getCategoryAppList(category).forEach(function(app) {
+                var parts = app.split(',');
+                var appId = parseInt(parts[0], 10);
+                if (appIdMap[appId]) {
+                    count++;
+                }
+            });
+            if (count > 0) {
+                categoryCount[category.name] = count;
+            }
+        });
+        
+        return categoryCount;
+    }
+    
+    function renderRulesList() {
+        var $container = $('#rules-list-container');
+        $container.empty();
+        
+        if (rules.length === 0) {
+            $container.html('<div class="empty-state">' + _NoRulesConfigured + '</div>');
+            return;
+        }
+        
+        var $table = $('<table>').addClass('common-table');
+        var $thead = $('<thead>');
+        var $tbody = $('<tbody>');
+        
+        var $headerRow = $('<tr>');
+        $headerRow.append($('<th>').text(_Name));
+        $headerRow.append($('<th>').text(_Mode));
+        $headerRow.append($('<th>').text(_TimeRules));
+        $headerRow.append($('<th>').text(_Apps));
+        $headerRow.append($('<th>').text(_Status));
+        $headerRow.append($('<th>').text(_Actions));
+        $thead.append($headerRow);
+        
+        rules.forEach(function(rule) {
+            if (!rule.time_rules || !Array.isArray(rule.time_rules)) {
+                rule.time_rules = [];
+            }
+            if (!rule.app_ids || !Array.isArray(rule.app_ids)) {
+                rule.app_ids = [];
+            }
+            
+            var $row = $('<tr>');
+            
+            $row.append($('<td>').text(rule.name));
+            
+            var modeText = rule.mode === 1 ? _AllUsers : _SingleUser + ': ' + (rule.user_name || rule.user_mac);
+            $row.append($('<td>').text(modeText));
+            
+
+            var $timeCell = $('<td>');
+            var $timeDisplay = $('<span>').addClass('time-rules-display');
+            
+            if (rule.time_rules && rule.time_rules.length > 0) {
+
+                var firstRule = rule.time_rules[0];
+                var weekdays = firstRule.weekdays.map(function(w) {
+                    var days = [_Sun, _Mon, _Tue, _Wed, _Thu, _Fri, _Sat];
+                    return days[w];
+                }).join(',');
+                var timeText = weekdays + ' ' + firstRule.start_time + '-' + firstRule.end_time;
+                $timeDisplay.text(timeText);
+                $timeDisplay.css('cursor', 'pointer');
+                $timeDisplay.attr('title', _HoverToViewTimeChart);
+                $timeDisplay.data('time-rules', JSON.stringify(rule.time_rules));
+                $timeCell.append($timeDisplay);
+
+                if (rule.time_rules.length > 1) {
+                    var $moreBtn = $('<button>').addClass('more-time-btn').text('...').attr('type', 'button')
+                        .data('rule-id', rule.id)
+                        .data('time-rules', JSON.stringify(rule.time_rules));
+                    $timeCell.append($moreBtn);
+                }
+            } else {
+                $timeDisplay.text('-');
+                $timeCell.append($timeDisplay);
+            }
+            $row.append($timeCell);
+            
+            var categoryCount = getAppCategoriesByRule(rule);
+            var appText = '';
+            if (Object.keys(categoryCount).length > 0) {
+                appText = Object.keys(categoryCount).map(function(categoryName) {
+                    return categoryName + '(' + categoryCount[categoryName] + ')';
+                }).join(', ');
+            } else {
+                appText = _ZeroApps;
+            }
+            $row.append($('<td>').text(appText));
+            
+            var enabledValue = rule.enabled;
+            if (typeof enabledValue === 'boolean') {
+                enabledValue = enabledValue ? 1 : 0;
+            }
+            var isEnabled = (enabledValue === 1 || enabledValue === true);
+            var statusText = isEnabled ? _Enabled : _Disabled;
+            $row.append($('<td>').text(statusText));
+            
+            var $actions = $('<td>');
+            var $actionsDiv = $('<div>').addClass('rule-actions');
+            $actionsDiv.append($('<button>').attr('type', 'button').addClass('btn-edit').text(_Edit).data('rule-id', rule.id).on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                editRule(rule.id);
+                return false;
+            }));
+            $actionsDiv.append($('<button>').attr('type', 'button').addClass('btn-delete').text(_Delete).data('rule-id', rule.id).on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteRule(rule.id);
+                return false;
+            }));
+            $actions.append($actionsDiv);
+            $row.append($actions);
+            
+            $tbody.append($row);
+        });
+        
+        $table.append($thead).append($tbody);
+        $container.append($table);
+        
+
+        $('.time-rules-display').on('mouseenter', function(e) {
+            var timeRules = $(this).data('time-rules');
+            if (timeRules) {
+                showTimeChartTooltip($(this), JSON.parse(timeRules));
+            }
+        }).on('mouseleave', function(e) {
+            $('.time-chart-tooltip').remove();
+        });
+
+        $('.more-time-btn').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showTimeChart($(this));
+        });
+        
+        $('.more-time-btn').on('mouseenter', function(e) {
+            showTimeChart($(this));
+        });
+    }
+    
+    function buildTimeChart(timeRules) {
+        var $chartContainer = $('<div>').addClass('time-chart-container');
+        var $chart = $('<div>').addClass('time-chart');
+        var dayOrder = [1, 2, 3, 4, 5, 6, 0];
+        var weekDayNames = [_Mon, _Tue, _Wed, _Thu, _Fri, _Sat, _Sun];
+
+        function parseMinutes(value) {
+            var parts = String(value || '').split(':');
+            if (parts.length < 2) return NaN;
+            return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        }
+
+        function appendHourCell($row, day, hour) {
+            var $cell = $('<div>').addClass('time-chart-cell');
+            var hourStartMinutes = hour * 60;
+            var hourEndMinutes = (hour + 1) * 60;
+            var fillRanges = [];
+
+            timeRules.forEach(function(tr) {
+                if (!tr || !Array.isArray(tr.weekdays) || !tr.start_time || !tr.end_time || tr.weekdays.indexOf(day) === -1) {
+                    return;
+                }
+
+                var startMinutes = parseMinutes(tr.start_time);
+                var endMinutes = parseMinutes(tr.end_time);
+                if (isNaN(startMinutes) || isNaN(endMinutes)) {
+                    return;
+                }
+
+                var ranges = startMinutes <= endMinutes
+                    ? [{ start: startMinutes, end: endMinutes }]
+                    : [{ start: startMinutes, end: 24 * 60 }, { start: 0, end: endMinutes }];
+
+                ranges.forEach(function(range) {
+                    if (range.end > hourStartMinutes && range.start < hourEndMinutes) {
+                        fillRanges.push({
+                            start: Math.max(0, range.start - hourStartMinutes),
+                            end: Math.min(60, range.end - hourStartMinutes)
+                        });
+                    }
+                });
+            });
+
+            if (fillRanges.length > 0) {
+                fillRanges.sort(function(a, b) { return a.start - b.start; });
+
+                var mergedRanges = [];
+                var currentRange = fillRanges[0];
+                for (var i = 1; i < fillRanges.length; i++) {
+                    if (fillRanges[i].start <= currentRange.end) {
+                        currentRange.end = Math.max(currentRange.end, fillRanges[i].end);
+                    } else {
+                        mergedRanges.push(currentRange);
+                        currentRange = fillRanges[i];
+                    }
+                }
+                mergedRanges.push(currentRange);
+
+                mergedRanges.forEach(function(range) {
+                    var fillStartPercent = (range.start / 60) * 100;
+                    var fillWidthPercent = ((range.end - range.start) / 60) * 100;
+
+                    if (fillWidthPercent >= 100) {
+                        $cell.addClass('active');
+                    } else if (fillWidthPercent > 0) {
+                        $cell.append($('<div>').addClass('time-chart-cell-fill').css({
+                            left: fillStartPercent + '%',
+                            width: fillWidthPercent + '%'
+                        }));
+                    }
+                });
+
+                var totalFill = 0;
+                mergedRanges.forEach(function(range) {
+                    totalFill += (range.end - range.start);
+                });
+                if (totalFill >= 60) {
+                    $cell.addClass('active');
+                    $cell.find('.time-chart-cell-fill').remove();
+                }
+            }
+
+            $row.append($cell);
+        }
+
+        var $headerRow = $('<div>').css('display', 'contents');
+        $headerRow.append($('<div>').addClass('time-chart-header').text(_Time));
+        for (var hour = 0; hour < 24; hour++) {
+            $headerRow.append($('<div>').addClass('time-chart-header').text((hour < 10 ? '0' : '') + hour));
+        }
+        $chart.append($headerRow);
+
+        dayOrder.forEach(function(day, dayIndex) {
+            var $row = $('<div>').css('display', 'contents');
+            $row.append($('<div>').addClass('time-chart-time-label').text(weekDayNames[dayIndex]));
+            for (var hour = 0; hour < 24; hour++) {
+                appendHourCell($row, day, hour);
+            }
+            $chart.append($row);
+        });
+
+        $chartContainer.append($chart);
+        return $chartContainer;
+    }
+
+    function showTimeChartTooltip($target, timeRules) {
+        $('.time-chart-tooltip').remove();
+        
+        if (!timeRules || timeRules.length === 0) {
+            return;
+        }
+        
+        var $tooltip = $('<div>').addClass('time-chart-tooltip');
+        $tooltip.append($('<h4>').text(_TimeRules).css({'margin': '0 0 10px 0', 'font-size': '14px'}));
+        $tooltip.append(buildTimeChart(timeRules));
+        
+        var targetOffset = $target.offset();
+        var targetHeight = $target.outerHeight();
+        var windowWidth = $(window).width();
+        var tooltipWidth = Math.min(760, windowWidth - 20);
+        var leftPos = Math.min(Math.max(10, targetOffset.left), windowWidth - tooltipWidth - 10);
+        
+        $tooltip.css({
+            'top': (targetOffset.top + targetHeight + 5) + 'px',
+            'left': Math.max(10, leftPos) + 'px'
+        });
+        
+        $('body').append($tooltip);
+    }
+    
+    function renderInlineTimeChart(timeRules, ruleId) {
+        var $container = $('<div>').addClass('time-chart-inline');
+        var $chart = $('<div>').addClass('time-chart');
+        
+        var $headerRow = $('<div>').css('display', 'contents');
+        $headerRow.append($('<div>').addClass('time-chart-header').text(_T));
+        for (var hour = 0; hour < 24; hour++) {
+            var timeLabel = '';
+            if (hour % 2 === 0) {
+                timeLabel = (hour < 10 ? '0' : '') + hour;
+            }
+            $headerRow.append($('<div>').addClass('time-chart-time-label').text(timeLabel));
+        }
+        $chart.append($headerRow);
+        
+        var dayOrder = [1, 2, 3, 4, 5, 6, 0];
+        var weekDayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        
+        dayOrder.forEach(function(day, dayIndex) {
+            var $row = $('<div>').css('display', 'contents');
+            
+            $row.append($('<div>').addClass('time-chart-header').text(weekDayNames[dayIndex]));
+            
+            for (var hour = 0; hour < 24; hour++) {
+                var $cell = $('<div>').addClass('time-chart-cell');
+                
+                var hourStartMinutes = hour * 60;
+                var hourEndMinutes = (hour + 1) * 60;
+                var fillRanges = [];
+                
+                timeRules.forEach(function(tr) {
+                    if (!tr || !tr.weekdays || !Array.isArray(tr.weekdays) || !tr.start_time || !tr.end_time) {
+                        return; // 跳过无效的时间规则
+                    }
+                    if (tr.weekdays.indexOf(day) !== -1) {
+                        var startParts = tr.start_time.split(':');
+                        var endParts = tr.end_time.split(':');
+                        if (!startParts || startParts.length < 2 || !endParts || endParts.length < 2) {
+                            return; // 跳过格式错误的时间
+                        }
+                        var startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+                        var endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+                        if (isNaN(startMinutes) || isNaN(endMinutes)) {
+                            return; // 跳过无效的时间值
+                        }
+                        
+                        var ruleStartInHour = 0;
+                        var ruleEndInHour = 0;
+                        var hasOverlap = false;
+                        
+                        if (startMinutes <= endMinutes) {
+                            if (endMinutes > hourStartMinutes && startMinutes < hourEndMinutes) {
+                                hasOverlap = true;
+                                ruleStartInHour = Math.max(0, startMinutes - hourStartMinutes);
+                                ruleEndInHour = Math.min(60, endMinutes - hourStartMinutes);
+                            }
+                        } else {
+                            if (startMinutes >= hourStartMinutes && startMinutes < hourEndMinutes) {
+                                hasOverlap = true;
+                                ruleStartInHour = startMinutes - hourStartMinutes;
+                                ruleEndInHour = 60;
+                            } else if (endMinutes > hourStartMinutes && endMinutes <= hourEndMinutes) {
+                                hasOverlap = true;
+                                ruleStartInHour = 0;
+                                ruleEndInHour = endMinutes - hourStartMinutes;
+                            } else if (startMinutes < hourStartMinutes && endMinutes > hourEndMinutes) {
+                                hasOverlap = true;
+                                ruleStartInHour = 0;
+                                ruleEndInHour = 60;
+                            }
+                        }
+                        
+                        if (hasOverlap) {
+                            fillRanges.push({
+                                start: ruleStartInHour,
+                                end: ruleEndInHour
+                            });
+                        }
+                    }
+                });
+                
+                if (fillRanges.length > 0) {
+                    fillRanges.sort(function(a, b) { return a.start - b.start; });
+                    
+                    var mergedRanges = [];
+                    var currentRange = fillRanges[0];
+                    for (var i = 1; i < fillRanges.length; i++) {
+                        if (fillRanges[i].start <= currentRange.end) {
+                            currentRange.end = Math.max(currentRange.end, fillRanges[i].end);
+                        } else {
+                            mergedRanges.push(currentRange);
+                            currentRange = fillRanges[i];
+                        }
+                    }
+                    mergedRanges.push(currentRange);
+                    
+                    mergedRanges.forEach(function(range) {
+                        var fillStartPercent = (range.start / 60) * 100;
+                        var fillHeightPercent = ((range.end - range.start) / 60) * 100;
+                        
+                        if (fillHeightPercent >= 100) {
+                            $cell.addClass('active');
+                        } else if (fillHeightPercent > 0) {
+                            var $fill = $('<div>').addClass('time-chart-cell-fill')
+                                .css({
+                                    'top': fillStartPercent + '%',
+                                    'height': fillHeightPercent + '%'
+                                });
+                            $cell.append($fill);
+                        }
+                    });
+                    
+                    var totalFill = 0;
+                    mergedRanges.forEach(function(range) {
+                        totalFill += (range.end - range.start);
+                    });
+                    if (totalFill >= 60) {
+                        $cell.addClass('active');
+                        $cell.find('.time-chart-cell-fill').remove();
+                    }
+                }
+                
+                $row.append($cell);
+            }
+            
+            $chart.append($row);
+        });
+        
+        $container.append($chart);
+        return $container;
+    }
+    
+    function showTimeChart($btn) {
+        $('.time-chart-popup').remove();
+        
+        var timeRules = JSON.parse($btn.data('time-rules'));
+        if (!timeRules || timeRules.length === 0) {
+            return;
+        }
+        
+        var $popup = $('<div>').addClass('time-chart-popup show');
+        $popup.append($('<h4>').text(_TimeRules).css({'margin': '0 0 10px 0'}));
+        $popup.append(buildTimeChart(timeRules));
+        
+        var btnOffset = $btn.offset();
+        var btnHeight = $btn.outerHeight();
+        var btnWidth = $btn.outerWidth();
+        var windowHeight = $(window).height();
+        var windowWidth = $(window).width();
+        var scrollTop = $(window).scrollTop();
+        
+        var btnTopInViewport = btnOffset.top - scrollTop;
+        var btnBottomInViewport = btnTopInViewport + btnHeight;
+        
+        var spaceAbove = btnTopInViewport - 10; // 距离顶部10px
+        var spaceBelow = windowHeight - btnBottomInViewport - 10; // 距离底部10px
+        
+        var estimatedChartHeight = 9 * 26 + 56;
+        var maxChartHeight = Math.max(spaceAbove, spaceBelow); // 选择较大的空间
+        
+        var actualMaxHeight = Math.min(estimatedChartHeight, maxChartHeight);
+        
+        var showAbove = spaceAbove > spaceBelow;
+        var topPos;
+        
+        if (showAbove) {
+            topPos = btnOffset.top - actualMaxHeight - 10;
+            if (topPos < scrollTop + 10) {
+                topPos = scrollTop + 10;
+                actualMaxHeight = btnTopInViewport - 20; // 调整高度，留出间距
+            }
+        } else {
+            topPos = btnOffset.top + btnHeight + 10;
+            if (topPos + actualMaxHeight > scrollTop + windowHeight - 10) {
+                topPos = scrollTop + windowHeight - actualMaxHeight - 10;
+                if (topPos < btnOffset.top + btnHeight + 10) {
+                    topPos = btnOffset.top - actualMaxHeight - 10;
+                    if (topPos < scrollTop + 10) {
+                        topPos = scrollTop + 10;
+                        actualMaxHeight = windowHeight - 20;
+                    }
+                }
+            }
+        }
+        
+        var leftPos = btnOffset.left + btnWidth + 10;
+        var popupWidth = Math.min(760, windowWidth - 40);
+        
+        if (leftPos + popupWidth > windowWidth - 10) {
+            leftPos = Math.max(10, btnOffset.left - popupWidth - 10);
+        }
+        
+        $popup.css({
+            'position': 'fixed',
+            'top': topPos + 'px',
+            'left': leftPos + 'px',
+            'max-height': actualMaxHeight + 'px',
+            'overflow-y': 'auto'
+        });
+        
+        $('body').append($popup);
+        
+        var clickHandler = function(e) {
+            if (!$(e.target).closest('.time-chart-popup, .more-time-btn').length) {
+                $('.time-chart-popup').remove();
+                $(document).off('click.timechart', clickHandler);
+            }
+        };
+        $(document).on('click.timechart', clickHandler);
+        
+        var closeTimer;
+        var mouseLeaveHandler = function() {
+            closeTimer = setTimeout(function() {
+                $('.time-chart-popup').remove();
+                $(document).off('click.timechart', clickHandler);
+            }, 300);
+        };
+        
+        var mouseEnterHandler = function() {
+            if (closeTimer) {
+                clearTimeout(closeTimer);
+            }
+        };
+        
+        $btn.on('mouseleave', mouseLeaveHandler);
+        $popup.on('mouseleave', mouseLeaveHandler);
+        $btn.on('mouseenter', mouseEnterHandler);
+        $popup.on('mouseenter', mouseEnterHandler);
+    }
+    
+    function editRule(ruleId) {
+        console.log('editRule called with ruleId:', ruleId, 'type:', typeof ruleId);
+        var rule = rules.find(function(r) { return r.id === ruleId; });
+        if (!rule) {
+            console.error('Rule not found:', ruleId);
+            return;
+        }
+        
+        ruleId = parseInt(ruleId);
+        console.log('editRule - parsed ruleId:', ruleId);
+        
+        $('#rule-name').val(rule.name);
+        var enabledValue = rule.enabled;
+        if (typeof enabledValue === 'boolean') {
+            enabledValue = enabledValue ? 1 : 0;
+        }
+        $('#rule-enabled').prop('checked', enabledValue === 1);
+        $('input[name="rule-mode"][value="' + rule.mode + '"]').prop('checked', true);
+        onModeChange();
+        $('#rule-filter-quic').prop('checked', parseInt(rule.filter_quic || 0, 10) === 1);
+        if (rule.mode === 2) {
+            $('#rule-user').val(rule.user_mac);
+        }
+        
+        $('#add-rule-modal').addClass('show').show();
+        $('#rule-form-title').text(_EditRule);
+        
+        $('#time-rules-container').empty();
+        var timeRules = rule.time_rules;
+        if (!timeRules || !Array.isArray(timeRules)) {
+            timeRules = [];
+        }
+        timeRules.forEach(function(tr) {
+            addTimeRule(tr);
+        });
+        
+        var appIds = rule.app_ids;
+        if (!appIds || !Array.isArray(appIds)) {
+            appIds = [];
+        }
+        renderAppSelection(appIds);
+        
+        currentEditingRuleId = ruleId;
+        console.log('editRule - STEP 3: Set currentEditingRuleId to:', currentEditingRuleId);
+
+        var $form = $('#rule-form');
+        if ($form.length > 0) {
+            $form.attr('data-editing-id', ruleId);
+            $form.data('editing-id', ruleId);
+            console.log('editRule - STEP 4: Set data-editing-id to form element immediately');
+        }
+
+        setTimeout(function() {
+            var $formDelayed = $('#rule-form');
+            if ($formDelayed.length > 0) {
+                $formDelayed.attr('data-editing-id', ruleId);
+                $formDelayed.data('editing-id', ruleId);
+                console.log('editRule - STEP 4 delayed: Also set to form element');
+            } else {
+                console.log('editRule - STEP 4 delayed: Form element not found, but using global variable');
+            }
+        }, 50);
+    }
+    
+    function deleteRule(ruleId) {
+        if (!confirm(_ConfirmDeleteRule)) {
+            return;
+        }
+        
+        ruleId = parseInt(ruleId);
+        
+        $.post("<%=url('admin/services/oaf/api/app_filter/delete_filter_rule')%>", {rule_id: ruleId}, function(data) {
+            if (data && data.code === 0) {
+                rules = rules.filter(function(r) { return r.id !== ruleId; });
+                renderRulesList();
+                if (typeof showCommonModal === 'function') {
+                    showCommonModal(_RuleDeletedSuccessfully, 2000);
+                } else {
+                    alert(_RuleDeletedSuccessfully);
+                }
+            } else {
+                if (typeof showCommonModal === 'function') {
+                    showCommonModal(_FailedToDeleteRule + ': ' + (data.message || _UnknownError), 3000);
+                } else {
+                    alert(_FailedToDeleteRule + ': ' + (data.message || _UnknownError));
+                }
+            }
+        }).fail(function() {
+            if (typeof showCommonModal === 'function') {
+                showCommonModal(_FailedToDeleteRule + ': ' + _NetworkError, 3000);
+            } else {
+                alert(_FailedToDeleteRule + ': ' + _NetworkError);
+            }
+        });
+    }
+    
+    function onModeChange() {
+        var mode = $('input[name="rule-mode"]:checked').val();
+        if (mode === '2') {
+            $('#user-selection-group').show();
+            loadUserOptions();
+        } else {
+            $('#user-selection-group').hide();
+        }
+    }
+    
+    function loadUserOptions() {
+        var $select = $('#rule-user');
+        $select.empty();
+        $select.append($('<option>').val('').text(_SelectUser));
+        
+        if (!allUsers || allUsers.length === 0) {
+            console.warn('No users available, reloading...');
+            loadAllUsers();
+            return;
+        }
+        
+        allUsers.forEach(function(user) {
+            var displayName = user.mac || '';
+            var extraInfo = '';
+            
+            if (user.nickname && user.nickname.trim() !== '') {
+                extraInfo = user.nickname;
+            } else if (user.hostname && user.hostname.trim() !== '' && user.hostname !== '*') {
+                extraInfo = user.hostname;
+            } else if (user.ip && user.ip.trim() !== '') {
+                extraInfo = user.ip;
+            }
+            
+            if (extraInfo) {
+                displayName = displayName + ' (' + extraInfo + ')';
+            }
+            
+            $select.append($('<option>').val(user.mac).text(displayName));
+        });
+    }
+    
+    function addTimeRule(timeRule) {
+        var currentTimeRulesCount = $('#time-rules-container .time-rule-item').length;
+        if (currentTimeRulesCount >= 16) {
+            if (typeof showCommonModal === 'function') {
+                showCommonModal(_MaxTimeRulesReached, 3000);
+            } else {
+                alert(_MaxTimeRulesReached);
+            }
+            return;
+        }
+        
+        timeRule = timeRule || {weekdays: [0,1,2,3,4,5,6], start_time: '00:00', end_time: '23:59'};
+        
+        var $timeRule = $('<div>').addClass('time-rule-item');
+        
+        var $weekdaysContainer = $('<div>').addClass('time-rule-weekdays');
+        var weekdays = [_Sun, _Mon, _Tue, _Wed, _Thu, _Fri, _Sat];
+        weekdays.forEach(function(day, index) {
+            var $checkbox = $('<input>').attr({
+                type: 'checkbox',
+                value: index,
+                'data-weekday': index
+            });
+            var selectedWeekdays = Array.isArray(timeRule.weekdays) ? timeRule.weekdays : [0,1,2,3,4,5,6];
+            if (selectedWeekdays.indexOf(index) !== -1) {
+                $checkbox.prop('checked', true);
+            }
+            var $weekdayItem = $('<div>').addClass('oaf-check-item time-rule-weekday');
+            var checkboxId = 'time-weekday-' + Date.now() + '-' + index + '-' + currentTimeRulesCount;
+            $checkbox.attr('id', checkboxId);
+            var $label = $('<label>').attr('for', checkboxId).text(day);
+            $weekdayItem.append($checkbox);
+            $weekdayItem.append($label);
+            $weekdaysContainer.append($weekdayItem);
+        });
+        
+        var $timeContainer = $('<div>').addClass('time-rule-time');
+        var $startTime = $('<input>').attr({
+            type: 'time',
+            class: 'time-start',
+            value: timeRule.start_time || '00:00'
+        });
+        var $endTime = $('<input>').attr({
+            type: 'time',
+            class: 'time-end',
+            value: timeRule.end_time || '23:59'
+        });
+        
+        $timeContainer.append($startTime);
+        $timeContainer.append($('<span>').text(' - '));
+        $timeContainer.append($endTime);
+        
+        var $actionsContainer = $('<div>').addClass('time-rule-actions');
+        var $removeBtn = $('<button>').attr('type', 'button').addClass('btn-remove-time').text(_Remove).on('click', function() {
+            $timeRule.remove();
+        });
+        $actionsContainer.append($removeBtn);
+        
+        $timeRule.append($weekdaysContainer);
+        $timeRule.append($timeContainer);
+        $timeRule.append($actionsContainer);
+        
+        $('#time-rules-container').append($timeRule);
+    }
+    
+    function renderAppSelection(selectedAppIds) {
+        selectedAppIds = selectedAppIds || [];
+        var $container = $('#app-selection-container');
+        
+        if (!$('#add-rule-modal').hasClass('show')) {
+            return;
+        }
+        
+        $container.empty();
+        
+        if (classList.length === 0) {
+            $container.html('<div>' + _LoadingAppList + '</div>');
+            loadClassList();
+            var timerId = setTimeout(function() {
+                if (!$('#add-rule-modal').hasClass('show')) {
+                    return;
+                }
+                renderAppSelection(selectedAppIds);
+            }, 500);
+            modalTimerIds.push(timerId);
+            return;
+        }
+        
+        classList.forEach(function(category) {
+            var $categorySection = $('<div>').addClass('category-section');
+            
+            var categoryApps = getCategoryAppList(category);
+            var categoryAppIds = categoryApps.map(function(app) {
+                return parseInt(app.split(',')[0]);
+            });
+            var selectedCount = categoryAppIds.filter(function(appId) {
+                return selectedAppIds.indexOf(appId) !== -1;
+            }).length;
+            var totalCount = categoryApps.length;
+            var isAllSelected = selectedCount === totalCount && totalCount > 0;
+            
+            var $header = $('<div>').addClass('category-header');
+            
+   
+            var $headerLeft = $('<div>').addClass('category-header-left');
+            var $categoryName = $('<span>').addClass('category-name').text(category.name + ' (' + totalCount + ')');
+            $headerLeft.append($categoryName);
+            
+            var $headerRight = $('<div>').addClass('category-header-right');
+            var $selectedCount = $('<span>').addClass('category-count').text(_Selected + ': ' + selectedCount);
+            var $arrow = $('<span>').addClass('arrow');
+            $headerRight.append($selectedCount).append($arrow);
+            
+            $header.append($headerLeft).append($headerRight);
+            
+            var $selectAllContainer = $('<div>').addClass('category-select-all-container');
+            var $selectAllCheckbox = $('<input>').attr({
+                type: 'checkbox',
+                'data-category': category.name
+            }).prop('checked', isAllSelected);
+            var $selectAllLabel = $('<label>').text(_SelectAll);
+            $selectAllContainer.append($selectAllCheckbox);
+            $selectAllContainer.append($selectAllLabel);
+            
+            $header.on('click', function(e) {
+                if ($(e.target).is('input[type="checkbox"]') || $(e.target).closest('.category-select-all-container').length > 0) {
+                    return;
+                }
+                var $selectAll = $(this).next();
+                var $content = $selectAll.next();
+                var isExpanded = $content.is(':visible');
+                if (isExpanded) {
+                    $content.slideUp();
+                    $selectAll.slideUp();
+                    $arrow.removeClass('expanded');
+                } else {
+                    $content.slideDown();
+                    $selectAll.slideDown();
+                    $arrow.addClass('expanded');
+                }
+            });
+            
+            $selectAllCheckbox.on('change', function(e) {
+                e.stopPropagation();
+                var isChecked = $(this).prop('checked');
+                var $categorySection = $(this).closest('.category-section');
+                var $appItems = $categorySection.find('.app-items');
+                
+                $appItems.find('input[type="checkbox"]').prop('checked', isChecked);
+                
+                updateCategorySelection(category.name, $categorySection);
+            });
+            
+            $selectAllLabel.on('click', function(e) {
+                e.stopPropagation();
+                $selectAllCheckbox.prop('checked', !$selectAllCheckbox.prop('checked'));
+                $selectAllCheckbox.trigger('change');
+            });
+            
+            $categorySection.append($header);
+            $categorySection.append($selectAllContainer);
+            
+            var $appItems = $('<div>').addClass('app-items').css('display', 'none'); // 默认关闭
+            
+            getCategoryAppList(category).forEach(function(app) {
+                var parts = app.split(',');
+                var appId = parseInt(parts[0]);
+                var appName = parts[1] || 'Unknown';
+                var hasIcon = parts[2] !== '0';
+                
+                var $appItem = $('<div>').addClass('app-item');
+                var $checkbox = $('<input>').attr({
+                    type: 'checkbox',
+                    value: appId,
+                    'data-app-id': appId
+                });
+                
+                if (selectedAppIds.indexOf(appId) !== -1) {
+                    $checkbox.prop('checked', true);
+                }
+                
+                var $icon = window.OAFIcon
+                    ? window.OAFIcon.createLetterIcon(appName, { className: 'app-icon-letter' })
+                    : $('<span>').addClass('app-icon-letter').text(appName.charAt(0).toUpperCase() || '?');
+                if (hasIcon) {
+                    var _iconSrc = '<%=resource%>/oaf/app_icons/' + encodeURIComponent(appId) + '.png';
+                    var _loader = new Image();
+                    _loader.onload = (function($el, src, alt) {
+                        return function() {
+                            $el.replaceWith($('<img>').attr({src: src, alt: alt}));
+                        };
+                    })($icon, _iconSrc, appName);
+                    _loader.src = _iconSrc;
+                }
+
+                var $label = $('<label>');
+                var $textSpan = $('<span>').text(appName);
+                $label.append($icon).append($textSpan);
+                
+      
+                $appItem.append($checkbox);
+                $appItem.append($label);
+                
+      
+                $label.on('click', function(e) {
+                    e.preventDefault();
+                    $checkbox.prop('checked', !$checkbox.prop('checked'));
+                    var $categorySection = $appItem.closest('.category-section');
+                    updateCategorySelection(category.name, $categorySection);
+                });
+                
+                $checkbox.on('change', function() {
+                    var $categorySection = $(this).closest('.category-section');
+                    updateCategorySelection(category.name, $categorySection);
+                });
+                
+                $appItems.append($appItem);
+            });
+            
+            $categorySection.append($appItems);
+            $container.append($categorySection);
+        });
+    }
+    
+    function updateCategorySelection(categoryName, $categorySection) {
+        var $appItems = $categorySection.find('.app-items');
+        var $checkboxes = $appItems.find('input[type="checkbox"]');
+        var totalCount = $checkboxes.length;
+        var selectedCount = $checkboxes.filter(':checked').length;
+        var isAllSelected = selectedCount === totalCount && totalCount > 0;
+        
+        var $selectAllCheckbox = $categorySection.find('.category-select-all-container input[type="checkbox"]');
+        $selectAllCheckbox.prop('checked', isAllSelected);
+        
+        var $selectedCount = $categorySection.find('.category-header-right .category-count');
+        if ($selectedCount.length === 0) {
+            $selectedCount = $('<span>').addClass('category-count').text(_Selected + ': ' + selectedCount);
+            $categorySection.find('.category-header-right').append($selectedCount);
+        } else {
+            $selectedCount.text(_Selected + ': ' + selectedCount);
+        }
+    }
+    
+    function saveRule(e) {
+        if (e) {
+            e.preventDefault();
+        }
+        
+        var ruleName = $('#rule-name').val().trim();
+        if (!ruleName) {
+            if (typeof showCommonModal === 'function') {
+                showCommonModal(_PleaseEnterRuleName, 1500);
+            } else {
+                alert(_PleaseEnterRuleName);
+            }
+            $('#rule-name').focus();
+            return false;
+        }
+        
+        var mode = parseInt($('input[name="rule-mode"]:checked').val());
+        var userMac = '';
+        var userName = '';
+        
+        if (mode === 2) {
+            userMac = $('#rule-user').val();
+            if (!userMac) {
+                if (typeof showCommonModal === 'function') {
+                    showCommonModal(_PleaseSelectUser, 1500);
+                } else {
+                    alert(_PleaseSelectUser);
+                }
+                $('#rule-user').focus();
+                return false;
+            }
+            var user = allUsers.find(function(u) { return u.mac === userMac; });
+            if (user) {
+                userName = user.nickname || user.hostname || user.mac;
+            }
+        }
+        
+        var timeRules = [];
+        $('#time-rules-container .time-rule-item').each(function() {
+            var $item = $(this);
+            var weekdays = [];
+            $item.find('input[type="checkbox"][data-weekday]:checked').each(function() {
+                weekdays.push(parseInt($(this).val()));
+            });
+            
+            if (weekdays.length > 0) {
+                timeRules.push({
+                    weekdays: weekdays,
+                    start_time: $item.find('.time-start').val(),
+                    end_time: $item.find('.time-end').val()
+                });
+            }
+        });
+        
+        if (timeRules.length === 0) {
+            if (typeof showCommonModal === 'function') {
+                showCommonModal(_PleaseAddTimeRule, 1500);
+            } else {
+                alert(_PleaseAddTimeRule);
+            }
+            return false;
+        }
+        
+        var appIds = [];
+        $('#app-selection-container input[type="checkbox"]:checked').each(function() {
+            var appId = $(this).val();
+            if (appId !== null && appId !== undefined && appId !== '') {
+                var parsedId = parseInt(appId);
+                if (!isNaN(parsedId)) {
+                    appIds.push(parsedId);
+                }
+            }
+        });
+        
+        if (appIds.length === 0) {
+            if (typeof showCommonModal === 'function') {
+                showCommonModal(_PleaseSelectApp, 1500);
+            } else {
+                alert(_PleaseSelectApp);
+            }
+            return false;
+        }
+        
+        var enabled = $('#rule-enabled').is(':checked') ? 1 : 0;
+        var filterQuic = $('#rule-filter-quic').is(':checked') ? 1 : 0;
+        
+        var editingId = currentEditingRuleId;
+        console.log('saveRule - STEP 1: editingId from global variable:', editingId, 'type:', typeof editingId);
+        
+        if (!editingId) {
+            var $form = $('#rule-form');
+            if ($form.length === 0) {
+                $form = $('#add-rule-modal').find('form');
+            }
+            if ($form.length === 0) {
+                $form = $('#add-rule-modal form');
+            }
+            
+            if ($form.length > 0) {
+                var editingIdAttr = $form.attr('data-editing-id');
+                var editingIdData = $form.data('editing-id');
+                editingId = editingIdAttr || editingIdData;
+                console.log('saveRule - STEP 1: editingId from form attr:', editingIdAttr, 'data:', editingIdData);
+            }
+        }
+        
+        console.log('saveRule - STEP 1: Final editingId:', editingId, 'type:', typeof editingId);
+        
+        if (editingId !== null && editingId !== undefined && editingId !== '') {
+            editingId = parseInt(editingId);
+            if (isNaN(editingId)) {
+                console.warn('saveRule - STEP 2: editingId is NaN after parseInt, setting to null');
+                editingId = null;
+            } else {
+                console.log('saveRule - STEP 2: Parsed editingId:', editingId);
+            }
+        } else {
+            console.log('saveRule - STEP 2: editingId is null/undefined/empty, setting to null');
+            editingId = null;
+        }
+        
+        var isEditMode = (editingId && editingId > 0);
+        console.log('saveRule - STEP 3: isEditMode:', isEditMode, 'editingId:', editingId);
+        
+        if (!isEditMode && rules.length >= 32) {
+            if (typeof showCommonModal === 'function') {
+                showCommonModal(_MaxRulesReached, 3000);
+            } else {
+                alert(_MaxRulesReached);
+            }
+            return false;
+        }
+        
+        var ruleData = {
+            name: ruleName,
+            mode: mode,
+            user_mac: userMac,
+            user_name: userName,
+            time_rules: timeRules,
+            app_ids: compressAppIds(appIds),
+            enabled: enabled,
+            filter_quic: filterQuic
+        };
+        
+        if (isEditMode) {
+            ruleData.id = editingId;
+            console.log('saveRule - STEP 4: Added id to ruleData:', ruleData.id);
+        } else {
+            console.log('saveRule - STEP 4: NOT in edit mode, will create new rule');
+        }
+        
+        var url = isEditMode ? "<%=url('admin/services/oaf/api/app_filter/update_filter_rule')%>" : "<%=url('admin/services/oaf/api/app_filter/add_filter_rule')%>";
+        
+        console.log('saveRule - STEP 5: Final decision - editingId:', editingId, 'isEditMode:', isEditMode, 'url:', url);
+        console.log('saveRule - STEP 6: ruleData:', JSON.stringify(ruleData, null, 2));
+        
+        $.post(url, {data: JSON.stringify(ruleData)}, function(data) {
+            if (data && data.code === 0) {
+                if (editingId) {
+                    var index = rules.findIndex(function(r) { return r.id === editingId; });
+                    if (index !== -1) {
+                        var localRuleData = $.extend({}, ruleData, {
+                            id: editingId,
+                            app_ids: expandAppIds(ruleData.app_ids || [])
+                        });
+                        rules[index] = localRuleData;
+                        renderRulesList(); // 编辑时直接渲染，无需重新获取
+                    }
+                } else {
+                    loadRules();
+                }
+
+            closeAddRuleModal();
+            if (typeof showCommonModal === 'function') {
+                showCommonModal(isEditMode ? _RuleUpdatedSuccessfully : _RuleAddedSuccessfully, 2000);
+            } else {
+                alert(isEditMode ? _RuleUpdatedSuccessfully : _RuleAddedSuccessfully);
+            }
+            } else {
+                if (typeof showCommonModal === 'function') {
+                    showCommonModal((isEditMode ? _FailedToUpdateRule : _FailedToAddRule) + ': ' + (data.message || _UnknownError), 3000);
+                } else {
+                    alert((isEditMode ? _FailedToUpdateRule : _FailedToAddRule) + ': ' + (data.message || _UnknownError));
+                }
+            }
+        }).fail(function() {
+            if (typeof showCommonModal === 'function') {
+                showCommonModal((isEditMode ? _FailedToUpdateRule : _FailedToAddRule) + ': ' + _NetworkError, 3000);
+            } else {
+                alert((isEditMode ? _FailedToUpdateRule : _FailedToAddRule) + ': ' + _NetworkError);
+            }
+        });
+    }
+    
+    function resetRuleForm(keepEditingId) {
+        var $form = $('#rule-form');
+        if ($form.length > 0 && $form[0]) {
+            var oldEditingIdAttr = $form.attr('data-editing-id');
+            var oldEditingIdData = $form.data('editing-id');
+            console.log('resetRuleForm - clearing editing-id (attr):', oldEditingIdAttr, 'keepEditingId:', keepEditingId);
+            console.log('resetRuleForm - clearing editing-id (data):', oldEditingIdData, 'keepEditingId:', keepEditingId);
+            console.log('resetRuleForm - clearing global currentEditingRuleId:', currentEditingRuleId);
+            $form[0].reset();
+            
+            if (!keepEditingId) {
+                $form.removeAttr('data-editing-id');
+                $form.removeData('editing-id');
+                currentEditingRuleId = null; // 清除全局变量
+                console.log('resetRuleForm - editing-id after clear (attr):', $form.attr('data-editing-id'));
+                console.log('resetRuleForm - editing-id after clear (data):', $form.data('editing-id'));
+                console.log('resetRuleForm - global currentEditingRuleId after clear:', currentEditingRuleId);
+            } else {
+                console.log('resetRuleForm - keeping editing-id:', oldEditingIdAttr || oldEditingIdData || currentEditingRuleId);
+            }
+            
+            $form.find('input, select, textarea').removeClass('error');
+        }
+        
+            if (!keepEditingId) {
+            $form.removeAttr('data-editing-id');
+            $form.removeData('editing-id');
+                currentEditingRuleId = null;
+        }
+        
+        $('#rule-name').val('');
+        
+        $('#rule-enabled').prop('checked', true);
+        $('#rule-filter-quic').prop('checked', false);
+        
+        $('input[name="rule-mode"][value="1"]').prop('checked', true);
+        $('input[name="rule-mode"][value="2"]').prop('checked', false);
+        
+        var $userSelect = $('#rule-user');
+        if ($userSelect.length > 0) {
+            $userSelect.empty();
+            $userSelect.append($('<option>').val('').text(_SelectUser));
+            $userSelect.val('');
+        }
+        
+        $('#time-rules-container').empty();
+        $('#app-selection-container').empty();
+        $('#user-selection-group').hide();
+        
+        $('#rule-form-title').text(_AddRule);
+        
+        addTimeRule();
+    }
+    
+    $(document).on('change', 'input[name="rule-mode"]', onModeChange);
+    $('#btn-add-time-rule').on('click', function() {
+        addTimeRule();
+    });
+    $('#btn-save-rule').on('click', function(e) {
+        e.preventDefault();
+        saveRule(e);
+        return false;
+    });
+    $('#btn-cancel-rule').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('btn-cancel-rule clicked - ' + new Date().getTime());
+        var startTime = performance.now();
+        closeAddRuleModal();
+        console.log('btn-cancel-rule after closeAddRuleModal - ' + (performance.now() - startTime).toFixed(2) + 'ms');
+        return false;
+    });
+    
+    $('#rule-form').on('submit', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Form submit prevented, calling saveRule via JavaScript');
+        saveRule(e);
+        return false;
+    });
+    var modalTimerIds = [];
+    
+    function clearModalTimers() {
+        modalTimerIds.length = 0;
+    }
+    
+    function showAddRuleModal() {
+        clearModalTimers();
+        
+        $('#add-rule-modal').addClass('show').show();
+        
+            resetRuleForm();
+        
+            if (classList.length === 0) {
+                loadClassList();
+            var timerId = setTimeout(function() {
+                if (!modal || modal.style.display === 'none') {
+                    return;
+                }
+                    renderAppSelection([]);
+                }, 500);
+            modalTimerIds.push(timerId);
+            } else {
+                renderAppSelection([]);
+            }
+    }
+    
+    function closeAddRuleModal() {
+        console.log('closeAddRuleModal called');
+        $('#add-rule-modal').removeClass('show');
+        
+        modalTimerIds.length = 0;
+        
+        setTimeout(function() {
+            $('#time-rules-container').empty();
+            $('#app-selection-container').empty();
+            
+            var $form = $('#rule-form');
+            if ($form.length > 0 && $form[0]) {
+                $form[0].reset();
+                $form.removeAttr('data-editing-id');
+                $form.removeData('editing-id');
+                currentEditingRuleId = null;
+                $('#rule-enabled').prop('checked', true);
+                $('#rule-filter-quic').prop('checked', false);
+                $('#user-selection-group').hide();
+                $('#rule-form-title').text(_AddRule);
+            }
+        }, 0);
+    }
+    
+    window.closeAddRuleModal = closeAddRuleModal;
+    
+    console.log('btn-add-rule initialized');
+    $('#btn-add-rule').on('click', function(e) {
+        console.log('btn-add-rule clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        showAddRuleModal();
+        return false;
+    });
+    
+    $(document).on('click', '.modal-close', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('modal-close button clicked - ' + new Date().getTime());
+        var startTime = performance.now();
+        closeAddRuleModal();
+        console.log('modal-close after closeAddRuleModal - ' + (performance.now() - startTime).toFixed(2) + 'ms');
+        return false;
+    });
+    
+    $('#add-rule-modal').on('click', function(e) {
+        if ($(e.target).hasClass('modal-close') || $(e.target).closest('.modal-close').length > 0) {
+            return;
+        }
+        if ($(e.target).is('#add-rule-modal')) {
+            closeAddRuleModal();
+        }
+    });
+    
+    addTimeRule();
+});
+//]]></script>
+
+<div class="cbi-section cbi-tblsection">
+    <div class="rules-toolbar">
+        <h3><%:Filter Rules%></h3>
+        <button type="button" id="btn-add-rule" class="btn-primary"><%:Add Rule%></button>
+    </div>
+
+    <div class="app-filter-tip">
+        <span class="app-filter-tip-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="currentColor" focusable="false">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+            </svg>
+        </span>
+        <span class="app-filter-tip-text">
+            <%:OAF already supports mobile app management. Mobile management is more convenient.%>
+            <a href="http://www.openappfilter.com" target="_blank" rel="noopener noreferrer"><%:Go to download%></a>
+        </span>
+    </div>
+    
+    <div id="rules-list-container" class="rules-list">
+    </div>
+</div>
+
+<div id="add-rule-modal">
+    <div class="modal-content">
+        <button type="button" class="modal-close">&times;</button>
+        <h3 id="rule-form-title"><%:Add Rule%></h3>
+        <form id="rule-form">
+                        <div class="form-group">
+                            <label for="rule-name"><%:Rule Name%> *</label>
+                            <input type="text" id="rule-name" name="rule-name" placeholder="<%:Enter rule name%>">
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="oaf-check-item">
+                                <input type="checkbox" id="rule-enabled" name="rule-enabled" checked>
+                                <label for="rule-enabled"><span><%:Enable Rule%></span></label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="oaf-check-item">
+                                <input type="checkbox" id="rule-filter-quic" name="rule-filter-quic">
+                                <label for="rule-filter-quic"><span><%:Filter QUIC%></span></label>
+                            </div>
+                            <div style="margin-top: 6px; color: #999; font-size: 12px; line-height: 1.5;">
+                                <%:Some apps need QUIC disabled to take effect, such as taobao, youtube, etc. This may also affect other apps. Please choose this switch according to actual conditions.%>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><%:Rule Mode%> *</label>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" id="mode-all" name="rule-mode" value="1" checked>
+                                    <label for="mode-all"><%:All Users%></label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="mode-single" name="rule-mode" value="2">
+                                    <label for="mode-single"><%:Single User%></label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group" id="user-selection-group" style="display: none;">
+                            <label for="rule-user"><%:Select User%> *</label>
+                            <select id="rule-user" name="rule-user">
+                                <option value=""><%:Select User%></option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><%:Time Rules%> *</label>
+                            <button type="button" id="btn-add-time-rule" class="btn-add-time"><%:Add Time Rule%></button>
+                            <div id="time-rules-container" class="time-rules-container">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><%:Select Apps%> *</label>
+                            <div id="app-selection-container" class="app-selection-container">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" id="btn-cancel-rule" class="btn-secondary"><%:Cancel%></button>
+                            <button type="button" id="btn-save-rule" class="btn-primary"><%:Save%></button>
+                        </div>
+                    </form>
+    </div>
+</div>

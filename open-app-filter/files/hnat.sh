@@ -1,3 +1,5 @@
+#!/bin/sh
+
 . /usr/share/libubox/jshn.sh
 . /lib/functions.sh
 
@@ -7,7 +9,7 @@ if [ "$1" = "1" ] ; then
     IS_BOOT=1
 fi
 
-DISABLE_HNAT=$(uci -q get appfilter.global.disable_hnat)
+DISABLE_HNAT=$(uci -q get fwx.advanced.disable_hnat)
 if [ "$DISABLE_HNAT" != "1" ]; then
     exit 0
 fi

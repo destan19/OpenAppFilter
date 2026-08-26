@@ -1,0 +1,672 @@
+<%
+local dsp = require "luci.dispatcher"
+local nfs = require "nixio.fs"
+local has_app_filter = nfs.access("/etc/config/appfilter")
+local has_access_control = nfs.access("/etc/config/macfilter")
+local has_record = nfs.access("/etc/config/fwx_record")
+%>
+<link rel="stylesheet" href="<%=resource%>/oaf/css/common.css">
+<script src="<%=resource%>/oaf/jquery-3.7.1.min.js"></script>
+<script src="<%=resource%>/oaf/common.js"></script>
+
+<style>
+    .oaf-whitelist-tip {
+        margin: 8px 0 14px;
+        padding: 10px 14px;
+        border: 1px solid var(--border-color-low, #e5e7eb);
+        border-radius: 6px;
+        background: var(--background-color-low, #f5f5f5);
+        color: var(--text-color-medium, #6b7280);
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .oaf-whitelist-tabs {
+        display: flex;
+        list-style: none;
+        gap: 0;
+        padding: 0;
+        margin: 10px 0 15px;
+        border-bottom: 1px solid var(--border-color-medium, #d1d5db);
+        overflow-x: auto;
+    }
+
+    .oaf-whitelist-tab {
+        padding: 3px 16px;
+        border: 1px solid var(--border-color-medium, #d1d5db) !important;
+        border-bottom: none !important;
+        border-radius: 5px 5px 0 0;
+        margin-right: 6px;
+        background: var(--background-color-low, #f5f5f5) !important;
+        color: var(--text-color-medium, #6b7280) !important;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: nowrap;
+    }
+
+    .oaf-whitelist-tab:hover {
+        background: var(--background-color-medium, #eee) !important;
+        color: var(--text-color-high, #333) !important;
+    }
+
+    .oaf-whitelist-tab.active {
+        background: var(--background-color-high, #fff) !important;
+        color: var(--text-color-high, #333) !important;
+        font-weight: bold;
+    }
+
+    .oaf-whitelist-panel {
+        display: none;
+    }
+
+    .oaf-whitelist-panel.active {
+        display: block;
+    }
+
+    .oaf-whitelist-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .oaf-whitelist-panel-header h3 {
+        min-width: 0;
+    }
+
+    .oaf-whitelist-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .oaf-whitelist-table {
+        width: 100%;
+        min-width: 680px;
+    }
+
+    .oaf-whitelist-add-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: auto;
+        min-width: max-content;
+        white-space: nowrap;
+        line-height: 1.4;
+        margin: 0;
+        padding: 9px 18px;
+        background-color: #2885e8;
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .oaf-whitelist-add-btn:hover {
+        background-color: #1e6bb8;
+    }
+
+    .oaf-whitelist-delete-btn {
+        padding: 5px 12px;
+        background-color: #e5484d;
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .oaf-whitelist-delete-btn:hover {
+        background-color: #c9373c;
+    }
+
+    .oaf-whitelist-modal,
+    .oaf-whitelist-message {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+    }
+
+    .oaf-whitelist-modal {
+        z-index: 10000;
+    }
+
+    .oaf-whitelist-modal-content {
+        width: calc(100vw - 32px);
+        max-width: 700px;
+        max-height: calc(100vh - 64px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-sizing: border-box;
+        border-radius: 8px;
+        border: 1px solid var(--border-color-low, #d1d5db);
+        background: var(--background-color-high, #fff);
+        color: var(--text-color-high, #1f2937);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+    }
+
+    .oaf-whitelist-modal-header {
+        padding: 20px 24px 14px;
+        border-bottom: 1px solid var(--border-color-low, #d1d5db);
+        color: var(--text-color-high, #1f2937);
+        font-size: 20px;
+        font-weight: 600;
+    }
+
+    .oaf-whitelist-selection-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 24px 10px;
+    }
+
+    .oaf-whitelist-selection-stat {
+        color: var(--text-color-medium, #6b7280);
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .oaf-whitelist-user-list {
+        min-height: 180px;
+        margin: 0 24px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color-low, #d1d5db);
+        border-radius: 4px;
+        background: var(--background-color-low, #f5f5f5);
+    }
+
+    .oaf-whitelist-user-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-bottom: 1px solid var(--border-color-low, #d1d5db);
+        background: var(--background-color-high, #fff);
+        color: var(--text-color-high, #1f2937);
+        cursor: pointer;
+    }
+
+    .oaf-whitelist-user-item:last-child {
+        border-bottom: none;
+    }
+
+    .oaf-whitelist-user-item:hover {
+        background: var(--background-color-medium, #eee);
+    }
+
+    .oaf-whitelist-user-item .oaf-check-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 0;
+    }
+
+    .oaf-whitelist-user-item .oaf-check-item > input[type="checkbox"] {
+        margin: 0 12px 0 0;
+        flex: 0 0 auto;
+    }
+
+    .oaf-whitelist-user-item .oaf-check-item > label {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .oaf-whitelist-user-mac {
+        color: var(--text-color-high, #1f2937);
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .oaf-whitelist-empty-state {
+        padding: 40px;
+        color: var(--text-color-medium, #6b7280);
+        text-align: center;
+    }
+
+    .oaf-whitelist-modal-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 16px 24px;
+        border-top: 1px solid var(--border-color-low, #d1d5db);
+    }
+
+    .oaf-whitelist-modal-btn {
+        min-width: 84px;
+        padding: 8px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 20px;
+    }
+
+    .oaf-whitelist-modal-btn-primary {
+        border: none;
+        background-color: #2885e8;
+        color: #fff;
+    }
+
+    .oaf-whitelist-modal-btn-secondary {
+        border: 1px solid var(--border-color-medium, #d1d5db);
+        background: transparent;
+        color: var(--text-color-high, #1f2937);
+    }
+
+    [data-darkmode="true"] .oaf-whitelist-user-item:hover {
+        background: var(--background-color-medium, rgba(255, 255, 255, 0.08));
+    }
+
+    .oaf-whitelist-message {
+        z-index: 10001;
+    }
+
+    .oaf-whitelist-message-content {
+        padding: 20px 30px;
+        border-radius: 5px;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        text-align: center;
+    }
+
+    @media (max-width: 600px) {
+        .oaf-whitelist-tabs {
+            overflow-x: auto;
+        }
+
+        .oaf-whitelist-tab {
+            min-width: max-content;
+        }
+
+        .oaf-whitelist-panel-header,
+        .oaf-whitelist-selection-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .oaf-whitelist-modal-content {
+            width: calc(100vw - 20px);
+            max-height: calc(100vh - 24px);
+        }
+
+        .oaf-whitelist-modal-buttons .oaf-whitelist-modal-btn {
+            flex: 1;
+        }
+    }
+</style>
+
+<script type="text/javascript">//<![CDATA[
+var whitelistText = {
+    noEntries: '<%:No whitelist entries yet%>',
+    loading: '<%:Loading...%>',
+    deleteLabel: '<%:Delete%>',
+    noDevices: '<%:No available devices to add%>',
+    selectDevice: '<%:Please select at least one device%>',
+    addSuccess: '<%:Add success%>',
+    addFailed: '<%:Add failed%>',
+    confirmRemove: '<%:Are you sure you want to remove this device from whitelist?%>',
+    deleteSuccess: '<%:Delete success%>',
+    deleteFailed: '<%:Delete failed%>',
+    selected: '<%:Selected%>'
+};
+
+var whitelistTypes = {};
+<% if has_app_filter then %>
+whitelistTypes.app_filter = {
+    panelId: 'appFilterWhitelistPanel',
+    tableBodyId: 'appFilterWhitelistTableBody',
+    getUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "app_filter", "get_appfilter_whitelist")%>',
+    addUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "app_filter", "add_appfilter_whitelist")%>',
+    delUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "app_filter", "del_appfilter_whitelist")%>',
+    usersUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "app_filter", "get_all_users")%>',
+    list: [],
+    users: [],
+    usersLoaded: false
+};
+<% end %>
+<% if has_access_control then %>
+whitelistTypes.access_control = {
+    panelId: 'accessControlWhitelistPanel',
+    tableBodyId: 'accessControlWhitelistTableBody',
+    getUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "mac_filter", "get_mac_filter_whitelist")%>',
+    addUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "mac_filter", "add_mac_filter_whitelist")%>',
+    delUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "mac_filter", "del_mac_filter_whitelist")%>',
+    usersUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "get_all_users")%>',
+    list: [],
+    users: [],
+    usersLoaded: false
+};
+<% end %>
+<% if has_record then %>
+whitelistTypes.record = {
+    panelId: 'recordWhitelistPanel',
+    tableBodyId: 'recordWhitelistTableBody',
+    getUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "record_whitelist", "get_record_whitelist")%>',
+    addUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "record_whitelist", "add_record_whitelist")%>',
+    delUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "record_whitelist", "del_record_whitelist")%>',
+    usersUrl: '<%=dsp.build_url("admin", "services", "oaf", "api", "record_whitelist", "get_all_users")%>',
+    list: [],
+    users: [],
+    usersLoaded: false
+};
+<% end %>
+
+var activeWhitelistType = null;
+var modalWhitelistType = null;
+
+function escapeWhitelistHtml(value) {
+    return $('<div>').text(value == null ? '' : String(value)).html();
+}
+
+function normalizeWhitelistMac(mac) {
+    return (mac || '').replace(/^\s+|\s+$/g, '').toUpperCase();
+}
+
+function switchWhitelistTab(type) {
+    if (!whitelistTypes[type]) {
+        return;
+    }
+
+    activeWhitelistType = type;
+    $('.oaf-whitelist-tab').removeClass('active').attr('aria-selected', 'false');
+    $('.oaf-whitelist-tab[data-type="' + type + '"]').addClass('active').attr('aria-selected', 'true');
+    $('.oaf-whitelist-panel').removeClass('active');
+    $('#' + whitelistTypes[type].panelId).addClass('active');
+}
+
+function loadWhitelist(type) {
+    var config = whitelistTypes[type];
+
+    new XHR().get(config.getUrl, null, function(x, data) {
+        config.list = data && data.data && Array.isArray(data.data.list) ? data.data.list : [];
+        renderWhitelistTable(type);
+    }, function() {
+        config.list = [];
+        renderWhitelistTable(type);
+    });
+}
+
+function loadWhitelistUsers(type, callback) {
+    var config = whitelistTypes[type];
+
+    new XHR().get(config.usersUrl, {flag: 2, page: 0}, function(x, data) {
+        config.users = data && data.data && Array.isArray(data.data.list) ? data.data.list : [];
+        config.usersLoaded = true;
+        if (callback) {
+            callback();
+        }
+    }, function() {
+        config.users = [];
+        config.usersLoaded = true;
+        if (callback) {
+            callback();
+        }
+    });
+}
+
+function renderWhitelistTable(type) {
+    var config = whitelistTypes[type];
+    var tableBody = document.getElementById(config.tableBodyId);
+
+    tableBody.innerHTML = '';
+    if (config.list.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">' + whitelistText.noEntries + '</td></tr>';
+        return;
+    }
+
+    config.list.forEach(function(user, index) {
+        var row = document.createElement('tr');
+        var mac = normalizeWhitelistMac(user.mac || '');
+        row.innerHTML = '<td>' + (index + 1) + '</td>' +
+            '<td style="font-family:monospace;font-weight:bold;">' + escapeWhitelistHtml(mac) + '</td>' +
+            '<td>' + escapeWhitelistHtml(user.hostname || '--') + '</td>' +
+            '<td>' + escapeWhitelistHtml(user.nickname || '--') + '</td>' +
+            '<td><button type="button" class="oaf-whitelist-delete-btn" onclick="removeWhitelistUser(\'' + type + '\',\'' + mac + '\')">' + whitelistText.deleteLabel + '</button></td>';
+        tableBody.appendChild(row);
+    });
+}
+
+function showWhitelistModal(type) {
+    modalWhitelistType = type;
+    $('#oafWhitelistModal').css('display', 'flex');
+
+    if (!whitelistTypes[type].usersLoaded) {
+        $('#oafWhitelistUserList').html('<div class="oaf-whitelist-empty-state">' + whitelistText.loading + '</div>');
+        updateWhitelistSelectionStats();
+        loadWhitelistUsers(type, function() {
+            if (modalWhitelistType === type) {
+                renderAvailableWhitelistUsers(type);
+            }
+        });
+        return;
+    }
+
+    renderAvailableWhitelistUsers(type);
+}
+
+function renderAvailableWhitelistUsers(type) {
+    var config = whitelistTypes[type];
+    var whitelistMacs = config.list.map(function(user) { return normalizeWhitelistMac(user.mac || ''); });
+    var availableUsers = config.users.filter(function(user) { return whitelistMacs.indexOf(normalizeWhitelistMac(user.mac || '')) === -1; });
+    var userList = $('#oafWhitelistUserList').empty();
+
+    if (availableUsers.length === 0) {
+        userList.html('<div class="oaf-whitelist-empty-state">' + whitelistText.noDevices + '</div>');
+        updateWhitelistSelectionStats();
+        return;
+    }
+
+    availableUsers.forEach(function(user) {
+        var mac = normalizeWhitelistMac(user.mac || '');
+        var extraInfo = user.nickname || ((user.hostname && user.hostname !== '*') ? user.hostname : user.ip) || '';
+        var displayText = extraInfo ? mac + ' (' + extraInfo + ')' : mac;
+        var item = $('<div class="oaf-whitelist-user-item"></div>');
+        var checkId = 'oaf-whitelist-user-' + modalWhitelistType + '-' + mac.replace(/[^a-zA-Z0-9_-]/g, '-');
+        var checkWrap = $('<div class="oaf-check-item"></div>');
+        var checkbox = $('<input type="checkbox">')
+            .attr('id', checkId)
+            .val(mac)
+            .on('change', updateWhitelistSelectionStats);
+        var label = $('<label class="oaf-whitelist-user-mac"></label>')
+            .attr('for', checkId)
+            .text(displayText);
+
+        checkWrap.append(checkbox).append(label);
+        item.append(checkWrap);
+        item.on('click', function(event) {
+            if (!$(event.target).closest('.oaf-check-item').length) {
+                checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+            }
+        });
+        userList.append(item);
+    });
+
+    updateWhitelistSelectionStats();
+}
+
+function updateWhitelistSelectionStats() {
+    var allCount = $('#oafWhitelistUserList input[type="checkbox"]').length;
+    var selectedCount = $('#oafWhitelistUserList input[type="checkbox"]:checked').length;
+    $('#oafWhitelistSelectionStats').text(whitelistText.selected + ': ' + selectedCount + ' / ' + allCount);
+}
+
+function toggleAllWhitelistUsers() {
+    var checkboxes = $('#oafWhitelistUserList input[type="checkbox"]');
+    var selectedCount = checkboxes.filter(':checked').length;
+    checkboxes.prop('checked', checkboxes.length > 0 && selectedCount !== checkboxes.length);
+    updateWhitelistSelectionStats();
+}
+
+function closeWhitelistModal() {
+    $('#oafWhitelistModal').hide();
+    modalWhitelistType = null;
+}
+
+function addWhitelistUsers() {
+    var config = whitelistTypes[modalWhitelistType];
+    var selectedMacs = $('#oafWhitelistUserList input[type="checkbox"]:checked').map(function() {
+        return this.value;
+    }).get();
+
+    if (selectedMacs.length === 0) {
+        showWhitelistMessage(whitelistText.selectDevice);
+        return;
+    }
+
+    new XHR().post(config.addUrl, {data: JSON.stringify({mac_list: selectedMacs})}, function(x, data) {
+        if (data && data.code == 2000) {
+            var type = modalWhitelistType;
+            closeWhitelistModal();
+            loadWhitelist(type);
+            showWhitelistMessage(whitelistText.addSuccess);
+        } else {
+            showWhitelistMessage(whitelistText.addFailed);
+        }
+    }, function() {
+        showWhitelistMessage(whitelistText.addFailed);
+    });
+}
+
+function removeWhitelistUser(type, mac) {
+    var config = whitelistTypes[type];
+
+    if (!confirm(whitelistText.confirmRemove)) {
+        return;
+    }
+
+    new XHR().post(config.delUrl, {mac: mac}, function(x, data) {
+        if (data && data.code == 2000) {
+            loadWhitelist(type);
+            showWhitelistMessage(whitelistText.deleteSuccess);
+        } else {
+            showWhitelistMessage(whitelistText.deleteFailed);
+        }
+    }, function() {
+        showWhitelistMessage(whitelistText.deleteFailed);
+    });
+}
+
+function showWhitelistMessage(message) {
+    $('#oafWhitelistMessageText').text(message);
+    $('#oafWhitelistMessage').css('display', 'flex');
+    setTimeout(function() {
+        $('#oafWhitelistMessage').hide();
+    }, 1500);
+}
+
+$(function() {
+    var types = Object.keys(whitelistTypes);
+
+    if (types.length === 0) {
+        return;
+    }
+
+    switchWhitelistTab(types[0]);
+    types.forEach(function(type) {
+        loadWhitelist(type);
+        loadWhitelistUsers(type);
+    });
+
+    $('#oafWhitelistModal').on('click', function(event) {
+        if (event.target === this) {
+            closeWhitelistModal();
+        }
+    });
+});
+//]]></script>
+
+<div class="cbi-section cbi-tblsection">
+    <div class="oaf-whitelist-tip">
+        <%:Users in the whitelist are not subject to control. For terminals using random MAC addresses, you can use the whitelist mechanism together with filtering rules: select All Users in a filtering rule, and the rule will apply to all new users.%>
+    </div>
+
+    <div class="oaf-whitelist-tabs" role="tablist">
+        <% if has_app_filter then %>
+        <button type="button" class="oaf-whitelist-tab" data-type="app_filter" role="tab" aria-selected="false" onclick="switchWhitelistTab('app_filter')"><%:App Filter Whitelist%></button>
+        <% end %>
+        <% if has_access_control then %>
+        <button type="button" class="oaf-whitelist-tab" data-type="access_control" role="tab" aria-selected="false" onclick="switchWhitelistTab('access_control')"><%:Access Control Whitelist%></button>
+        <% end %>
+        <% if has_record then %>
+        <button type="button" class="oaf-whitelist-tab" data-type="record" role="tab" aria-selected="false" onclick="switchWhitelistTab('record')"><%:Record Whitelist%></button>
+        <% end %>
+    </div>
+
+    <% if has_app_filter then %>
+    <div id="appFilterWhitelistPanel" class="oaf-whitelist-panel" role="tabpanel">
+        <div class="oaf-whitelist-panel-header">
+            <h3 style="margin:0;"><%:App Filter Whitelist%></h3>
+            <button type="button" class="oaf-whitelist-add-btn" onclick="showWhitelistModal('app_filter')">+ <%:Add to Whitelist%></button>
+        </div>
+        <div class="oaf-whitelist-table-wrap">
+            <table class="common-table oaf-whitelist-table">
+                <thead><tr><th><%:No.%></th><th><%:MAC Address%></th><th><%:Hostname%></th><th><%:Nickname%></th><th><%:Operation%></th></tr></thead>
+                <tbody id="appFilterWhitelistTableBody"><tr><td colspan="5" style="text-align:center;padding:30px;color:#999;"><%:Loading...%></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+    <% end %>
+
+    <% if has_access_control then %>
+    <div id="accessControlWhitelistPanel" class="oaf-whitelist-panel" role="tabpanel">
+        <div class="oaf-whitelist-panel-header">
+            <h3 style="margin:0;"><%:Access Control Whitelist%></h3>
+            <button type="button" class="oaf-whitelist-add-btn" onclick="showWhitelistModal('access_control')">+ <%:Add to Whitelist%></button>
+        </div>
+        <div class="oaf-whitelist-table-wrap">
+            <table class="common-table oaf-whitelist-table">
+                <thead><tr><th><%:No.%></th><th><%:MAC Address%></th><th><%:Hostname%></th><th><%:Nickname%></th><th><%:Operation%></th></tr></thead>
+                <tbody id="accessControlWhitelistTableBody"><tr><td colspan="5" style="text-align:center;padding:30px;color:#999;"><%:Loading...%></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+    <% end %>
+
+    <% if has_record then %>
+    <div id="recordWhitelistPanel" class="oaf-whitelist-panel" role="tabpanel">
+        <div class="oaf-whitelist-panel-header">
+            <h3 style="margin:0;"><%:Record Whitelist%></h3>
+            <button type="button" class="oaf-whitelist-add-btn" onclick="showWhitelistModal('record')">+ <%:Add to Whitelist%></button>
+        </div>
+        <div class="oaf-whitelist-table-wrap">
+            <table class="common-table oaf-whitelist-table">
+                <thead><tr><th><%:No.%></th><th><%:MAC Address%></th><th><%:Hostname%></th><th><%:Nickname%></th><th><%:Operation%></th></tr></thead>
+                <tbody id="recordWhitelistTableBody"><tr><td colspan="5" style="text-align:center;padding:30px;color:#999;"><%:Loading...%></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+    <% end %>
+</div>
+
+<div id="oafWhitelistModal" class="oaf-whitelist-modal">
+    <div class="oaf-whitelist-modal-content">
+        <div class="oaf-whitelist-modal-header"><%:Add to Whitelist%></div>
+        <div class="oaf-whitelist-selection-toolbar">
+            <button type="button" class="oaf-whitelist-modal-btn oaf-whitelist-modal-btn-secondary" onclick="toggleAllWhitelistUsers()"><%:Select All%></button>
+            <span id="oafWhitelistSelectionStats" class="oaf-whitelist-selection-stat"><%:Selected%>: 0 / 0</span>
+        </div>
+        <div id="oafWhitelistUserList" class="oaf-whitelist-user-list"></div>
+        <div class="oaf-whitelist-modal-buttons">
+            <button type="button" class="oaf-whitelist-modal-btn oaf-whitelist-modal-btn-primary" onclick="addWhitelistUsers()"><%:OK%></button>
+            <button type="button" class="oaf-whitelist-modal-btn oaf-whitelist-modal-btn-secondary" onclick="closeWhitelistModal()"><%:Cancel%></button>
+        </div>
+    </div>
+</div>
+
+<div id="oafWhitelistMessage" class="oaf-whitelist-message">
+    <div class="oaf-whitelist-message-content">
+        <p id="oafWhitelistMessageText" style="margin:0;"></p>
+    </div>
+</div>

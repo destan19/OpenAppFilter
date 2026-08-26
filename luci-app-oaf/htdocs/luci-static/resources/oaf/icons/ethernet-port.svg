@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Ethernet port icon</title>
+  <desc id="desc">A minimal RJ45 Ethernet port icon with contact pins and a stepped connector shape.</desc>
+  <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="34" y="34" width="188" height="188" rx="16"/>
+    <path d="M68 67h120v80h-28v34H96v-34H68Z"/>
+    <path d="M96 147v20h64v-20"/>
+    <path d="M84 88h88v34H84Z"/>
+    <path d="M97 90v30"/>
+    <path d="M110 90v30"/>
+    <path d="M123 90v30"/>
+    <path d="M136 90v30"/>
+    <path d="M149 90v30"/>
+    <path d="M162 90v30"/>
+  </g>
+</svg>

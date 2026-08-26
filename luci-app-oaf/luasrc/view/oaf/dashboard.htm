@@ -1,0 +1,4178 @@
+<link rel="stylesheet" href="<%=resource%>/oaf/css/common.css">
+<script src="<%=resource%>/oaf/jquery-3.7.1.min.js"></script>
+<script src="<%=resource%>/oaf/oaf_icon.js"></script>
+<script src="<%=resource%>/oaf/echarts.min.js"></script>
+
+<style>
+    :root {
+        --chart-text-color: #333333;
+        --chart-axis-line-color: rgba(0, 0, 0, 0.2);
+        --chart-axis-label-color: #666666;
+        --chart-split-line-color: rgba(0, 0, 0, 0.08);
+        --chart-split-line-dashed-color: rgba(0, 0, 0, 0.15);
+        --chart-tooltip-bg: rgba(255, 255, 255, 0.95);
+        --chart-tooltip-text: #333333;
+        --temp-bar-default-gradient: linear-gradient(90deg,#d9eefc,#ff9800);
+        --temp-space-bar-gradient: linear-gradient(90deg,#22c4df,#4ea6f6);
+        --storage-bar-gradient: linear-gradient(90deg,#1fc2de,#4ca6fb);
+        --storage-bar-shadow: 0 0 10px rgba(66, 214, 255, 0.34);
+    }
+
+    [data-darkmode="true"] {
+        --temp-space-bar-gradient: linear-gradient(90deg,#a1ecff,#abd5ff);
+        --storage-bar-gradient: linear-gradient(90deg,#9deaff,#a6ceff);
+        --storage-bar-shadow: 0 0 14px rgba(151, 217, 255, 0.58);
+    }
+
+    .dash {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+        gap: 12px;
+        padding: 0 0 8px;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+    .dash > * {
+        min-width: 0;
+    }
+    .card {
+        border-radius: 8px;
+        border: 1px solid rgba(121, 141, 164, 0.36);
+        padding: 4px 12px;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    [data-darkmode="true"] .card {
+        border-color: rgba(255, 255, 255, 0.24);
+    }
+    #active-app-card {
+        min-height: auto;
+    }
+    .card h3 { margin: 0 0 2px 0; font-size: 14px; }
+    .card > .mini-title,
+    .card .card-title-row > .mini-title {
+        margin: 0 0 2px 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 14px;
+        line-height: 1.4;
+        color: inherit;
+    }
+    .chart-container {
+        flex: 1;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 250px;
+        height: 35vh;
+        max-height: 450px;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+    #history-traffic-card {
+        min-height: 270px;
+    }
+    #history-traffic-card .chart-container {
+        min-height: 220px;
+        height: 260px;
+        max-height: 300px;
+    }
+    #pie-app-card, #bar-user-traffic-card {
+        min-height: 470px;  
+    }
+    #pie-app-card .chart-container, #bar-user-traffic-card .chart-container {
+        min-height: 400px; 
+        height: 100%;  
+        max-height: none; 
+    }
+    .tab-btn {
+        padding: 4px 12px;
+        font-size: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .app-stats-switch {
+        position: relative;
+        display: inline-block;
+    }
+    .mode-switch-guide-bubble {
+        position: fixed;
+        z-index: 9999;
+        width: 340px;
+        max-width: calc(100vw - 16px);
+        padding: 14px 16px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(37, 99, 235, 0.28);
+        background: linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(219, 234, 254, 0.98));
+        color: #1e40af;
+        font-size: 13px;
+        line-height: 1.5;
+        box-shadow: 0 16px 32px rgba(29, 78, 216, 0.22);
+        pointer-events: auto;
+    }
+    .mode-switch-guide-bubble::before {
+        content: "";
+        position: absolute;
+        top: -7px;
+        right: 18px;
+        width: 12px;
+        height: 12px;
+        background: rgba(231, 242, 255, 0.98);
+        border-left: 1px solid rgba(37, 99, 235, 0.28);
+        border-top: 1px solid rgba(37, 99, 235, 0.28);
+        transform: rotate(45deg);
+    }
+    .mode-switch-guide-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #1e3a8a;
+    }
+    .mode-switch-guide-text {
+        margin: 0;
+    }
+    .mode-switch-guide-actions {
+        margin-top: 10px;
+        text-align: right;
+    }
+    .mode-switch-guide-ok {
+        border: 1px solid rgba(37, 99, 235, 0.35);
+        background: #2563eb;
+        color: #fff;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 12px;
+        cursor: pointer;
+        line-height: 1.2;
+    }
+    .mode-switch-guide-ok:hover {
+        background: #1d4ed8;
+    }
+    [data-darkmode="true"] .mode-switch-guide-bubble {
+        border-color: rgba(147, 197, 253, 0.32);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(30, 64, 175, 0.35));
+        color: #dbeafe;
+        box-shadow: 0 16px 36px rgba(2, 6, 23, 0.55);
+    }
+    [data-darkmode="true"] .mode-switch-guide-bubble::before {
+        background: rgba(34, 53, 90, 0.98);
+        border-left-color: rgba(147, 197, 253, 0.32);
+        border-top-color: rgba(147, 197, 253, 0.32);
+    }
+    [data-darkmode="true"] .mode-switch-guide-title {
+        color: #eff6ff;
+    }
+    [data-darkmode="true"] .mode-switch-guide-ok {
+        border-color: rgba(191, 219, 254, 0.35);
+        background: #3b82f6;
+        color: #eff6ff;
+    }
+    [data-darkmode="true"] .mode-switch-guide-ok:hover {
+        background: #2563eb;
+    }
+    .app-stats-select-wrap {
+        display: none !important;
+    }
+    .app-stats-switch-btn {
+        min-width: 78px;
+        height: 22px;
+        font-size: 12px;
+        line-height: 20px;
+        border-radius: 4px;
+        padding: 0 18px 0 8px;
+        border: 1px solid rgba(148,163,184,.45);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        text-align: left;
+    }
+    .app-stats-switch-btn::after {
+        content: "";
+        position: absolute;
+        right: 7px;
+        top: 7px;
+        width: 6px;
+        height: 6px;
+        border-right: 1.5px solid currentColor;
+        border-bottom: 1.5px solid currentColor;
+        transform: rotate(45deg);
+        opacity: .75;
+    }
+    .app-stats-switch-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 24px;
+        min-width: 78px;
+        z-index: 20;
+        border-radius: 4px;
+        border: 1px solid rgba(148,163,184,.45);
+        overflow: hidden;
+        background: #ffffff;
+        color: #1f2937;
+    }
+    .app-stats-switch.open .app-stats-switch-menu {
+        display: block;
+    }
+    .app-stats-switch-item {
+        display: block;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        font-size: 12px;
+        padding: 4px 8px;
+        cursor: pointer;
+    }
+    .app-stats-switch-item:hover,
+    .app-stats-switch-item.active {
+        background: #e5e7eb;
+        color: #111827;
+    }
+    [data-darkmode="true"] .app-stats-switch-menu {
+        background: #1f2937;
+        color: #e5e7eb;
+        border-color: #374151;
+    }
+    [data-darkmode="true"] .app-stats-switch-item:hover,
+    [data-darkmode="true"] .app-stats-switch-item.active {
+        background: #374151;
+        color: #f3f4f6;
+    }
+    .tab-btn:hover {
+    }
+    .tab-btn.active {
+        background: rgba(59, 130, 246, 0.3);
+        border-color: rgba(59, 130, 246, 0.5);
+        color: #3b82f6;
+    }
+    .top-stats { display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-bottom:12px; }
+    .acceleration-warning {
+        display: none;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 0 0 10px;
+        padding: 10px 14px;
+        border: 1px solid rgba(245, 158, 11, 0.42);
+        border-radius: 7px;
+        background: rgba(245, 158, 11, 0.10);
+        color: #b45309;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .acceleration-warning-text {
+        flex: 1;
+        min-width: 0;
+    }
+    .acceleration-warning-close {
+        width: 20px;
+        height: 20px;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 18px;
+        padding: 0;
+        opacity: .72;
+        flex: none;
+    }
+    .acceleration-warning-close:hover {
+        opacity: 1;
+        background: rgba(245, 158, 11, 0.16);
+    }
+    .acceleration-warning strong {
+        font-weight: 600;
+    }
+    [data-darkmode="true"] .acceleration-warning {
+        border-color: rgba(251, 191, 36, 0.44);
+        background: rgba(120, 53, 15, 0.30);
+        color: #fcd34d;
+    }
+    .top-stats .big { font-size:15px; font-weight:600; }
+    .top-stats .top-stat-value {
+        font-size: 21px;
+        font-weight: 700;
+        line-height: 1.05;
+        letter-spacing: 0.01em;
+        color: #eaf2fb;
+        text-shadow: 0 1px 0 rgba(5, 12, 22, 0.35);
+    }
+    .mini {
+        border-radius: 8px;
+        padding: 15px 10px;
+        font-size: 12px;
+        line-height: 1.4;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .mini > div:first-child {
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .top-stats .mini {
+        --stat-bg-from: #222c38;
+        --stat-bg-mid: #1c2530;
+        --stat-bg-to: #18212b;
+        --stat-glow-color: rgba(90, 167, 248, 0.32);
+        --stat-icon-color: #7fb4f5;
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        padding: 11px 13px 12px;
+        gap: 10px;
+        min-height: 88px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 10px 22px rgba(8, 15, 30, 0.30), 0 2px 6px rgba(8, 15, 30, 0.16);
+        background:
+            radial-gradient(circle at 88% 12%, var(--stat-glow-color) 0%, rgba(255, 255, 255, 0) 46%),
+            linear-gradient(160deg, var(--stat-bg-from) 0%, var(--stat-bg-mid) 55%, var(--stat-bg-to) 100%);
+        color: rgba(248, 251, 255, 0.98);
+    }
+    .top-stats .mini:nth-child(2) {
+        --stat-glow-color: rgba(163, 148, 255, 0.30);
+        --stat-icon-color: #a394ff;
+    }
+    .top-stats .mini:nth-child(3) {
+        --stat-glow-color: rgba(69, 215, 155, 0.30);
+        --stat-icon-color: #4fd09a;
+    }
+    .top-stats .mini:nth-child(4) {
+        --stat-glow-color: rgba(247, 181, 107, 0.30);
+        --stat-icon-color: #f2ae66;
+    }
+    .top-stats .mini:nth-child(1),
+    .top-stats .mini:nth-child(2),
+    .top-stats .mini:nth-child(3) {
+        cursor: pointer;
+        overflow: visible;
+    }
+    .top-stats .mini > .tooltip {
+        position: absolute;
+        z-index: 1000;
+    }
+    #oaf-feature-version,
+    #oaf-app-record-count {
+        cursor: pointer;
+    }
+    .top-stats .stat-head {
+        position: relative;
+        display: block;
+        min-height: 24px;
+        padding-right: 30px;
+    }
+    .top-stats .stat-label {
+        display: block;
+        font-size: 12px;
+        line-height: 24px;
+        padding-left: 0;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        opacity: 0.86;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .top-stats .stat-icon {
+        position: absolute;
+        top: 2px;
+        right: 0;
+        left: auto;
+        width: 22px;
+        height: 22px;
+        display: block;
+        background-color: var(--stat-icon-color);
+        opacity: 0.92;
+        -webkit-mask: var(--stat-icon-url) center / contain no-repeat;
+        mask: var(--stat-icon-url) center / contain no-repeat;
+    }
+.top-stats .icon-application { --stat-icon-url: url('/luci-static/resources/oaf/icons/application.svg'); }
+.top-stats .icon-user { --stat-icon-url: url('/luci-static/resources/oaf/icons/user.svg'); }
+.top-stats .icon-connect { --stat-icon-url: url('/luci-static/resources/oaf/icons/filter.svg'); }
+.top-stats .icon-flow { --stat-icon-url: url('/luci-static/resources/oaf/icons/flow.svg'); }
+    .top-stats .mini .top-stat-value {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .top-stats #mini-traffic {
+        font-size: 19px;
+    }
+    .top-stats .mini > * {
+        position: relative;
+        z-index: 2;
+    }
+    [data-darkmode="true"] .top-stats .mini {
+        border-color: rgba(255, 255, 255, 0.16);
+        box-shadow: 0 10px 22px rgba(2, 8, 20, 0.34), 0 2px 6px rgba(2, 8, 20, 0.18);
+    }
+    :root:not([data-darkmode="true"]) .top-stats .mini {
+        --stat-bg-from: #ffffff;
+        --stat-bg-mid: #f8fafc;
+        --stat-bg-to: #f1f5f9;
+        --stat-glow-color: rgba(90, 167, 248, 0.16);
+        --stat-icon-color: #3d7fc4;
+        color: #1f2d3d;
+        border-color: rgba(121, 141, 164, 0.24);
+        box-shadow: 0 10px 20px rgba(20, 26, 36, 0.12), 0 2px 5px rgba(20, 26, 36, 0.06);
+    }
+    :root:not([data-darkmode="true"]) .top-stats .mini:nth-child(2) {
+        --stat-glow-color: rgba(139, 124, 246, 0.14);
+        --stat-icon-color: #6b5ae2;
+    }
+    :root:not([data-darkmode="true"]) .top-stats .mini:nth-child(3) {
+        --stat-glow-color: rgba(47, 191, 127, 0.14);
+        --stat-icon-color: #1f9c68;
+    }
+    :root:not([data-darkmode="true"]) .top-stats .mini:nth-child(4) {
+        --stat-glow-color: rgba(224, 148, 74, 0.14);
+        --stat-icon-color: #cf7f2f;
+    }
+    :root:not([data-darkmode="true"]) .top-stats .top-stat-value {
+        color: #172638;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+    }
+    :root:not([data-darkmode="true"]) .top-stats .stat-label {
+        color: rgba(31, 45, 62, 0.86);
+        opacity: 0.88;
+    }
+    .kv { display: grid; grid-template-columns: 90px 1fr; row-gap: 6px; column-gap: 4px; font-size: 13px; }
+    .mini-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    .mini-title.with-help {
+        position: relative;
+        cursor: help;
+    }
+    .compact-mini {
+        gap: 8px;
+    }
+    .compact-kv {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .compact-row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 7px 0;
+        border-radius: 0;
+        background: transparent;
+        border: none;
+    }
+    .compact-row::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: linear-gradient(
+            90deg,
+            rgba(148, 163, 184, 0) 0,
+            rgba(148, 163, 184, 0.18) 33%,
+            rgba(148, 163, 184, 0.18) 67%,
+            rgba(148, 163, 184, 0) 100%
+        );
+    }
+    [data-darkmode="true"] .compact-row {
+        background: transparent;
+    }
+    [data-darkmode="true"] .compact-row::after {
+        background: linear-gradient(
+            90deg,
+            rgba(120, 138, 162, 0) 0,
+            rgba(120, 138, 162, 0.22) 33%,
+            rgba(120, 138, 162, 0.22) 67%,
+            rgba(120, 138, 162, 0) 100%
+        );
+    }
+    .compact-kv .compact-row:last-child::after {
+        display: none;
+    }
+    .compact-label {
+        font-size: 12px;
+        opacity: 0.78;
+        white-space: nowrap;
+    }
+    .compact-value {
+        font-size: 14px;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    [data-darkmode="true"] .compact-label {
+        color: rgba(184, 199, 220, 0.78);
+    }
+    [data-darkmode="true"] .compact-value {
+        color: #dbe9fb;
+    }
+    [data-darkmode="true"] #sys-model {
+        color: #f2f8ff;
+        text-shadow: 0 0 0 rgba(0, 0, 0, 0.01);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: geometricPrecision;
+    }
+    #sys-hostname,
+    #sys-model,
+    #sys-version,
+    #sys-kernel-version,
+    #sys-uptime {
+        max-width: 170px;
+    }
+    .env-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 2px 0;
+    }
+    .env-row + .env-row {
+        margin-top: 10px;
+    }
+    .env-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 13px;
+    }
+    .env-label {
+        font-weight: 600;
+        opacity: 0.86;
+    }
+    .env-value {
+        font-weight: 600;
+    }
+    #env-storage-card .env-label,
+    #env-storage-card .env-value {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: geometricPrecision;
+        opacity: 1;
+        letter-spacing: 0.1px;
+    }
+    [data-darkmode="true"] #env-storage-card .env-label {
+        color: rgba(215, 228, 244, 0.92);
+    }
+    [data-darkmode="true"] #env-storage-card .env-value {
+        color: #ecf6ff;
+    }
+    #sys-model, #sys-cpu-model-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .meter { height: 6px; background: rgba(0, 0, 0, 0.08); border-radius: 999px; overflow: hidden; position: relative; }
+
+    [data-darkmode="true"] .meter { background: #141d2a; }
+    .bar { height: 100%; width: 0; background: linear-gradient(90deg,#16a34a,#22c55e); position: relative; overflow: hidden; border-radius: 999px; }
+    #cpu-temp-bar {
+        background: var(--temp-bar-default-gradient);
+    }
+    #storage-overlay-bar {
+        background: var(--storage-bar-gradient);
+        box-shadow: var(--storage-bar-shadow);
+    }
+    #port-status-card {
+        gap: 8px;
+    }
+    .port-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+    }
+    .port-item {
+        position: relative;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-color-medium, #6b7280);
+    }
+    .port-icon {
+        width: 34px;
+        height: 34px;
+        color: #6b7280;
+        background: currentColor;
+    -webkit-mask: url("<%=resource%>/oaf/icons/ethernet-port.svg") center / contain no-repeat;
+    mask: url("<%=resource%>/oaf/icons/ethernet-port.svg") center / contain no-repeat;
+    }
+    .port-item.port-up.port-speed-high .port-icon {
+        color: #f1d950;
+    }
+    .port-item.port-up.port-speed-mid .port-icon {
+        color: #18b12c;
+    }
+    .port-item.port-up.port-speed-low .port-icon {
+        color: #08ecec;
+    }
+    .port-name {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.1;
+    }
+    .port-speed {
+        font-size: 10px;
+        line-height: 1;
+        opacity: 0.78;
+    }
+    .port-empty {
+        color: var(--text-color-medium, #6b7280);
+        text-align: center;
+        padding: 8px 0 4px;
+    }
+    .port-item:hover .tooltip {
+        display: block;
+    }
+
+    .sys-info-layout {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 20px;
+        align-items: start;
+    }
+    .sys-info-text {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .sys-info-text-item {
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    .sys-info-text-label {
+        margin-right: 6px;
+    }
+    .sys-info-text-value {
+        font-weight: 500;
+    }
+    .sys-info-circulars {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+    }
+
+    .circular-progress {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .circular-progress-wrapper {
+        position: relative;
+        display: inline-block;
+        width: 85px;
+        height: 85px;
+    }
+    .circular-progress svg {
+        width: 85px;
+        height: 85px;
+        transform: rotate(-90deg);
+    }
+    .circular-progress-label {
+        margin-top: 10px;
+        font-size: 13px;
+        text-align: center;
+    }
+    .circular-progress .progress-ring-bg {
+        fill: none;
+        stroke: rgba(0, 0, 0, 0.1); 
+        stroke-width: 7;
+    }
+
+    [data-darkmode="true"] .circular-progress .progress-ring-bg {
+        stroke: rgba(132, 153, 182, 0.22);
+    }
+    .circular-progress .progress-ring {
+        fill: none;
+        stroke-width: 7;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.5s ease;
+    }
+    .circular-progress.cpu .progress-ring {
+        stroke: url(#cpuGradient);
+    }
+    .circular-progress.mem .progress-ring {
+        stroke: url(#memGradient);
+    }
+    .circular-progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .progress-info {
+        display: flex;
+        flex-direction: column;
+        margin-left: 12px;
+    }
+    .progress-info-label {
+        font-size: 12px;
+        margin-bottom: 2px;
+    }
+    .progress-info-value {
+        font-size: 16px;
+        font-weight: 600;
+    }
+    .main-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; min-width: 0; }
+    .full { grid-column: 1 / -1; }
+    .list {
+        font-size: 13px;
+        min-height: 300px;
+    }
+    .list table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .list th, .list td { border-bottom: 1px solid var(--border-color-low); padding: 6px 4px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .list th:nth-child(1), .list td:nth-child(1) { width: 14%; }
+    .list th:nth-child(2), .list td:nth-child(2) { width: 10%; } 
+    .list th:nth-child(3), .list td:nth-child(3) { width: 10%; } 
+    .list th:nth-child(4), .list td:nth-child(4) { width: 10%; } 
+    .list th:nth-child(5), .list td:nth-child(5) { width: 12%; } 
+    .list th:nth-child(6), .list td:nth-child(6) { width: 12%; } 
+    .list th:nth-child(7), .list td:nth-child(7) { width: 12%; } 
+    .list th:nth-child(8), .list td:nth-child(8) { width: 20%; }
+    .dashboard-device-info { display:flex; align-items:center; gap:6px; min-width:0; }
+    .dashboard-device-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 24px;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-sizing: border-box;
+    }
+    .dashboard-device-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+    .right-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; max-width: 100%; }
+    .right-col .mini {
+        position: relative;
+        border: 1px solid rgba(121, 141, 164, 0.36);
+        border-radius: 8px;
+        overflow: hidden;
+        padding-left: 13px;
+        padding-right: 13px;
+    }
+    #sys-info-card,
+    #active-terminal-card,
+    #port-status-card {
+        overflow: visible;
+    }
+    .right-col .mini-title {
+        font-weight: 400;
+    }
+    .right-col .compact-value {
+        font-weight: 400;
+    }
+    .right-col .env-label,
+    .right-col .env-value {
+        font-weight: 400;
+    }
+    .right-col .circular-progress-text {
+        font-weight: 400;
+    }
+    #sys-info-card .compact-kv {
+        gap: 0;
+    }
+    #sys-info-card .compact-row {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+    #active-terminal-list {
+        /* Tune active terminal columns here. Total width + 3 gaps should fit the right card content width. */
+        --terminal-name-width: 86px;
+        --terminal-up-width: 66px;
+        --terminal-down-width: 66px;
+        --terminal-app-width: 78px;
+        --terminal-column-gap: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        height: 238px;
+        overflow: visible;
+    }
+    .active-terminal-item {
+        display: grid;
+        grid-template-columns:
+            var(--terminal-name-width)
+            var(--terminal-up-width)
+            var(--terminal-down-width)
+            var(--terminal-app-width);
+        align-items: center;
+        gap: var(--terminal-column-gap);
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        font-size: 12px;
+        line-height: 1.4;
+        min-width: 0;
+        min-height: 28px;
+        box-sizing: border-box;
+        position: relative;
+    }
+    .active-terminal-item:last-child {
+        border-bottom: 0;
+    }
+    .active-terminal-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: inherit;
+    }
+    .active-terminal-app {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        opacity: 0.82;
+        min-width: 0;
+    }
+    .active-terminal-up {
+        color: #58a6ff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+    }
+    .active-terminal-down {
+        color: #8b7bff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+    }
+    .active-terminal-empty {
+        padding: 12px 0;
+        text-align: center;
+        color: #888;
+        font-size: 12px;
+    }
+    .active-terminal-item > .tooltip {
+        position: absolute;
+        z-index: 1000;
+        max-width: 320px;
+        right: 100%;
+        margin-right: 8px;
+        left: auto;
+        top: 0;
+        transform: none;
+    }
+    .active-terminal-item:hover .tooltip {
+        display: block;
+    }
+    .active-terminal-item .tooltip-value {
+        word-break: break-all;
+    }
+    #active-terminal-card:hover {
+        z-index: 100;
+    }
+    [data-darkmode="true"] .right-col .mini {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        box-shadow: none;
+    }
+    [data-darkmode="true"] .right-col .mini-title {
+        color: #e5eefc;
+    }
+    [data-darkmode="true"] #running-status-card .circular-progress-text {
+        color: #e6f0ff;
+    }
+    [data-darkmode="true"] #running-status-card .circular-progress-label {
+        color: rgba(221, 234, 250, 0.92);
+    }
+    .spark { height: 70px; }
+    .app-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 12px;
+        padding: 4px 0;
+        min-height: 60px;
+    }
+    .app-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        position: relative;
+        cursor: pointer;
+    }
+    .app-icon {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        object-fit: cover;
+        display: block;
+        opacity: 1;
+    }
+    .app-icon-letter {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 700;
+        color: #ffffff;
+        line-height: 1;
+        user-select: none;
+    }
+    .app-icon-wrap {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        margin-bottom: 6px;
+        overflow: hidden;
+        display: inline-block;
+        vertical-align: middle;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-sizing: border-box;
+    }
+    [data-darkmode="true"] .app-icon-wrap {
+        border-color: rgba(148, 163, 184, 0.35);
+    }
+    [data-darkmode="true"] .app-icon {
+        filter: none;
+    }
+    .app-name {
+        width: 4.8em;
+        max-width: 100%;
+        font-size: 12px;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .active-url-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        position: relative;
+        justify-content: flex-start;
+    }
+    #active-url-card {
+        flex: 1;
+        min-height: 0;
+    }
+    .active-url-item {
+        position: relative;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 10px 0;
+    }
+    .active-url-item::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: linear-gradient(
+            90deg,
+            rgba(148, 163, 184, 0) 0,
+            rgba(148, 163, 184, 0.18) 33%,
+            rgba(148, 163, 184, 0.18) 67%,
+            rgba(148, 163, 184, 0) 100%
+        );
+    }
+    .active-url-item.slide-in {
+        animation: slideInFromBottom 0.4s ease-out;
+    }
+    @keyframes slideInFromBottom {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    [data-darkmode="true"] .active-url-item::after {
+        background: linear-gradient(
+            90deg,
+            rgba(120, 138, 162, 0) 0,
+            rgba(120, 138, 162, 0.22) 33%,
+            rgba(120, 138, 162, 0.22) 67%,
+            rgba(120, 138, 162, 0) 100%
+        );
+    }
+    .active-url-item:last-child::after {
+        display: none;
+    }
+    .active-url-item {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        font-size: 12px;
+        line-height: 1.4;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    .active-url-item.www-highlight {
+    }
+    .active-url-name {
+        flex: 0 0 auto;
+        max-width: 9em;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+        margin-right: 6px;
+    }
+    .active-url-url {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    .active-url-url-prefix {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .active-url-url-suffix {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+    .active-url-item.www-highlight .active-url-url {
+        color: #22c55e;
+    }
+    .tooltip {
+        --tooltip-bg: rgba(20, 29, 41, 0.96);
+        --tooltip-border: rgba(118, 136, 160, 0.34);
+        --tooltip-label-color: rgba(194, 210, 228, 0.78);
+        --tooltip-value-color: rgba(229, 238, 250, 0.94);
+        position: absolute;
+        background: var(--tooltip-bg);
+        border: 1px solid var(--tooltip-border);
+        border-radius: 8px;
+        padding: 12px;
+        min-width: 280px;
+        font-size: 12px;
+        line-height: 1.6;
+        z-index: 1000;
+        pointer-events: none;
+        box-shadow: 0 10px 24px rgba(6, 12, 22, 0.40);
+        display: none;
+    }
+    :root:not([data-darkmode="true"]) .tooltip {
+        --tooltip-bg: #ffffff;
+        --tooltip-border: rgba(151, 166, 183, 0.42);
+        --tooltip-label-color: rgba(90, 106, 124, 0.86);
+        --tooltip-value-color: rgba(32, 45, 62, 0.95);
+        box-shadow: 0 8px 20px rgba(40, 51, 66, 0.16);
+    }
+    .top-stats .mini > .tooltip {
+        min-width: 190px;
+    }
+
+    .tooltip-top {
+        bottom: 100%;
+        margin-bottom: 8px;
+    }
+
+    .tooltip-bottom {
+        top: 100%;
+        margin-top: 8px;
+    }
+
+    .tooltip-left {
+        right: 100%;
+        margin-right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .tooltip-right {
+        left: 100%;
+        margin-left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .tooltip-top::before {
+        content: '';
+        position: absolute;
+        top: 100%;
+        border: 6px solid transparent;
+        border-top-color: var(--tooltip-bg);
+    }
+
+    .tooltip-arrow-left::before {
+        left: 20px;
+    }
+
+    .tooltip-arrow-center::before {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .tooltip-center-x {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .tooltip-top.tooltip-center-x.tooltip-arrow-center::before {
+        transform: translateX(-50%);
+    }
+
+    .tooltip-arrow-right::before {
+        right: 20px;
+        left: auto;
+    }
+
+
+    .tooltip-bottom::after {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        border: 6px solid transparent;
+        border-bottom-color: var(--tooltip-bg);
+    }
+
+    .tooltip-bottom.tooltip-arrow-center::after {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .tooltip-bottom.tooltip-arrow-left::after {
+        left: 20px;
+    }
+    .tooltip-bottom.tooltip-arrow-right::after {
+        right: 20px;
+        left: auto;
+    }
+
+    .tooltip-row {
+        display: flex;
+        margin-bottom: 6px;
+    }
+    .tooltip-row:last-child {
+        margin-bottom: 0;
+    }
+    .tooltip-label {
+        color: var(--tooltip-label-color);
+        min-width: 90px;
+        margin-right: 8px;
+    }
+    .tooltip-value {
+        color: var(--tooltip-value-color);
+        flex: 1;
+    }
+
+    .app-item:hover .tooltip {
+        display: block;
+    }
+
+
+    .dash {
+        min-width: 0;
+    }
+
+    @media (max-width: 768px) {
+        .dash {
+            grid-template-columns: 1fr;  
+            gap: 12px;
+            padding: 0 0 6px;
+            min-width: 0;
+        }
+
+        .card {
+            padding: 10px;
+            min-height: auto;
+        }
+
+        .card h3 {
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .chart-container {
+            min-height: 200px;
+            height: 250px; 
+            max-height: 300px;
+        }
+
+        #pie-app-card, #bar-user-traffic-card {
+            min-height: 350px;
+        }
+        #pie-app-card .chart-container, #bar-user-traffic-card .chart-container {
+            min-height: 300px;
+            height: 300px;
+        }
+
+        .top-stats {
+            grid-template-columns: repeat(2, 1fr);  
+            gap: 8px;
+        }
+
+        .top-stats .big {
+            font-size: 16px;
+        }
+
+        .top-stats .mini {
+            min-height: 80px;
+            padding: 9px 10px 10px;
+            gap: 8px;
+        }
+
+        .top-stats .stat-label {
+            font-size: 11px;
+            letter-spacing: 0.04em;
+        }
+
+        .top-stats .stat-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .top-stats .top-stat-value {
+            font-size: 18px;
+        }
+
+        .top-stats #mini-traffic {
+            font-size: 15px;
+        }
+
+        .main-grid {
+            grid-template-columns: 1fr;  
+            gap: 10px;
+        }
+
+        .sys-info-layout {
+            grid-template-columns: 1fr; 
+            gap: 15px;
+        }
+
+        .mini {
+            padding: 12px 8px;
+            font-size: 11px;
+        }
+        .right-col .mini {
+            padding-left: 11px;
+            padding-right: 11px;
+        }
+
+        .kv {
+            grid-template-columns: 80px 1fr;
+            font-size: 12px;
+        }
+    }
+</style>
+
+<div class="dash">
+    <div>
+        <div class="acceleration-warning" id="acceleration-warning">
+            <div class="acceleration-warning-text">
+                <strong><%:Tip%>:</strong>
+                <%:Some modules may affect filtering and identification. If it does not work, please disable related functions such as software and hardware acceleration, ad filtering, mwan3, QoS, etc.%>
+            </div>
+            <button type="button" class="acceleration-warning-close" id="acceleration-warning-close" title="<%:Close%>" aria-label="<%:Close%>">&times;</button>
+        </div>
+        <div class="top-stats">
+            <div class="mini">
+                <div class="stat-head">
+                    <span class="stat-label"><%:Online App%></span>
+                    <span class="stat-icon icon-application" aria-hidden="true"></span>
+                </div>
+                <div id="app-count" class="top-stat-value">0</div>
+                <span class="tooltip">
+                    <div class="tooltip-row"><span class="tooltip-label"><%:Online App%>:</span><span class="tooltip-value" id="app-online-count">0</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label"><%:Offline App%>:</span><span class="tooltip-value" id="app-offline-count">0</span></div>
+                </span>
+            </div>
+            <div class="mini">
+                <div class="stat-head">
+                    <span class="stat-label"><%:Online User%></span>
+                    <span class="stat-icon icon-user" aria-hidden="true"></span>
+                </div>
+                <div id="mini-online" class="top-stat-value">0</div>
+                <span class="tooltip">
+                    <div class="tooltip-row"><span class="tooltip-label"><%:Online User%>:</span><span class="tooltip-value" id="user-online-count">0</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label"><%:Offline User%>:</span><span class="tooltip-value" id="user-offline-count">0</span></div>
+                </span>
+            </div>
+            <div class="mini">
+                <div class="stat-head">
+                    <span class="stat-label"><%:Filter Rules%></span>
+                    <span class="stat-icon icon-connect" aria-hidden="true"></span>
+                </div>
+                <div id="mini-rule-count" class="top-stat-value">0</div>
+                <span class="tooltip">
+                    <div class="tooltip-row"><span class="tooltip-label"><%:App Filter Rules%>:</span><span class="tooltip-value" id="rule-af-count">0</span></div>
+                    <div class="tooltip-row"><span class="tooltip-label"><%:Access Control Rules%>:</span><span class="tooltip-value" id="rule-mf-count">0</span></div>
+                </span>
+            </div>
+            <div class="mini">
+                <div class="stat-head">
+                    <span class="stat-label"><%:Today Traffic%></span>
+                    <span class="stat-icon icon-flow" aria-hidden="true"></span>
+                </div>
+                <div id="mini-traffic" class="top-stat-value">0MB</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+
+
+            <!--
+            <div class="card full">
+                <h3 id="traffic-title"><%:Real-time Traffic%></h3>
+                <div id="line-wan" class="chart-container"></div>
+                <div id="wan-realtime-rate" style="text-align: center; margin-top: 8px; font-size: 13px;">
+                    <span><%:Upload%>:</span><span id="wan-up-rate">0 KB/s</span> 
+                    <span style="margin-left: 15px;"><%:Download%>:</span><span id="wan-down-rate">0 KB/s</span>
+                </div>
+            </div>
+            -->
+            <div class="card full" id="history-traffic-card">
+                <div class="card-title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div class="mini-title"><%:Traffic Statistics%></div>
+                    <span class="app-stats-select-wrap">
+                        <select id="traffic-stats-select" class="app-stats-select">
+                            <option value="today" selected><%:Today%></option>
+                            <option value="days30"><%:Last 30 Days%></option>
+                        </select>
+                    </span>
+                </div>
+                <div id="history-traffic-chart" class="chart-container"></div>
+            </div>
+            <div class="card full" id="active-app-card">
+                <div class="mini-title"><%:Visiting%></div>
+                <div class="app-grid" id="active-apps"></div>
+    </div>
+            <div class="card" id="pie-app-card">
+                <div class="card-title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div class="mini-title"><%:App Duration Statistics%></div>
+                    <span class="app-stats-select-wrap">
+                        <select id="app-stats-select" class="app-stats-select">
+                            <option value="hourly"><%:Last Hour%></option>
+                            <option value="daily" selected><%:Today%></option>
+                        </select>
+                    </span>
+                </div>
+                <div id="pie-app" class="chart-container"></div>
+            </div>
+            <div class="card" id="bar-user-traffic-card">
+                <div class="mini-title"><%:User Traffic Top8%></div>
+                <div id="bar-user-traffic" class="chart-container"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="right-col">
+        <div class="mini compact-mini" id="sys-info-card" style="position:relative;">
+            <div class="mini-title" id="oaf-status-title"><%:OAF Status%></div>
+            <div class="compact-kv">
+                <div class="compact-row">
+                    <span class="compact-label"><%:Work Mode%></span>
+                    <span class="compact-value" id="oaf-work-mode">--</span>
+                </div>
+                <div class="compact-row">
+                    <span class="compact-label"><%:Service Version%></span>
+                    <span class="compact-value" id="oaf-version">--</span>
+                </div>
+                <div class="compact-row">
+                    <span class="compact-label"><%:Engine Version%></span>
+                    <span class="compact-value" id="oaf-engine-version">--</span>
+                </div>
+                <div class="compact-row">
+                    <span class="compact-label"><%:Feature Library%></span>
+                    <span class="compact-value" id="oaf-feature-version">--</span>
+                </div>
+                <div class="compact-row">
+                    <span class="compact-label"><%:App Record Count%></span>
+                    <span class="compact-value" id="oaf-app-record-count">--</span>
+                </div>
+            </div>
+        </div>
+        <div class="mini" id="running-status-card" style="display:none;">
+            <div style="font-weight:400; margin-bottom:10px;"><%:Running Status%></div>
+
+            <svg style="position:absolute; width:0; height:0;">
+                <defs>
+                    <linearGradient id="cpuGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#26f7de;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#17d8ff;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="memGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#74e3ff;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#56b9ff;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+            </svg>
+
+            <div style="display:flex; gap:20px; justify-content:space-around; align-items:flex-start;">
+                <div class="circular-progress cpu">
+                    <div class="circular-progress-wrapper">
+                        <svg>
+                            <circle class="progress-ring-bg" cx="42.5" cy="42.5" r="35"></circle>
+                            <circle class="progress-ring" cx="42.5" cy="42.5" r="35" id="cpu-ring"></circle>
+                        </svg>
+                        <div class="circular-progress-text" id="cpu-text">0%</div>
+                    </div>
+                    <div class="circular-progress-label">CPU</div>
+                </div>
+                <div class="circular-progress mem">
+                    <div class="circular-progress-wrapper">
+                        <svg>
+                            <circle class="progress-ring-bg" cx="42.5" cy="42.5" r="35"></circle>
+                            <circle class="progress-ring" cx="42.5" cy="42.5" r="35" id="mem-ring"></circle>
+                        </svg>
+                        <div class="circular-progress-text" id="mem-text">0%</div>
+                    </div>
+                    <div class="circular-progress-label"><%:Memory%></div>
+                </div>
+            </div>
+        </div>
+        <div class="mini compact-mini" id="active-terminal-card" style="position:relative;">
+            <div class="mini-title"><%:Active Terminals%></div>
+            <div id="active-terminal-list"></div>
+        </div>
+        <div class="mini compact-mini" id="port-status-card" style="display:none;">
+            <div class="mini-title"><%:Port Status%></div>
+            <div class="port-grid" id="port-status-grid"></div>
+        </div>
+        <div class="mini compact-mini" id="env-storage-card" style="display:none;">
+            <div class="env-row">
+                <div class="env-head">
+                    <span class="env-label" id="env-primary-label"><%:Temperature%></span>
+                    <span class="env-value" id="cpu-temp-text">--</span>
+                </div>
+                <div class="meter">
+                    <div id="cpu-temp-bar" class="bar"></div>
+                </div>
+            </div>
+            <div class="env-row">
+                <div class="env-head">
+                    <span class="env-label"><%:Disk Space%></span>
+                    <span class="env-value" id="storage-overlay-text">--</span>
+                </div>
+                <div class="meter">
+                    <div id="storage-overlay-bar" class="bar"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card" id="active-url-card">
+            <div class="mini-title"><%:Active URL%></div>
+            <div id="active-url-list" class="active-url-list"></div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">//<![CDATA[
+    (function() {
+        try {
+            localStorage.setItem('luci-menu-category', 'basic');
+            console.log('Dashboard: Force set menu category to basic');
+        } catch(e) {
+            console.error('Dashboard: Failed to set menu category:', e);
+        }
+    })();
+
+    var _Unknown = '<%:Unknown%>';
+    var _OnlineApp = '<%:Online App%>';
+    var _OnlineUser = '<%:Online User%>';
+    var _User = '<%:User%>';
+    var _Connections = '<%:Connections%>';
+    var _FilterRules = '<%:Filter Rules%>';
+    var _TodayTraffic = '<%:Today Traffic%>';
+    var _RealtimeTraffic = '<%:Real-time Traffic%>';
+    var _Upload = '<%:Upload%>';
+    var _Download = '<%:Download%>';
+    var _ActiveApps = '<%:Active Apps%>';
+    var _AppUsageDistribution = '<%:App Usage Distribution%>';
+    var _LastHour = '<%:Last Hour%>';
+    var _Today = '<%:Today%>';
+    var _UserTrafficTop8 = '<%:User Traffic Top8%>';
+    var _ActiveTerminalsTop8 = '<%:Active Terminals Top8%>';
+    var _Name = '<%:Name%>';
+    var _IP = '<%:IP%>';
+    var _UpstreamRate = '<%:Upstream Rate%>';
+    var _DownstreamRate = '<%:Downstream Rate%>';
+    var _UpstreamTraffic = '<%:Upstream Traffic%>';
+    var _DownstreamTraffic = '<%:Downstream Traffic%>';
+    var _CurrentApp = '<%:Current App%>';
+    var _CurrentURL = '<%:Current URL%>';
+    var _SystemInfo = '<%:System Info%>';
+    var _OAFStatus = '<%:OAF Status%>';
+    var _Hostname = '<%:Hostname%>';
+    var _DeviceModel = '<%:Device Model%>';
+    var _CPU = 'CPU';
+    var _FirmwareVersion = '<%:Firmware Version%>';
+    var _KernelVersion = '<%:Kernel Version%>';
+    var _Uptime = '<%:Uptime%>';
+    var _RunningStatus = '<%:Running Status%>';
+    var _Memory = '<%:Memory%>';
+    var _Network = '<%:Network%>';
+    var _PortStatus = '<%:Port Status%>';
+    var _Gateway = '<%:Gateway%>';
+    var _GatewayMode = '<%:Gateway Mode%>';
+    var _BypassMode = '<%:Bypass Mode%>';
+    var _DNS = '<%:DNS%>';
+    var _Mask = '<%:Mask%>';
+    var _Temperature = '<%:Temperature%>';
+    var _TempSpace = '<%:Temp Space%>';
+    var _DiskSpace = '<%:Disk Space%>';
+    var _BootSpace = '<%:Boot Space%>';
+    var _ActiveURL = '<%:Active URL%>';
+    var _NoData = '<%:No Data%>';
+    var _Total = '<%:Total%>';
+    var _Day = '<%:Day%>';
+    var _Hour = '<%:Hour%>';
+    var _Minute = '<%:Minute%>';
+    var _Upstream = '<%:Upstream%>';
+    var _Downstream = '<%:Downstream%>';
+    var _Enabled = '<%:Enabled%>';
+    var _Disabled = '<%:Disabled%>';
+    var _Lite = '<%:Lite%>';
+    var _Plus = '<%:Plus%>';
+    var _Free = '<%:Free%>';
+    var _Premium = '<%:Premium%>';
+    var _AppID = '<%:App ID%>';
+    var _AccessTime = '<%:Access Time%>';
+    var _MACAddress = '<%:MAC Address%>';
+    var _Speed = '<%:Speed%>';
+    var _Status = '<%:Status%>';
+    var _Duplex = '<%:Duplex%>';
+    var _RxBytes = '<%:Rx Bytes%>';
+    var _TxBytes = '<%:Tx Bytes%>';
+    var _RxPackets = '<%:Rx Packets%>';
+    var _TxPackets = '<%:Tx Packets%>';
+    var _RxErrorPackets = '<%:Rx Error Packets%>';
+    var _TxErrorPackets = '<%:Tx Error Packets%>';
+    var _SourceIP = '<%:Source IP%>';
+    var _DestinationIP = '<%:Destination IP%>';
+    var _Protocol = '<%:Protocol%>';
+    var _SourcePort = '<%:Source Port%>';
+    var _DestinationPort = '<%:Destination Port%>';
+    var _MatchedDomain = '<%:Matched Domain%>';
+    var _IPAddress = '<%:IP Address%>';
+    var _Expanded = '<%:Expanded%>';
+    var _SwitchModeGuide = '<%:Tip: Click here to switch modes.%>';
+    var _SwitchModeGuideTitle = '<%:Quick Guide%>';
+    var _SwitchModeGuideAction = '<%:Got it%>';
+    var shouldShowModeSwitchGuide = false;
+    var modeSwitchGuideDismissed = false;
+    var initStatusFetched = false;
+    var initStatusSetting = false;
+    var modeSwitchGuideRetryCount = 0;
+    var MODE_SWITCH_GUIDE_MAX_RETRY = 20;
+
+    function pct(v){ return Math.max(0, Math.min(100, Math.round(v))); }
+    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+    function getRootCssVar(name, defaultValue){
+        var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return value || defaultValue;
+    }
+    function isDarkMode(){
+        return document.documentElement.getAttribute('data-darkmode') === 'true';
+    }
+
+    function getTempBarGradient(tempC){
+        var t = clamp(parseFloat(tempC) || 0, 20, 100);
+        var ratio = (t - 20) / 80;
+        var startL = Math.round(84 - ratio * 6);
+        var endL = Math.round(62 - ratio * 14);
+        return 'linear-gradient(90deg,hsl(198,58%,' + startL + '%),hsl(32,100%,' + endL + '%))';
+    }
+
+    function setBar(id, txt, val){
+        var $bar = $('#' + id);
+        var p = pct(val);
+        $bar.css('width', p + "%");
+        if(txt && txt.length > 0) {
+            var $t = $('#' + txt);
+            $t.text(p + "%");
+        }
+    }
+
+    function setCircularProgress(ringId, textId, val){
+        var $ring = $('#' + ringId);
+        var $text = $('#' + textId);
+        var p = pct(val);
+
+        var radius = 35;
+        var circumference = 2 * Math.PI * radius;
+
+        var offset = circumference - (p / 100) * circumference;
+        $ring.css({
+            'stroke-dasharray': circumference,
+            'stroke-dashoffset': offset
+        });
+
+        $text.text(p + "%");
+    }
+
+    function formatMemory(memKB) {
+        var memMB = memKB / 1024;
+        if(memMB >= 1024) {
+            return (memMB / 1024).toFixed(2) + 'GB';
+        } else {
+            return Math.round(memMB) + 'MB';
+        }
+    }
+
+    function formatStorage(kb) {
+        var mb = kb / 1024;
+        if(mb >= 1024) {
+            return (mb / 1024).toFixed(2) + 'GB';
+        } else {
+            return Math.round(mb) + 'MB';
+        }
+    }
+
+    function setMemCircularProgress(ringId, textId, val, totalKB){
+        var $ring = $('#' + ringId);
+        var $text = $('#' + textId);
+        var p = pct(val);
+
+        var radius = 35;
+        var circumference = 2 * Math.PI * radius;
+
+        var offset = circumference - (p / 100) * circumference;
+        $ring.css({
+            'stroke-dasharray': circumference,
+            'stroke-dashoffset': offset
+        });
+
+        var usedKB = Math.round((p / 100) * totalKB);
+        $text.text(formatMemory(usedKB));
+    }
+
+    function randomWalk(cur, step){
+        var n = cur + (Math.random() - 0.5) * step;
+        return Math.max(0, n);
+    }
+
+    function fetchDashboardCommon(){
+        new XHR().get('<%=url("admin/services/oaf/api/dashboard/get_dashboard_common")%>', null, function(x, data){
+            if(data){
+                try {
+                    var json = typeof data === 'string' ? JSON.parse(data) : data;
+                    updateDashboardData(json);
+                } catch(e) {
+                    console.error('Failed to parse dashboard data:', e);
+                }
+            }
+        });
+    }
+
+    function dismissAccelerationWarning(){
+        $('#acceleration-warning').hide();
+        new XHR().post('<%=url("admin/services/oaf/api/dashboard/set_notice_status")%>', {}, function() {});
+    }
+
+    function bindTopStatNav(){
+        $('#app-count').closest('.mini').on('click', function(){
+            location.href = '<%=url("admin/services/oaf/app_record")%>';
+        });
+        $('#mini-online').closest('.mini').on('click', function(){
+            location.href = '<%=url("admin/services/oaf/users/list")%>';
+        });
+        $('#mini-rule-count').closest('.mini').on('click', function(){
+            var afCount = window._afRuleCount || 0;
+            var mfCount = window._mfRuleCount || 0;
+            if (afCount > 0 || mfCount === 0) {
+                location.href = '<%=url("admin/services/oaf/app_filter/rules")%>';
+            } else {
+                location.href = '<%=url("admin/services/oaf/mac_filter/rules")%>';
+            }
+        });
+        $('#oaf-feature-version').on('click', function(){
+            location.href = '<%=url("admin/services/oaf/feature")%>';
+        });
+        $('#oaf-app-record-count').on('click', function(){
+            location.href = '<%=url("admin/services/oaf/app_record")%>?tab=history';
+        });
+        $('.top-stats .mini').on('mousemove', function(e) {
+            var $tip = $(this).find('.tooltip');
+            if (!$tip.length) {
+                return;
+            }
+            var rect = this.getBoundingClientRect();
+            var tipW = 190;
+            var tipH = 90;
+            var x = e.clientX - rect.left + 12;
+            if (e.clientX + 12 + tipW > window.innerWidth - 8) {
+                x = e.clientX - rect.left - 12 - tipW;
+            }
+            var y = e.clientY - rect.top + 12;
+            if (e.clientY + 12 + tipH > window.innerHeight - 8) {
+                y = e.clientY - rect.top - 12 - tipH;
+            }
+            $tip.css({ left: x, top: y }).show();
+        }).on('mouseleave', function() {
+            $(this).find('.tooltip').hide();
+        });
+    }
+
+    function fetchInitStatusOnce(){
+        if (initStatusFetched) {
+            return;
+        }
+        initStatusFetched = true;
+        new XHR().get('<%=url("admin/services/oaf/api/dashboard/get_init_status")%>', null, function(x, data){
+            if(!data){
+                return;
+            }
+            try {
+                var json = typeof data === 'string' ? JSON.parse(data) : data;
+                shouldShowModeSwitchGuide = parseInt(json.init_status, 10) === 0;
+                updateModeSwitchGuide();
+            } catch(e) {
+                console.error('Failed to parse init status data:', e);
+            }
+        });
+    }
+
+    function fetchDashboardData(){
+        if(isRenderingHosts) {
+            return;
+        }
+
+        new XHR().get('<%=url("admin/services/oaf/api/dashboard/get_daily_top_users")%>', null, function(x, data){
+            if(data){
+                try {
+                    var json = typeof data === 'string' ? JSON.parse(data) : data;
+                    updateUserTrafficChart(json);
+                } catch(e) {
+                    console.error('Failed to parse user traffic data:', e);
+                }
+            }
+        });
+
+        new XHR().get('<%=url("admin/services/oaf/api/dashboard/get_active_users")%>?count=8', null, function(x, data){
+            if(data){
+                try {
+                    var json = typeof data === 'string' ? JSON.parse(data) : data;
+                    if(json && json.users && Array.isArray(json.users)) {
+                        activeUsersData = json.users;
+                        cacheUsersByMac(activeUsersData);
+                        renderClientList();
+                    } else {
+                        activeUsersData = [];
+                        renderClientList();
+                    }
+                } catch(e) {
+                    console.error('Failed to parse active users data:', e);
+                    activeUsersData = [];
+                    renderClientList();
+                }
+            } else {
+                activeUsersData = [];
+                renderClientList();
+            }
+        });
+    }
+
+    function fetchHistoryTrafficData(type){
+        type = type || currentTrafficStatsType || 'today';
+        var url = type === 'days30' ?
+            '<%=url("admin/services/oaf/api/dashboard/get_history_traffic_stats")%>?days=30' :
+            '<%=url("admin/services/oaf/api/dashboard/get_global_traffic_stats")%>';
+
+        new XHR().get(url, null, function(x, data){
+            if(data){
+                try {
+                    var json = typeof data === 'string' ? JSON.parse(data) : data;
+                    updateHistoryTrafficChart(json, type);
+                } catch(e) {
+                    console.error('Failed to parse traffic stats data:', e);
+                }
+            }
+        });
+    }
+
+    function isEmptyValue(value) {
+        return value === undefined || value === null || value === '' || value === '0.0.0.0';
+    }
+
+    function formatEmptyValue(value, defaultValue) {
+        defaultValue = defaultValue || '--';
+        return isEmptyValue(value) ? defaultValue : value;
+    }
+
+    function escapeHtml(value) {
+        return String(value === undefined || value === null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatPortSpeed(speed) {
+        var value = parseInt(speed, 10) || 0;
+        var speedMap = {
+            10: '10Mbps',
+            100: '100Mbps',
+            1000: '1Gbps',
+            2500: '2.5Gbps',
+            5000: '5Gbps',
+            10000: '10Gbps'
+        };
+        if (speedMap[value]) {
+            return speedMap[value];
+        }
+        if (value > 1000) {
+            return (value / 1000).toFixed(value % 1000 === 0 ? 0 : 1) + 'Gbps';
+        }
+        return value > 0 ? value + 'Mbps' : '--';
+    }
+
+    function getPortSpeedClass(port) {
+        var speed = parseInt(port && port.speed, 10) || 0;
+        if (!port || parseInt(port.up, 10) !== 1) {
+            return 'port-down';
+        }
+        if (speed > 1000) return 'port-up port-speed-high';
+        if (speed === 1000) return 'port-up port-speed-mid';
+        return 'port-up port-speed-low';
+    }
+
+    function renderPortStatus(portList) {
+        var $grid = $('#port-status-grid');
+        if (!$grid.length) {
+            return;
+        }
+        if (!Array.isArray(portList) || portList.length === 0) {
+            $grid.html('<div class="port-empty" style="grid-column:1 / -1;">' + _NoData + '</div>');
+            return;
+        }
+
+        var html = '';
+        var sortedPorts = portList.slice().sort(function(a, b) {
+            var roleA = a && a.role === 'wan' ? 0 : 1;
+            var roleB = b && b.role === 'wan' ? 0 : 1;
+            if (roleA !== roleB) {
+                return roleA - roleB;
+            }
+            return 0;
+        });
+        sortedPorts.slice(0, 8).forEach(function(port) {
+            var name = port && port.name ? String(port.name) : '--';
+            var role = port && port.role ? String(port.role).toLowerCase() : '';
+            var displayName = role === 'wan' ? 'wan' : name;
+            var speedText = formatPortSpeed(port && port.speed);
+            var statusText = port && parseInt(port.up, 10) === 1 ? 'Up' : 'Down';
+            var duplexText = port && port.duplex && String(port.duplex).toLowerCase() !== 'unknown' ? String(port.duplex) : '--';
+            var duplexSuffix = '';
+            if (duplexText !== '--') {
+                var duplexLower = duplexText.toLowerCase();
+                if (duplexLower === 'full') {
+                    duplexSuffix = '(全双工)';
+                } else if (duplexLower === 'half') {
+                    duplexSuffix = '(半双工)';
+                } else {
+                    duplexSuffix = '(' + duplexText + ')';
+                }
+            }
+            var speedDetailText = speedText + duplexSuffix;
+            var macText = port && port.mac ? String(port.mac) : '--';
+            var tooltipHtml = '<div class="tooltip-row"><span class="tooltip-label">' + _Name + ':</span><span class="tooltip-value">' + escapeHtml(displayName) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _Status + ':</span><span class="tooltip-value">' + escapeHtml(statusText) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _Speed + ':</span><span class="tooltip-value">' + escapeHtml(speedDetailText) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _MACAddress + ':</span><span class="tooltip-value">' + escapeHtml(macText) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _RxBytes + ':</span><span class="tooltip-value">' + escapeHtml(port && port.rx_bytes !== undefined ? port.rx_bytes : 0) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _TxBytes + ':</span><span class="tooltip-value">' + escapeHtml(port && port.tx_bytes !== undefined ? port.tx_bytes : 0) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _RxPackets + ':</span><span class="tooltip-value">' + escapeHtml(port && port.rx_packets !== undefined ? port.rx_packets : 0) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _TxPackets + ':</span><span class="tooltip-value">' + escapeHtml(port && port.tx_packets !== undefined ? port.tx_packets : 0) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _RxErrorPackets + ':</span><span class="tooltip-value">' + escapeHtml(port && port.rx_error_packets !== undefined ? port.rx_error_packets : 0) + '</span></div>' +
+                              '<div class="tooltip-row"><span class="tooltip-label">' + _TxErrorPackets + ':</span><span class="tooltip-value">' + escapeHtml(port && port.tx_error_packets !== undefined ? port.tx_error_packets : 0) + '</span></div>';
+            html += '<div class="port-item ' + getPortSpeedClass(port) + '">' +
+                    '<span class="port-icon"></span>' +
+                    '<span class="port-name">' + escapeHtml(displayName) + '</span>' +
+                    '<span class="port-speed">' + escapeHtml(speedText) + '</span>' +
+                    '<span class="tooltip tooltip-left">' + tooltipHtml + '</span>' +
+                    '</div>';
+        });
+        $grid.html(html);
+    }
+
+    function normalizeDnsValue(value) {
+        if (Array.isArray(value)) {
+            return value.filter(function(item) {
+                return !isEmptyValue(item);
+            }).join(' / ');
+        }
+        if (typeof value === 'string') {
+            return value;
+        }
+        return '';
+    }
+
+    function maskToPrefix(mask) {
+        if (isEmptyValue(mask)) {
+            return null;
+        }
+        var parts = String(mask).split('.');
+        if (parts.length !== 4) {
+            return null;
+        }
+        var bits = '';
+        for (var i = 0; i < parts.length; i++) {
+            var n = parseInt(parts[i], 10);
+            if (isNaN(n) || n < 0 || n > 255) {
+                return null;
+            }
+            var partBits = n.toString(2);
+            while (partBits.length < 8) {
+                partBits = '0' + partBits;
+            }
+            bits += partBits;
+        }
+        if (bits.indexOf('01') !== -1) {
+            return null;
+        }
+        return bits.replace(/0/g, '').length;
+    }
+
+    function formatIpWithPrefix(ip, mask) {
+        if (isEmptyValue(ip)) {
+            return '--';
+        }
+        var prefix = maskToPrefix(mask);
+        if (prefix === null) {
+            return ip;
+        }
+        return ip + '/' + prefix;
+    }
+
+    function setSummaryValue(id, value) {
+        var text = formatEmptyValue(value);
+        var $el = $('#' + id);
+        $el.text(text).attr('title', text);
+    }
+
+    function updateSystemTooltip(sys, versionStr, uptimeStr) {
+        var hostname = formatEmptyValue(sys.hostname);
+        var cpuModel = formatEmptyValue(sys.cpu_model_name);
+        var kernelVersion = formatEmptyValue(sys.kernel_version);
+        var model = formatEmptyValue(sys.model);
+        var tooltipVersionStr = versionStr;
+        if (tooltipVersionStr && tooltipVersionStr !== '--' && parseInt(sys.expand_root, 10) === 1) {
+            tooltipVersionStr += ' (' + _Expanded + ')';
+        }
+        var html = '<div class="tooltip-row"><span class="tooltip-label">' + _Hostname + ':</span><span class="tooltip-value">' + hostname + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _CPU + ':</span><span class="tooltip-value">' + cpuModel + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _KernelVersion + ':</span><span class="tooltip-value">' + kernelVersion + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _DeviceModel + ':</span><span class="tooltip-value">' + model + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _FirmwareVersion + ':</span><span class="tooltip-value">' + formatEmptyValue(tooltipVersionStr) + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _Uptime + ':</span><span class="tooltip-value">' + formatEmptyValue(uptimeStr) + '</span></div>';
+        $('#sysinfo-tooltip').html(html);
+    }
+
+    function formatOpenwrtVersion(sys) {
+        if (sys.openwrt_version === 'SNAPSHOT' && sys.release_date) {
+            return 's' + sys.release_date;
+        }
+        return sys.openwrt_version;
+    }
+
+    function formatReleaseTypeSuffix(sys) {
+        var releaseType = parseInt(sys.release_type, 10);
+        if (releaseType === 1) {
+            return '(alpha)';
+        }
+        if (releaseType === 2) {
+            return '(beta)';
+        }
+        return '';
+    }
+
+    function formatFeatureLibraryVersion(version, type) {
+        var text = String(version || '').trim();
+        if (!text) {
+            return '--';
+        }
+        return 'v' + text.replace(/^[vV]/, '') + '(' + (Number(type) === 1 ? _Plus : _Lite) + ')';
+    }
+
+    function formatFeatureLibraryType(free) {
+        return Number(free) === 1 ? _Free : _Premium;
+    }
+
+    function formatWorkMode(mode) {
+        var value = parseInt(mode, 10);
+        if (value === 0) {
+            return _GatewayMode;
+        }
+        if (value === 1) {
+            return _BypassMode;
+        }
+        return '--';
+    }
+
+    function setCompactValue(id, value) {
+        var text = formatEmptyValue(value);
+        $('#' + id).text(text).attr('title', text);
+    }
+
+    function isX86Arch(arch) {
+        return arch === 'x86-64' || arch === 'x86_64';
+    }
+
+    function removeModeSwitchGuideBubble() {
+        $('#mode-switch-guide-bubble').remove();
+        $(window).off('resize.mode_guide scroll.mode_guide');
+        $(document).off('click.mode_guide_ack');
+    }
+
+    function acknowledgeInitStatus() {
+        if (initStatusSetting) {
+            return;
+        }
+        initStatusSetting = true;
+        new XHR().post('<%=url("admin/services/oaf/api/dashboard/set_init_status")%>', {}, function() {
+            initStatusSetting = false;
+        });
+    }
+
+    function positionModeSwitchGuideBubble() {
+        var $btn = $('.top-mode-menu .top-more-button');
+        var $bubble = $('#mode-switch-guide-bubble');
+        if (!$btn.length || !$bubble.length) {
+            return false;
+        }
+        var rect = $btn[0].getBoundingClientRect();
+        var bubbleWidth = $bubble.outerWidth() || 220;
+        var left = rect.left + rect.width - bubbleWidth;
+        if (left < 8) {
+            left = 8;
+        }
+        var top = rect.bottom + 10;
+        $bubble.css({
+            left: left + 'px',
+            top: top + 'px'
+        });
+        return true;
+    }
+
+    function updateModeSwitchGuide() {
+        if (!(shouldShowModeSwitchGuide && !modeSwitchGuideDismissed)) {
+            removeModeSwitchGuideBubble();
+            modeSwitchGuideRetryCount = 0;
+            return;
+        }
+
+        var $bubble = $('#mode-switch-guide-bubble');
+        if (!$bubble.length) {
+            $bubble = $('<div id="mode-switch-guide-bubble" class="mode-switch-guide-bubble">' +
+                '<div class="mode-switch-guide-title"></div>' +
+                '<p class="mode-switch-guide-text"></p>' +
+                '<div class="mode-switch-guide-actions"><button type="button" id="mode-switch-guide-ok" class="mode-switch-guide-ok"></button></div>' +
+                '</div>');
+            $bubble.find('.mode-switch-guide-title').text(_SwitchModeGuideTitle);
+            $bubble.find('.mode-switch-guide-text').text(_SwitchModeGuide);
+            $bubble.find('#mode-switch-guide-ok').text(_SwitchModeGuideAction);
+            $('body').append($bubble);
+        }
+
+        if (!positionModeSwitchGuideBubble()) {
+            if (modeSwitchGuideRetryCount < MODE_SWITCH_GUIDE_MAX_RETRY) {
+                modeSwitchGuideRetryCount++;
+                setTimeout(function() {
+                    updateModeSwitchGuide();
+                }, 300);
+            }
+            return;
+        }
+        modeSwitchGuideRetryCount = 0;
+
+        $(window).off('resize.mode_guide scroll.mode_guide').on('resize.mode_guide scroll.mode_guide', function() {
+            positionModeSwitchGuideBubble();
+        });
+
+        $(document).off('click.mode_guide_ack').on('click.mode_guide_ack', '#mode-switch-guide-ok', function(e) {
+            e.preventDefault();
+            modeSwitchGuideDismissed = true;
+            shouldShowModeSwitchGuide = false;
+            acknowledgeInitStatus();
+            removeModeSwitchGuideBubble();
+        });
+    }
+
+    function updateDashboardData(data){
+        var sys = data.system_status || {};
+        var net = data.network_status || {};
+        var apps = data.active_app || {};
+        var hosts = data.active_host || {};
+        var traffic = data.interface_traffic || {};
+        var advanced = data.advanced || {};
+        var oaf = data.oaf_status || {};
+        var feature = oaf.feature || {};
+        $('#acceleration-warning').css('display', parseInt(advanced.notice_status, 10) === 1 ? 'none' : 'flex');
+
+        var versionStr = '';
+        var openwrtVersion = formatOpenwrtVersion(sys);
+        if(openwrtVersion && sys.fwx_version) {
+            versionStr = openwrtVersion + '-' + sys.fwx_version;
+        } else if(openwrtVersion) {
+            versionStr = openwrtVersion;
+        } else if(sys.fwx_version) {
+            versionStr = sys.fwx_version;
+        } else {
+            versionStr = '--';
+        }
+        if (versionStr !== '--') {
+            versionStr += formatReleaseTypeSuffix(sys);
+        }
+
+        var uptimeStr = '--';
+        if(sys.uptime) {
+            uptimeStr = formatUptime(sys.uptime);
+        }
+
+        setCompactValue('oaf-version', oaf.version || '--');
+        setCompactValue('oaf-engine-version', oaf.engine_version || '');
+        setCompactValue('oaf-work-mode', formatWorkMode(oaf.work_mode));
+        setCompactValue('oaf-feature-version', feature.version || '--');
+        setCompactValue('oaf-app-record-count', oaf.app_record_count === undefined ? 0 : oaf.app_record_count);
+
+        if(sys.total_mem !== undefined) {
+            $('#sys-mem-total').text(formatMemory(sys.total_mem));
+        }
+
+        if(sys.connections !== undefined) {
+            $('#sys-connections').text(sys.connections);
+        }
+
+        if(sys.client_num !== undefined) {
+            $('#sys-client-num').text(sys.client_num);
+        }
+
+        var onlineUserCount = parseInt(
+            sys.online_user_count !== undefined ? sys.online_user_count : sys.client_num,
+            10
+        ) || 0;
+        $('#mini-online').text(onlineUserCount);
+        $('#user-online-count').text(onlineUserCount);
+        $('#user-offline-count').text(parseInt(sys.offline_user_count, 10) || 0);
+
+        var filterRuleCount = parseInt(sys.filter_rule_count, 10);
+        if (isNaN(filterRuleCount)) {
+            filterRuleCount = (parseInt(sys.af_rule_count, 10) || 0) + (parseInt(sys.mf_rule_count, 10) || 0);
+        }
+        $('#mini-rule-count').text(filterRuleCount);
+        window._afRuleCount = parseInt(sys.af_rule_count, 10) || 0;
+        window._mfRuleCount = parseInt(sys.mf_rule_count, 10) || 0;
+        $('#rule-af-count').text(window._afRuleCount);
+        $('#rule-mf-count').text(window._mfRuleCount);
+
+        var hasOverlayStorage = false;
+        var hasTmpStorage = false;
+        var tmpPercent = 0;
+        var tmpText = '--';
+        if(sys.storage) {
+            var storage = sys.storage;
+            if(storage.tmp && storage.tmp.total_kb !== undefined && storage.tmp.used_kb !== undefined) {
+                var tmpTotal = parseInt(storage.tmp.total_kb, 10) || 0;
+                var tmpUsed = parseInt(storage.tmp.used_kb, 10) || 0;
+                tmpPercent = tmpTotal > 0 ? Math.round((tmpUsed / tmpTotal) * 100) : 0;
+                tmpText = formatStorage(tmpUsed) + ' / ' + formatStorage(tmpTotal);
+                hasTmpStorage = true;
+            }
+            var overlay = storage.overlay || storage.root;
+            if(overlay && overlay.total_kb !== undefined && overlay.used_kb !== undefined) {
+                var overlayTotal = parseInt(overlay.total_kb, 10) || 0;
+                var overlayUsed = parseInt(overlay.used_kb, 10) || 0;
+                var overlayPercent = overlayTotal > 0 ? Math.round((overlayUsed / overlayTotal) * 100) : 0;
+                var overlayText = formatStorage(overlayUsed) + ' / ' + formatStorage(overlayTotal);
+                var overlayDisplayText = overlayText + ' (' + overlayPercent + '%)';
+                $('#storage-overlay-text').text(overlayDisplayText).attr('title', overlayDisplayText);
+                setBar('storage-overlay-bar', '', overlayPercent);
+                $('#storage-overlay-bar').css('min-width', overlayPercent > 0 ? '4px' : '0');
+                hasOverlayStorage = true;
+            }
+        }
+        if (!hasOverlayStorage) {
+            $('#storage-overlay-text').text('--').attr('title', '--');
+            setBar('storage-overlay-bar', '', 0);
+            $('#storage-overlay-bar').css('min-width', '0');
+        }
+
+        if(sys.flow) {
+            var todayUp = parseInt(sys.flow.today_up) || 0; // KB
+            var todayDown = parseInt(sys.flow.today_down) || 0; // KB
+            var totalFlowKB = todayUp + todayDown;
+            $('#mini-traffic').text(formatTraffic(totalFlowKB * 1024));
+        }
+
+        if(sys.cpu !== undefined){
+            var cpuVal = parseFloat(sys.cpu) || 0;
+            setCircularProgress('cpu-ring','cpu-text',cpuVal);
+        }
+        if(sys.total_mem !== undefined && sys.used_mem !== undefined){
+            var memTotal = parseInt(sys.total_mem) || 256;
+            var memUsed = parseInt(sys.used_mem) || 0;
+            var memPercent = memTotal > 0 ? (memUsed / memTotal * 100) : 0;
+            setMemCircularProgress('mem-ring','mem-text',memPercent, memTotal);
+        }
+
+        var $envCard = $('#env-storage-card');
+        var $primaryLabel = $('#env-primary-label');
+        var hasCpuTemp = sys.cpu_temp !== undefined && sys.cpu_temp > 0;
+
+        if ($envCard.length) {
+            if (hasCpuTemp) {
+                $primaryLabel.text(_Temperature);
+                var cpuTempVal = Math.round(sys.cpu_temp);
+                var cpuTempWidth = Math.min(100, Math.max(0, cpuTempVal));
+                var cpuTempText = cpuTempVal + '\u00B0C';
+                $('#cpu-temp-text').text(cpuTempText).attr('title', cpuTempText);
+                $('#cpu-temp-bar')
+                    .css('background', getTempBarGradient(cpuTempVal))
+                    .css('width', cpuTempWidth + '%')
+                    .css('min-width', cpuTempWidth > 0 ? '4px' : '0');
+            } else if (hasTmpStorage) {
+                $primaryLabel.text(_TempSpace);
+                var tmpDisplayText = tmpText + ' (' + tmpPercent + '%)';
+                $('#cpu-temp-text').text(tmpDisplayText).attr('title', tmpDisplayText);
+                $('#cpu-temp-bar')
+                    .css('background', getRootCssVar('--temp-space-bar-gradient', 'linear-gradient(90deg,#71def1,#87c6ff)'))
+                    .css('width', tmpPercent + '%')
+                    .css('min-width', tmpPercent > 0 ? '4px' : '0');
+            } else {
+                $primaryLabel.text(_TempSpace);
+                $('#cpu-temp-text').text('--').attr('title', '--');
+                $('#cpu-temp-bar')
+                    .css('background', getRootCssVar('--temp-bar-default-gradient', 'linear-gradient(90deg,#f89501,#db4702)'))
+                    .css('width', '0')
+                    .css('min-width', '0');
+            }
+        }
+
+        var lanDns = normalizeDnsValue(net.lan && net.lan.dns);
+        var wanDns = normalizeDnsValue(net.wan && net.wan.dns);
+
+        var wanGateway = (net.wan && net.wan.gateway) ? net.wan.gateway : '';
+        var lanGateway = (net.lan && net.lan.gateway) ? net.lan.gateway : '';
+
+        var isGatewayMode = (net.wan && net.wan.ip && net.wan.ip !== '0.0.0.0' && net.wan.ip !== '');
+
+        var networkData = {
+            work_mode: (net.work_mode !== undefined && net.work_mode !== null) ? net.work_mode : 1,
+            isGatewayMode: isGatewayMode,  
+            lan: {
+                ip: net.lan && net.lan.ip || '0.0.0.0',
+                mask: net.lan && net.lan.mask || '255.255.255.0',
+                ipv6: net.lan && net.lan.ipv6 || '',
+                gateway: lanGateway,
+                dns: lanDns
+            },
+            wan: {
+                ip: net.wan && net.wan.ip || '0.0.0.0',
+                mask: net.wan && net.wan.mask || '255.255.255.0',
+                ipv6: net.wan && net.wan.ipv6 || '',
+                gateway: wanGateway,
+                dns: wanDns
+            }
+        };
+        updateNetworkInfo(networkData);
+        renderPortStatus(net.port_status || []);
+
+        var appList = apps.list;
+        if(!Array.isArray(appList)) {
+            appList = [];
+        }
+        updateActiveApps(appList);
+
+        var onlineAppCount = parseInt(
+            apps.online_total !== undefined ? apps.online_total : apps.total,
+            10
+        ) || 0;
+        $('#app-count').text(onlineAppCount);
+        $('#app-online-count').text(onlineAppCount);
+        $('#app-offline-count').text(parseInt(apps.offline_total, 10) || 0);
+
+        if(traffic.interface && traffic.traffic){
+            updateInterfaceTraffic(traffic);
+        }
+
+        updateActiveHosts((hosts.list || []).slice(0, 8));
+    }
+
+    function formatUptime(seconds){
+        var days = Math.floor(seconds / 86400);
+        var hours = Math.floor((seconds % 86400) / 3600);
+        var minutes = Math.floor((seconds % 3600) / 60);
+        var secs = seconds % 60;
+        var result = [];
+        if(days > 0) result.push(days + 'd');
+        if(hours > 0) result.push(hours + 'h');
+        if(minutes > 0) result.push(minutes + 'm');
+        result.push(secs + 's');
+        return result.length > 0 ? result.join(' ') : '0s';
+    }
+
+    var cpu=18, mem=42;
+    var memTotalMB = 512; 
+
+    setCircularProgress('cpu-ring','cpu-text',cpu);
+    setMemCircularProgress('mem-ring','mem-text',mem, memTotalMB);
+
+    setBar('storage-overlay-bar','',0);
+
+    var TRAFFIC_SAMPLE_POINTS = 60;
+    var FWX_ECHART_RENDERER = 'svg';
+    var pieApp = echarts.init($('#pie-app')[0], null, { renderer: FWX_ECHART_RENDERER });
+    var lineWanEl = $('#line-wan')[0];
+    var lineWan = lineWanEl ? echarts.init(lineWanEl, null, { renderer: FWX_ECHART_RENDERER }) : null;
+    var historyTraffic = echarts.init($('#history-traffic-chart')[0], null, { renderer: FWX_ECHART_RENDERER });
+    var barUserTraffic = echarts.init($('#bar-user-traffic')[0], null, { renderer: FWX_ECHART_RENDERER });
+
+    function resizeDashboardCharts() {
+        [pieApp, lineWan, historyTraffic, barUserTraffic].forEach(function(chart) {
+            if (chart) {
+                chart.resize();
+            }
+        });
+    }
+
+    var resizeDashboardChartsTimer = null;
+    $(window).on('resize.dashboardCharts', function() {
+        clearTimeout(resizeDashboardChartsTimer);
+        resizeDashboardChartsTimer = setTimeout(resizeDashboardCharts, 120);
+    });
+    if (window.ResizeObserver) {
+        var dashboardResizeObserver = new ResizeObserver(function() {
+            clearTimeout(resizeDashboardChartsTimer);
+            resizeDashboardChartsTimer = setTimeout(resizeDashboardCharts, 120);
+        });
+        var dashEl = document.querySelector('.dash');
+        if (dashEl) {
+            dashboardResizeObserver.observe(dashEl);
+        }
+    }
+    setTimeout(resizeDashboardCharts, 0);
+    setTimeout(resizeDashboardCharts, 300);
+
+
+    function getCSSVariable(name, defaultValue) {
+        var root = document.documentElement;
+        var value = getComputedStyle(root).getPropertyValue(name).trim();
+        return value || defaultValue;
+    }
+
+    var darkText = getCSSVariable('--chart-text-color', '#333333');
+    var axisLineColor = getCSSVariable('--chart-axis-line-color', 'rgba(0,0,0,0.2)');
+    var axisLabelColor = getCSSVariable('--chart-axis-label-color', '#666666');
+    var splitLineColor = getCSSVariable('--chart-split-line-color', 'rgba(0,0,0,0.08)');
+    var splitLineDashedColor = getCSSVariable('--chart-split-line-dashed-color', 'rgba(0,0,0,0.15)');
+    var tooltipBg = getCSSVariable('--chart-tooltip-bg', 'rgba(255,255,255,0.95)');
+    var tooltipText = getCSSVariable('--chart-tooltip-text', '#333333');
+
+    var axis = { 
+        lineStyle:{color:axisLineColor}, 
+        axisLabel:{color:axisLabelColor}, 
+        axisLine:{lineStyle:{color:axisLineColor}}, 
+        splitLine:{lineStyle:{color:splitLineColor}} 
+    };
+    var palette = [
+        '#58a6ff',
+        '#8b5cf6',
+        '#72b7a1',
+        '#4dc7ff',
+        '#f6b26b',
+		'#14b8a6',
+        '#d39f6a',
+        '#22c55e',
+        '#f59e0b',
+        '#c79abb',
+        '#fda4af',
+        '#14b8a6'
+    ];
+    var userTrafficUpColor = '#58a6ff';
+    var userTrafficDownColor = '#8b7bff';
+
+    var currentAppStatsType = 'daily';
+    var currentTrafficStatsType = 'today';
+
+    var appStatsData = {
+        hourly: null,
+        daily: null
+    };
+
+    pieApp.setOption({
+        backgroundColor: 'transparent',
+        color: palette,
+        textStyle:{ color: axisLabelColor },
+        tooltip:{
+            trigger:'item', 
+            backgroundColor: tooltipBg,
+            textStyle: { color: tooltipText },
+            formatter: function(params) {
+                var name = params.name || _Unknown;
+                var value = params.value || 0;
+                var percent = params.percent || 0;
+                var hours = Math.floor(value / 3600);
+                var minutes = Math.floor((value % 3600) / 60);
+                var timeStr = '';
+                if (hours > 0) {
+                    timeStr = hours + _Hour + (minutes > 0 ? minutes + _Minute : '');
+                } else {
+                    timeStr = minutes + _Minute;
+                }
+                return name + '<br/>' + timeStr + ' (' + percent.toFixed(1) + '%)';
+            }
+        },
+        legend:{bottom:0, textStyle:{color:axisLabelColor}},
+        grid: {
+            top: '5%', 
+            bottom: '10%'
+        },
+        series:[{ 
+            type:'pie', 
+            radius:['50%','65%'], 
+            center: ['50%', '45%'], 
+            data:[] 
+        }]
+    });
+
+    function updateAppTypeStatsChart(data) {
+        if (!data) {
+            pieApp.setOption({
+                series: [{
+                    data: []
+                }]
+            });
+            return;
+        }
+
+        var typesArray = [];
+        if (Array.isArray(data.types)) {
+            typesArray = data.types;
+        } else if (data.types && typeof data.types === 'object') {
+            typesArray = Object.keys(data.types).map(function(key) {
+                return data.types[key];
+            });
+        }
+
+        var chartData = typesArray.map(function(item) {
+            return {
+                name: item.name || ('Category ' + item.app_type),
+                value: item.total_time || 0
+            };
+        });
+
+        pieApp.setOption({
+            series: [{
+                data: chartData
+            }]
+        });
+        resizeDashboardCharts();
+    }
+
+
+    function fetchAppTypeStats(type) {
+        type = type || 'hourly';
+
+
+        if (appStatsData[type]) {
+            updateAppTypeStatsChart(appStatsData[type]);
+            return;
+        }
+
+        var url = '<%=url("admin/services/oaf/api/dashboard/get_app_type_stats")%>?type=' + type;
+        new XHR().get(url, null, function(x, data) {
+            if (data) {
+                try {
+                    var json = typeof data === 'string' ? JSON.parse(data) : data;
+                    appStatsData[type] = json;
+                    if (currentAppStatsType === type) {
+                        updateAppTypeStatsChart(json);
+                    }
+                } catch(e) {
+                    console.error('Failed to parse app type stats data:', e);
+                }
+            }
+        });
+    }
+
+    function fetchAllAppTypeStats() {
+        ['hourly', 'daily'].forEach(function(type) {
+            var url = '<%=url("admin/services/oaf/api/dashboard/get_app_type_stats")%>?type=' + type;
+            new XHR().get(url, null, function(x, data) {
+                if (data) {
+                    try {
+                        var json = typeof data === 'string' ? JSON.parse(data) : data;
+                        appStatsData[type] = json;
+                        if (currentAppStatsType === type) {
+                            updateAppTypeStatsChart(json);
+                        }
+                    } catch(e) {
+                        console.error('Failed to parse app type stats data:', e);
+                    }
+                }
+            });
+        });
+    }
+
+    $('#app-stats-select').on('change', function() {
+        var type = $(this).val() || 'daily';
+        currentAppStatsType = type;
+        if (appStatsData[type]) {
+            updateAppTypeStatsChart(appStatsData[type]);
+        } else {
+            fetchAppTypeStats(type);
+        }
+    });
+
+    $('#traffic-stats-select').on('change', function() {
+        currentTrafficStatsType = $(this).val() || 'today';
+        fetchHistoryTrafficData(currentTrafficStatsType);
+    });
+
+    function initAppStatsCustomSwitch() {
+        var $native = $('#app-stats-select');
+        if (!$native.length || $('#app-stats-switch').length) {
+            return;
+        }
+        var appStatsLabelHourly = '<%:Last Hour%>';
+        var appStatsLabelDaily = '<%:Today%>';
+        var $switch = $('<span id="app-stats-switch" class="app-stats-switch">' +
+            '<button type="button" id="app-stats-switch-btn" class="app-stats-switch-btn">' + appStatsLabelDaily + '</button>' +
+            '<div id="app-stats-switch-menu" class="app-stats-switch-menu">' +
+            '<button type="button" class="app-stats-switch-item" data-type="hourly">' + appStatsLabelHourly + '</button>' +
+            '<button type="button" class="app-stats-switch-item active" data-type="daily">' + appStatsLabelDaily + '</button>' +
+            '</div>' +
+            '</span>');
+
+        $native.closest('.app-stats-select-wrap').after($switch);
+
+        var updateSwitch = function(type) {
+            var label = type === 'hourly' ? appStatsLabelHourly : appStatsLabelDaily;
+            $('#app-stats-switch-btn').text(label);
+            $('#app-stats-switch-menu .app-stats-switch-item').removeClass('active');
+            $('#app-stats-switch-menu .app-stats-switch-item[data-type="' + type + '"]').addClass('active');
+        };
+        updateSwitch(currentAppStatsType || 'daily');
+
+        $(document).on('click', '#app-stats-switch-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#app-stats-switch').toggleClass('open');
+        });
+        $(document).on('click', '#app-stats-switch-menu .app-stats-switch-item', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var type = $(this).data('type') || 'daily';
+            updateSwitch(type);
+            $('#app-stats-switch').removeClass('open');
+            $native.val(type).trigger('change');
+        });
+        $(document).on('click', function() {
+            $('#app-stats-switch').removeClass('open');
+        });
+    }
+
+    function initTrafficStatsCustomSwitch() {
+        var $native = $('#traffic-stats-select');
+        if (!$native.length || $('#traffic-stats-switch').length) {
+            return;
+        }
+
+        var todayText = $native.find('option[value="today"]').text() || 'Today';
+        var days30Text = $native.find('option[value="days30"]').text() || 'Last 30 Days';
+        var $switch = $('<span id="traffic-stats-switch" class="app-stats-switch">' +
+            '<button type="button" id="traffic-stats-switch-btn" class="app-stats-switch-btn"></button>' +
+            '<div id="traffic-stats-switch-menu" class="app-stats-switch-menu">' +
+            '<button type="button" class="app-stats-switch-item active" data-type="today"></button>' +
+            '<button type="button" class="app-stats-switch-item" data-type="days30"></button>' +
+            '</div>' +
+            '</span>');
+
+        $switch.find('[data-type="today"]').text(todayText);
+        $switch.find('[data-type="days30"]').text(days30Text);
+        $native.closest('.app-stats-select-wrap').after($switch);
+
+        var updateSwitch = function(type) {
+            var label = type === 'days30' ? days30Text : todayText;
+            $('#traffic-stats-switch-btn').text(label);
+            $('#traffic-stats-switch-menu .app-stats-switch-item').removeClass('active');
+            $('#traffic-stats-switch-menu .app-stats-switch-item[data-type="' + type + '"]').addClass('active');
+        };
+        updateSwitch(currentTrafficStatsType || 'today');
+
+        $(document).on('click', '#traffic-stats-switch-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#traffic-stats-switch').toggleClass('open');
+        });
+        $(document).on('click', '#traffic-stats-switch-menu .app-stats-switch-item', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var type = $(this).data('type') || 'today';
+            updateSwitch(type);
+            $('#traffic-stats-switch').removeClass('open');
+            $native.val(type).trigger('change');
+        });
+        $(document).on('click', function() {
+            $('#traffic-stats-switch').removeClass('open');
+        });
+    }
+
+    $(document).on('click', '#acceleration-warning-close', function(e) {
+        e.preventDefault();
+        dismissAccelerationWarning();
+    });
+
+
+    fetchDashboardCommon();
+    fetchDashboardData();
+    fetchHistoryTrafficData(currentTrafficStatsType);
+    fetchAllAppTypeStats();
+    initAppStatsCustomSwitch();
+    initTrafficStatsCustomSwitch();
+    bindTopStatNav();
+
+    setInterval(function(){
+        fetchDashboardCommon();
+    }, 3000);
+
+    setTimeout(function(){
+        setInterval(function(){
+            fetchDashboardData();
+            fetchAllAppTypeStats();
+            if (currentTrafficStatsType === 'today') {
+                fetchHistoryTrafficData(currentTrafficStatsType);
+            }
+        }, 3000);
+    }, 1500);
+
+    barUserTraffic.setOption({
+        backgroundColor: 'transparent',
+        color: [userTrafficUpColor, userTrafficDownColor],
+        textStyle: { color: axisLabelColor },
+        tooltip: {
+            trigger: 'item', 
+            axisPointer: { type: 'shadow' },
+            backgroundColor: tooltipBg,
+            textStyle: { color: tooltipText }, 
+            formatter: function(params) {
+                if (params.seriesName !== _Downstream) {
+                    return '';
+                }
+                var user = params.data.user;
+                if (!user) {
+                    return '';
+                }
+                var nameInfo = formatUserDisplayName(user);
+                var displayName = nameInfo.display;
+                var fullName = nameInfo.full;
+                var upStr = formatTraffic(user.up_bytes);
+                var downStr = formatTraffic(user.down_bytes);
+                var totalStr = formatTraffic(user.total_bytes);
+                return displayName + '<br/>' +
+                       'MAC: ' + (user.mac || '') + '<br/>' +
+                       _IP + ': ' + user.ip + '<br/>' +
+                       '<span style="color:' + userTrafficUpColor + ';">&bull;</span> ' + _Upstream + ': ' + upStr + '<br/>' +
+                       '<span style="color:' + userTrafficDownColor + ';">&bull;</span> ' + _Downstream + ': ' + downStr + '<br/>' +
+                       _Total + ': ' + totalStr;
+            },
+            confine: true 
+        },
+        legend: {
+            show: true,
+            bottom: 0,
+            textStyle: { color: axisLabelColor },
+            data: [_Upstream, _Downstream]
+        },
+        grid: {
+            left: 8,
+            right: 8,
+            top: '2%',  
+            bottom: '12%',  
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            position: 'bottom',
+            min: 0,  
+            axisLabel: {
+                color: axisLabelColor,
+                fontSize: 10,
+                formatter: function(value) {
+                    return formatTraffic(value);
+                }
+            },
+            axisLine: {
+                show: true,
+                lineStyle: { color: axisLineColor } 
+            },
+            splitLine: {
+                show: false  
+            },
+            splitNumber: 6  
+        },
+        yAxis: [
+            {
+                type: 'category',
+                position: 'left',
+                boundaryGap: false,  
+                axisLabel: {
+                    color: axisLabelColor,
+                    fontSize: 12,
+                    fontWeight: 'bold',
+                    formatter: function(value, index) {
+                        return (index + 1).toString();
+                    }
+                },
+                axisLine: {
+                    show: true,
+                    lineStyle: { color: axisLineColor } 
+                },
+                splitLine: {
+                    show: false  
+                },
+                data: []
+            },
+            {
+                type: 'category',
+                position: 'right',
+                axisLabel: {
+                    show: false  
+                },
+                axisLine: {
+                    show: false
+                },
+                splitLine: {
+                    show: false
+                },
+                data: []
+            }
+        ],
+        series: [
+            {
+                name: _Upstream,
+                type: 'bar',
+                stack: 'traffic', 
+                data: [],
+                barWidth: 25,
+                barCategoryGap: '50%',
+                label: {
+                    show: false  
+                }
+            },
+            {
+                name: _Downstream,
+                type: 'bar',
+                stack: 'traffic', 
+                data: [],
+                barWidth: 25,
+                barCategoryGap: '50%',
+                label: {
+                    show: true, 
+                    position: 'right',  
+                    color: axisLabelColor,
+                    fontSize: 11,
+                    formatter: function(params) {
+                        if (params.seriesName === _Downstream) {
+                            if (params.data.user) {
+                                var nameInfo = formatUserDisplayName(params.data.user);
+                                var displayName = nameInfo.display;
+                                var totalBytes = (params.data.user.up_bytes || 0) + (params.data.user.down_bytes || 0);
+                                var totalTraffic = formatTraffic(totalBytes);
+                                return displayName + '(' + totalTraffic + ')';
+                            }
+                        }
+                        return '';
+                    },
+                    distance: 3,
+                    overflow: 'truncate',
+                    width: 130
+                }
+            }
+        ]
+    });
+
+    var clientData = [];
+
+    var networkData = {
+        work_mode: 1, 
+        lan: {ip: '', mask: '', ipv6: '', dns: '', gateway: ''},
+        wan: {ip: '', mask: '', ipv6: '', dns: '', gateway: ''}
+    };
+
+    function updateNetworkInfo(data){
+        if(data){
+            networkData = data;
+        }
+        renderNetworkInfo();
+    }
+
+    function renderNetworkInfo(){
+        var lan = networkData.lan || {};
+        var wan = networkData.wan || {};
+        var isGatewayMode = networkData.isGatewayMode !== undefined ? networkData.isGatewayMode : (wan && wan.ip && wan.ip !== '0.0.0.0' && wan.ip !== '');
+
+        var lanSummary = formatIpWithPrefix(lan.ip, lan.mask);
+        var wanSummary = isGatewayMode ? formatIpWithPrefix(wan.ip, wan.mask) : '--';
+        var lanSummaryDisplay = lanSummary;
+        var wanSummaryDisplay = wanSummary;
+        var gatewaySummary = isGatewayMode ? wan.gateway : lan.gateway;
+        var dnsSummary = isGatewayMode ? wan.dns : lan.dns;
+
+        setSummaryValue('network-lan-summary', lanSummaryDisplay);
+        setSummaryValue('network-wan-summary', wanSummaryDisplay);
+        setSummaryValue('network-gateway-summary', gatewaySummary);
+        setSummaryValue('network-dns-summary', dnsSummary);
+
+        updateNetworkTooltip();
+    }
+
+    function updateNetworkTooltip(){
+        var $tooltip = $('#network-tooltip');
+        var lan = networkData.lan || {};
+        var wan = networkData.wan || {};
+
+        var isGatewayMode = networkData.isGatewayMode !== undefined ? networkData.isGatewayMode : (wan && wan.ip && wan.ip !== '0.0.0.0' && wan.ip !== '');
+
+        var html = '<div class="tooltip-row"><span class="tooltip-label" style="font-weight:600;">LAN:</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _IPAddress + ':</span><span class="tooltip-value">' + formatEmptyValue(lan.ip) + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _Mask + ':</span><span class="tooltip-value">' + formatEmptyValue(lan.mask) + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">IPv6:</span><span class="tooltip-value">' + formatEmptyValue(lan.ipv6) + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _Gateway + ':</span><span class="tooltip-value">' + formatEmptyValue(lan.gateway) + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _DNS + ':</span><span class="tooltip-value">' + formatEmptyValue(lan.dns) + '</span></div>' +
+                   '<div class="tooltip-row" style="margin-top:8px;"><span class="tooltip-label" style="font-weight:600;">WAN:</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _IPAddress + ':</span><span class="tooltip-value">' + formatEmptyValue(wan.ip) + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">' + _Mask + ':</span><span class="tooltip-value">' + formatEmptyValue(wan.mask) + '</span></div>' +
+                   '<div class="tooltip-row"><span class="tooltip-label">IPv6:</span><span class="tooltip-value">' + formatEmptyValue(wan.ipv6) + '</span></div>';
+        if (isGatewayMode) {
+            html += '<div class="tooltip-row"><span class="tooltip-label">' + _Gateway + ':</span><span class="tooltip-value">' + formatEmptyValue(wan.gateway) + '</span></div>' +
+                    '<div class="tooltip-row"><span class="tooltip-label">' + _DNS + ':</span><span class="tooltip-value">' + formatEmptyValue(wan.dns) + '</span></div>';
+        } else {
+            html += '<div class="tooltip-row"><span class="tooltip-label">' + _Gateway + ':</span><span class="tooltip-value">' + formatEmptyValue(lan.gateway) + '</span></div>' +
+                    '<div class="tooltip-row"><span class="tooltip-label">' + _DNS + ':</span><span class="tooltip-value">' + formatEmptyValue(lan.dns) + '</span></div>';
+        }
+        $tooltip.html(html);
+    }
+
+    function bindTooltipHover(titleId, tooltipId) {
+        var $title = $('#' + titleId);
+        if ($title.length) {
+            $title.on('mouseenter', function() {
+                $('#' + tooltipId).show();
+            }).on('mouseleave', function() {
+                $('#' + tooltipId).hide();
+            });
+        }
+    }
+
+    var currentInterface = '';
+
+    function calculateYAxisInterval(max) {
+        var KB = 1024;
+        var MB = 1024 * 1024;
+        var unit = KB;
+        if (max >= MB) {
+            unit = MB;
+        } else if (max >= KB) {
+            unit = KB;
+        } else {
+            unit = 1;
+        }
+        var smallSteps = [1, 2, 5, 10];
+        var tensSteps = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+        var steps = max >= 10 * unit ? tensSteps : smallSteps;
+        var selected = steps[0] * unit;
+        for (var i = 0; i < steps.length; i++) {
+            var interval = steps[i] * unit;
+            if (interval * 6 >= max) {
+                selected = interval;
+                break;
+            }
+        }
+        if (selected * 6 < max) {
+            selected = steps[steps.length - 1] * unit;
+        }
+        return selected;
+    }
+
+    function loadTrafficData(){
+        var newInterface = 'wan';
+        if(newInterface !== currentInterface){
+            currentInterface = newInterface;
+            updateTrafficTitle(currentInterface);
+
+            if(up.length === 0){
+                up = [];
+                down = [];
+                curUp = 2e7;
+                curDown = 5e7;
+                for(var i=0; i<TRAFFIC_SAMPLE_POINTS; i++){
+                    up.push(0);
+                    down.push(0);
+                }
+            }
+        }
+        curUp = randomWalk(curUp, 8e6);
+        curDown = randomWalk(curDown, 12e6);
+        up.push(curUp);
+        down.push(curDown);
+        up.shift();
+        down.shift();
+
+        var maxValue = Math.max.apply(Math, up.concat(down));
+
+        var interval = calculateYAxisInterval(maxValue);
+
+        var suggestedMax = interval * 6;
+
+        if (lineWan) {
+            lineWan.setOption({
+                yAxis: {
+                    interval: interval,
+                    max: suggestedMax
+                },
+                series:[{data:up},{data:down}]
+            });
+        }
+
+        updateWanRealtimeRate(curUp, curDown);
+    }
+
+    function updateTrafficTitle(interfaceName){
+        var $titleEl = $('#traffic-title');
+        if($titleEl.length){
+            if(interfaceName){
+                $titleEl.text(_RealtimeTraffic + ' (' + interfaceName + ')');
+            } else {
+                $titleEl.text(_RealtimeTraffic);
+            }
+        }
+    }
+
+    function bytes(v){
+        return formatRate(v);
+    }
+
+    function updateWanRealtimeRate(upBytes, downBytes) {
+        var $upRate = $('#wan-up-rate');
+        var $downRate = $('#wan-down-rate');
+        if ($upRate.length) {
+            $upRate.text(formatRate(upBytes));
+        }
+        if ($downRate.length) {
+            $downRate.text(formatRate(downBytes));
+        }
+    }
+    var x = [], up = [], down = [], curUp = 2e7, curDown = 5e7; // bytes/s
+    for (var i=0;i<TRAFFIC_SAMPLE_POINTS;i++){ x.push(i - (TRAFFIC_SAMPLE_POINTS - 1)); }
+    if (lineWan) {
+        lineWan.setOption({
+            backgroundColor: 'transparent',
+            color: ['#58a6ff', '#8b7bff'],
+            textStyle:{ color: axisLabelColor },
+            animation: false,
+            animationDurationUpdate: 0,
+            tooltip:{
+                trigger:'axis',
+                backgroundColor: tooltipBg,
+                textStyle: { color: tooltipText },
+                formatter:function(p){
+                    return _Upstream + ': '+bytes(p[0].data)+'<br/>'+_Downstream + ': '+bytes(p[1].data);
+                }
+            },
+            grid: {
+                left: '8%',
+                right: '3%',
+                top: '15%',
+                bottom: '3%',
+                containLabel: false
+            },
+            xAxis:{
+                type:'category',
+                data:x,
+                boundaryGap:false,
+                axisLabel:{show:false, color:axisLabelColor},
+                axisLine:axis.axisLine,
+                splitLine:axis.splitLine
+            },
+            yAxis:{
+                type:'value',
+                min: 0,
+                interval: 20 * 1024,
+                max: 20 * 1024 * 6,
+                axisLabel:{
+                    formatter:function(v){
+                        return formatRate(v);
+                    },
+                    color:axisLabelColor
+                },
+                axisLine:axis.axisLine,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        type: 'dashed',
+                        color: splitLineDashedColor,
+                        width: 1
+                    }
+                }
+            },
+            series:[
+                {
+                    name:_Upstream,
+                    type:'line',
+                    smooth:true,
+                    symbol:'none',
+                    lineStyle: {
+                        width: 1.2
+                    },
+                    areaStyle:{opacity:0.18},
+                    data:up
+                },
+                {
+                    name:_Downstream,
+                    type:'line',
+                    smooth:true,
+                    symbol:'none',
+                    lineStyle: {
+                        width: 1.2
+                    },
+                    areaStyle:{opacity:0.18},
+                    data:down
+                }
+            ],
+            legend:{ top:0, textStyle:{color:axisLabelColor} }
+        });
+    }
+
+    if(typeof up === 'undefined' || up.length === 0){
+        up = [];
+        down = [];
+        for(var i=0; i<TRAFFIC_SAMPLE_POINTS; i++){
+            up.push(0);
+            down.push(0);
+        }
+    }
+
+    var $activeTerminalList = $('#active-terminal-list');
+    var activeUsersData = [];
+    var activeUsersByMac = {};
+
+    function floorFixed(value, digits) {
+        var scale = Math.pow(10, digits);
+        return (Math.floor(value * scale) / scale).toFixed(digits);
+    }
+
+    function formatRate(bytesPerSec) {
+        var value = Number(bytesPerSec) || 0;
+        if (value >= 1024 * 1024) {
+            return Math.floor(value / (1024 * 1024)) + ' MB/s';
+        }
+        if (value >= 1024) {
+            return Math.floor(value / 1024) + ' KB/s';
+        }
+        return Math.floor(value) + ' B/s';
+    }
+
+    function formatTraffic(bytes) {
+        var value = Number(bytes) || 0;
+        var val;
+        var unit;
+        if (value >= 1024 * 1024 * 1024) {
+            val = value / (1024 * 1024 * 1024);
+            unit = ' GB';
+        } else if (value >= 1024 * 1024) {
+            val = value / (1024 * 1024);
+            unit = ' MB';
+        } else if (value >= 1024) {
+            val = value / 1024;
+            unit = ' KB';
+        } else {
+            return Math.floor(value) + ' B';
+        }
+        if (val >= 100) {
+            return Math.floor(val) + unit;
+        }
+        return floorFixed(val, 1).replace(/\.0$/, '') + unit;
+    }
+
+    function formatUserDisplayName(user) {
+        if (!user) {
+            return { display: '', full: '' };
+        }
+
+        var rawName = '';
+        if (user.nickname && user.nickname.trim() !== '') {
+            rawName = user.nickname;
+        } else if (user.hostname && user.hostname.trim() !== '') {
+            rawName = user.hostname;
+        } else {
+            rawName = user.mac || '';
+        }
+
+        return formatUserName(rawName, user.mac || '');
+    }
+
+    var DEVICE_ICON_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#ec4899','#84cc16','#6366f1'];
+    function deviceIconColor(value) {
+        value = value || '';
+        var hash = 0;
+        for (var i = 0; i < value.length; i++) {
+            hash = value.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return DEVICE_ICON_COLORS[Math.abs(hash) % DEVICE_ICON_COLORS.length];
+    }
+
+    function buildDashboardDeviceIconHtml(displayName, mac) {
+        var source = displayName || mac || '?';
+        var firstChar = '?';
+        if (source && source !== '--') {
+            firstChar = String(source).trim().charAt(0).toUpperCase() || '?';
+        }
+        return '<span class="dashboard-device-icon" style="background:' + deviceIconColor(mac || source) + ';">' + escapeHtml(firstChar) + '</span>';
+    }
+
+    function normalizeMacKey(mac) {
+        return mac ? String(mac).trim().toLowerCase() : '';
+    }
+
+    function cacheUsersByMac(users) {
+        if (!Array.isArray(users)) {
+            return;
+        }
+
+        users.forEach(function(user) {
+            var key = normalizeMacKey(user && user.mac);
+            if (!key) {
+                return;
+            }
+
+            activeUsersByMac[key] = $.extend({}, activeUsersByMac[key] || {}, user);
+        });
+    }
+
+    function getCachedUserByMac(mac) {
+        var key = normalizeMacKey(mac);
+        return key ? (activeUsersByMac[key] || null) : null;
+    }
+
+    function truncateMiddle(value, maxLength) {
+        var text = value ? String(value).trim() : '';
+        maxLength = maxLength || 16;
+
+        if (text.length <= maxLength) {
+            return text;
+        }
+
+        var keepLength = maxLength - 3;
+        var frontLength = Math.ceil(keepLength / 2);
+        var backLength = keepLength - frontLength;
+        return text.substring(0, frontLength) + '...' + text.substring(text.length - backLength);
+    }
+
+    function formatActiveAppUser(app) {
+        app = app || {};
+        var mac = app.mac ? String(app.mac).trim() : '';
+        var cachedUser = getCachedUserByMac(mac) || {};
+        var nickname = app.nickname || cachedUser.nickname || '';
+        var hostname = app.hostname || cachedUser.hostname || '';
+        var rawName = '';
+
+        if (nickname && String(nickname).trim() !== '') {
+            rawName = String(nickname).trim();
+        } else if (hostname && String(hostname).trim() !== '') {
+            rawName = String(hostname).trim();
+        }
+
+        if (rawName) {
+            return {
+                display: truncateMiddle(rawName, 16) + (mac ? ' (' + mac + ')' : ''),
+                full: rawName + (mac ? ' (' + mac + ')' : '')
+            };
+        }
+
+        return {
+            display: mac || '--',
+            full: mac || '--'
+        };
+    }
+
+    function getUserDisplayName(user) {
+        var nameInfo = formatUserDisplayName(user);
+        return nameInfo.display;
+    }
+
+    function renderClientList() {
+        $activeTerminalList.empty();
+        if (!activeUsersData || activeUsersData.length === 0) {
+            $activeTerminalList.html('<div class="active-terminal-empty">' + _NoData + '</div>');
+            return;
+        }
+
+        var rows = activeUsersData.slice(0, 8).map(function(user) {
+            var nameInfo = formatUserDisplayName(user);
+            var name = nameInfo.display;
+            var fullName = nameInfo.full;
+            var upRate = formatRate(user.up_rate || 0);
+            var downRate = formatRate(user.down_rate || 0);
+            var app = (user.app && user.app.trim() !== '') ? user.app : '--';
+            var mac = user.mac || '';
+            var alias = (user.nickname && String(user.nickname).trim() !== '') ? user.nickname : ((user.hostname && String(user.hostname).trim() !== '') ? user.hostname : '');
+            var macDisplay = mac;
+            if (alias) {
+                macDisplay = mac + ' (' + alias + ')';
+            }
+            var tooltipHtml =
+                '<div class="tooltip-row"><span class="tooltip-label">' + _MACAddress + ':</span><span class="tooltip-value">' + escapeHtml(macDisplay) + '</span></div>' +
+                '<div class="tooltip-row"><span class="tooltip-label">' + _IP + ':</span><span class="tooltip-value">' + escapeHtml(user.ip || '--') + '</span></div>' +
+                '<div class="tooltip-row"><span class="tooltip-label">' + _UpstreamRate + ':</span><span class="tooltip-value">' + escapeHtml(upRate) + '</span></div>' +
+                '<div class="tooltip-row"><span class="tooltip-label">' + _DownstreamRate + ':</span><span class="tooltip-value">' + escapeHtml(downRate) + '</span></div>' +
+                '<div class="tooltip-row"><span class="tooltip-label">' + _UpstreamTraffic + ':</span><span class="tooltip-value">' + escapeHtml(formatTraffic(user.today_up_bytes || 0)) + '</span></div>' +
+                '<div class="tooltip-row"><span class="tooltip-label">' + _DownstreamTraffic + ':</span><span class="tooltip-value">' + escapeHtml(formatTraffic(user.today_down_bytes || 0)) + '</span></div>' +
+                '<div class="tooltip-row"><span class="tooltip-label">' + _CurrentApp + ':</span><span class="tooltip-value">' + escapeHtml(app) + '</span></div>' +
+                '<div class="tooltip-row"><span class="tooltip-label">' + _CurrentURL + ':</span><span class="tooltip-value">' + escapeHtml(user.url || '--') + '</span></div>';
+
+            return '<div class="active-terminal-item">' +
+                '<span class="active-terminal-name">' + escapeHtml(name || '--') + '</span>' +
+                '<span class="active-terminal-up">&uarr; ' + escapeHtml(upRate) + '</span>' +
+                '<span class="active-terminal-down">&darr; ' + escapeHtml(downRate) + '</span>' +
+                '<span class="active-terminal-app">' + escapeHtml(app) + '</span>' +
+                '<span class="tooltip">' + tooltipHtml + '</span>' +
+                '</div>';
+        }).join('');
+        $activeTerminalList.html(rows);
+        $activeTerminalList.off('mousemove.activeTip mouseleave.activeTip')
+            .on('mousemove.activeTip', '.active-terminal-item', function(e) {
+                var $tip = $(this).find('.tooltip');
+                if (!$tip.length) {
+                    return;
+                }
+                var rect = this.getBoundingClientRect();
+                var y = e.clientY - rect.top - 10;
+                if (y < 0) {
+                    y = 0;
+                }
+                $tip.css({ top: y });
+            })
+            .on('mouseleave.activeTip', '.active-terminal-item', function() {
+                $(this).find('.tooltip').hide();
+            });
+    }
+    function formatTime(timestamp){
+        var d = new Date(timestamp);
+        return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0')+' '+
+               d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
+    }
+    function updateActiveApps(appList){
+        var $container = $('#active-apps');
+
+        if(!$container.length) return;
+
+        if(!Array.isArray(appList)) {
+            appList = [];
+        }
+
+        $container.empty();
+
+        if(!appList || appList.length === 0) {
+            var $noData = $('<div>').addClass('no-data').css({
+                'display': 'flex',
+                'align-items': 'center',
+                'justify-content': 'center',
+                'width': '100%',
+                'min-height': '60px',
+                'color': '#888',
+                'font-size': '14px'
+            }).text(_NoData);
+            $container.append($noData);
+            return;
+        }
+
+        function formatActiveAppName(name) {
+            var text = name ? String(name) : '';
+            var maxUnits = 8;
+            var units = 0;
+            var output = '';
+
+            for (var i = 0; i < text.length; i++) {
+                var ch = text.charAt(i);
+                var chUnits = /[\u4e00-\u9fa5]/.test(ch) ? 2 : 1;
+                if (units + chUnits > maxUnits) {
+                    return output + '...';
+                }
+                output += ch;
+                units += chUnits;
+            }
+
+            return output;
+        }
+
+        var displayList = appList.slice(0, 10);
+        displayList.forEach(function(app){
+            var $appItem = $('<div>').addClass('app-item');
+            var $iconWrap = $('<span>').addClass('app-icon-wrap')
+                .attr('title', app.name || 'app');
+            var appId = (app && app.id !== undefined && app.id !== null) ? String(app.id).trim() : '';
+            var appDisplayName = app.name || ('app' + app.id) || '?';
+            var $appIcon = window.OAFIcon
+                ? window.OAFIcon.createAppIcon(appId, appDisplayName, '/luci-static/resources', { className: 'app-icon-letter', size: '100%', radius: 'inherit', fontSize: '16px', icon: app.icon })
+                : $('<div>').addClass('app-icon-letter').text(appDisplayName.charAt(0).toUpperCase());
+            $iconWrap.append($appIcon);
+            var appFullName = app.name || ('app' + app.id);
+            var $nameSpan = $('<div>')
+                .addClass('app-name')
+                .text(formatActiveAppName(appFullName))
+                .attr('title', appFullName);
+            var $tooltip = $('<div>').addClass('tooltip tooltip-top tooltip-arrow-center tooltip-center-x');
+
+            var timestamp = app.timestamp ? formatTime(app.timestamp * 1000) : formatTime(Date.now());
+            var userInfo = formatActiveAppUser(app);
+            var tooltipHtml = 
+                '<div class="tooltip-row"><span class="tooltip-label">' + _AccessTime + ':</span><span class="tooltip-value">'+timestamp+'</span></div>';
+            tooltipHtml += '<div class="tooltip-row"><span class="tooltip-label">' + _User + ':</span><span class="tooltip-value" title="' + escapeHtml(userInfo.full) + '">' + escapeHtml(userInfo.display) + '</span></div>';
+            if(app.src_ip) tooltipHtml += '<div class="tooltip-row"><span class="tooltip-label">' + _SourceIP + ':</span><span class="tooltip-value">'+app.src_ip+'</span></div>';
+            if(app.dst_ip) tooltipHtml += '<div class="tooltip-row"><span class="tooltip-label">' + _DestinationIP + ':</span><span class="tooltip-value">'+app.dst_ip+'</span></div>';
+            if(app.protocol) tooltipHtml += '<div class="tooltip-row"><span class="tooltip-label">' + _Protocol + ':</span><span class="tooltip-value">'+app.protocol+'</span></div>';
+            if(app.src_port) tooltipHtml += '<div class="tooltip-row"><span class="tooltip-label">' + _SourcePort + ':</span><span class="tooltip-value">'+app.src_port+'</span></div>';
+            if(app.dst_port) tooltipHtml += '<div class="tooltip-row"><span class="tooltip-label">' + _DestinationPort + ':</span><span class="tooltip-value">'+app.dst_port+'</span></div>';
+            if(app.domain) tooltipHtml += '<div class="tooltip-row"><span class="tooltip-label">' + _MatchedDomain + ':</span><span class="tooltip-value">'+app.domain+'</span></div>';
+            $tooltip.html(tooltipHtml);
+            $appItem.append($iconWrap).append($nameSpan).append($tooltip);
+            $container.append($appItem);
+        });
+    }
+
+    function extractDomain(url) {
+        if (!url || typeof url !== 'string') return '';
+        var domain = url.replace(/^https?:\/\//i, '');
+        var parts = domain.split('/');
+        return parts[0];
+    }
+
+    function isHttps(url) {
+        if (!url || typeof url !== 'string') return false;
+        return url.toLowerCase().startsWith('https://');
+    }
+
+    function truncateUrl(url, maxLength) {
+        if (!url || typeof url !== 'string') return '';
+        if (url.length <= maxLength) return url;
+
+        var frontLength = 12;
+        var backLength = 12;
+        var front = url.substring(0, frontLength);
+        var back = url.substring(url.length - backLength);
+        return front + '...' + back;
+    }
+
+    function isMacAddress(str) {
+        if (!str || typeof str !== 'string') return false;
+        var macPattern = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
+        return macPattern.test(str);
+    }
+
+    function formatMacAddress(mac) {
+        if (!mac || typeof mac !== 'string') return '';
+        if (!isMacAddress(mac)) return mac;
+
+        var parts = mac.split(':');
+        if (parts.length >= 3) {
+            return parts.slice(-3).join(':');
+        }
+        return mac;
+    }
+
+    function hasChinese(str) {
+        if (!str || typeof str !== 'string') return false;
+        return /[\u4e00-\u9fa5]/.test(str);
+    }
+
+    function formatUserName(name, mac) {
+        var displayName = name || mac || '';
+        var fullName = displayName;
+
+        if (isMacAddress(displayName)) {
+            displayName = formatMacAddress(displayName);
+        } else if (displayName) {
+            if (hasChinese(displayName)) {
+                var chineseChars = displayName.match(/[\u4e00-\u9fa5]/g);
+                if (chineseChars && chineseChars.length > 5) {
+                    var count = 0;
+                    var index = 0;
+                    for (var i = 0; i < displayName.length; i++) {
+                        if (/[\u4e00-\u9fa5]/.test(displayName[i])) {
+                            count++;
+                            if (count === 5) {
+                                index = i + 1;
+                                break;
+                            }
+                        }
+                    }
+                    displayName = displayName.substring(0, index) + '...';
+                }
+            } else {
+                if (displayName.length > 12) {
+                    var front = displayName.substring(0, 6);
+                    var back = displayName.substring(displayName.length - 6);
+                    displayName = front + '...' + back;
+                }
+            }
+        }
+
+        return {
+            display: displayName,
+            full: fullName
+        };
+    }
+
+    function formatActiveUrlUserName(name, mac) {
+        var displayName = name || mac || '';
+        return {
+            display: isMacAddress(displayName) ? formatMacAddress(displayName) : displayName,
+            full: displayName
+        };
+    }
+
+    function setMiddleEllipsisText($container, text) {
+        var value = text || '--';
+        $container.empty();
+        if (value === '--' || value.length <= 28) {
+            $container.text(value);
+            return;
+        }
+        var suffixLength = Math.min(18, Math.floor(value.length / 2));
+        $container.append(
+            $('<span>').addClass('active-url-url-prefix').text(value.substring(0, value.length - suffixLength)),
+            $('<span>').addClass('active-url-url-suffix').text(value.substring(value.length - suffixLength))
+        );
+    }
+
+    function getUrlProtocol(url) {
+        if (!url || typeof url !== 'string') return '';
+        if (url.toLowerCase().startsWith('https://')) return 'https://';
+        if (url.toLowerCase().startsWith('http://')) return 'http://';
+        return '';
+    }
+
+    function formatActiveHostUrl(host) {
+        var rawUrl = (host && (host.url || host.host)) ? String(host.url || host.host).trim() : '';
+        if (!rawUrl) {
+            return '';
+        }
+
+        if (getUrlProtocol(rawUrl)) {
+            return rawUrl;
+        }
+
+        if (parseInt(host.app_proto, 10) === 1 || parseInt(host.dst_port, 10) === 80) {
+            return 'http://' + rawUrl;
+        }
+
+        return 'https://' + rawUrl;
+    }
+
+    function startsWithWww(url) {
+        if (!url || typeof url !== 'string') return false;
+        var withoutProtocol = url.replace(/^https?:\/\//i, '');
+        return withoutProtocol.toLowerCase().startsWith('www.');
+    }
+
+    var cachedHostKeys = [];  
+    var MAX_DISPLAY_HOSTS = 10;  
+    var pendingHostQueue = [];  
+    var isRenderingHosts = false; 
+    var hostRenderInterval = null; 
+    var isFirstRender = true; 
+
+    var userColors = [
+        '#38bdf8',
+        '#f97316',
+        '#c084fc',
+        '#ec4899',
+        '#84cc16'
+    ];
+
+    function getUserColor(mac) {
+        if (!mac) return userColors[0];
+
+        var hash = 0;
+        for (var i = 0; i < mac.length; i++) {
+            hash = ((hash * 31) + mac.charCodeAt(i)) >>> 0;
+        }
+
+        var colorIndex = hash % userColors.length;
+        return userColors[colorIndex];
+    }
+
+    function createHostItem(host) {
+        var $item = $('<div>').addClass('active-url-item');
+
+        var fullUrl = formatActiveHostUrl(host);
+        var userName = host.name || host.mac || '';
+
+        if (startsWithWww(fullUrl)) {
+            $item.addClass('www-highlight');
+        }
+
+        var displayUrl = fullUrl || '--';
+
+        var nameInfo = formatActiveUrlUserName(host.name, host.mac);
+        var displayName = nameInfo.display;
+        var fullName = nameInfo.full;
+
+        var userColor = getUserColor(host.mac);
+
+        var $name = $('<span>').addClass('active-url-name');
+        if (displayName) {
+            $name.text(displayName + ': ');
+            $name.css('color', userColor);
+            if (displayName !== fullName) {
+                $name.attr('title', fullName);
+            }
+        }
+        var $url = $('<span>').addClass('active-url-url');
+        setMiddleEllipsisText($url, displayUrl);
+
+        $item.append($name).append($url);
+
+        var titleParts = [];
+        if (fullName) {
+            titleParts.push(fullName);
+        }
+        if (fullUrl) {
+            titleParts.push(fullUrl);
+        }
+        if (titleParts.length > 0) {
+            $item.attr('title', titleParts.join(': '));
+        }
+
+        var hostKey = (host.mac || '') + '|' + (fullUrl || '') + '|' + (host.timestamp || 0);
+        $item.data('host-key', hostKey);
+
+        return $item;
+    }
+
+    function getHostKey(host) {
+        var fullUrl = host.url || host.host || '';
+        return (host.mac || '') + '|' + fullUrl + '|' + (host.timestamp || 0);
+    }
+
+    function renderNextHostItem(noAnimation) {
+        var $container = $('#active-url-list');
+
+        if(!$container.length || pendingHostQueue.length === 0) {
+            isRenderingHosts = false;
+            if(hostRenderInterval) {
+                clearInterval(hostRenderInterval);
+                hostRenderInterval = null;
+            }
+            return;
+        }
+
+        var host = pendingHostQueue.shift();
+        var $item = createHostItem(host);
+
+        if(!noAnimation && !isFirstRender) {
+            $item.addClass('slide-in');
+            setTimeout(function() {
+                $item.removeClass('slide-in');
+            }, 400);
+        }
+
+        $container.append($item);
+
+        var key = getHostKey(host);
+        cachedHostKeys.push(key);
+
+        var $items = $container.find('.active-url-item');
+        if($items.length > MAX_DISPLAY_HOSTS) {
+            var $oldestItem = $items.first();
+            var oldKey = $oldestItem.data('host-key');
+            var keyIndex = cachedHostKeys.indexOf(oldKey);
+            if(keyIndex !== -1) {
+                cachedHostKeys.splice(keyIndex, 1);
+            }
+            $oldestItem.remove();
+        }
+    }
+
+    function startHostRendering(newHosts) {
+        if(!newHosts || newHosts.length === 0) {
+            return;
+        }
+
+        if(isRenderingHosts) {
+            pendingHostQueue = pendingHostQueue.concat(newHosts);
+            return;
+        }
+
+        var $container = $('#active-url-list');
+        var isFirstTime = isFirstRender && $container.find('.active-url-item').length === 0;
+
+        isRenderingHosts = true;
+        pendingHostQueue = newHosts.slice(); 
+
+        if(hostRenderInterval) {
+            clearInterval(hostRenderInterval);
+            hostRenderInterval = null;
+        }
+
+        if(isFirstTime) {
+            while(pendingHostQueue.length > 0) {
+                renderNextHostItem(true); 
+            }
+            isFirstRender = false;
+            isRenderingHosts = false;
+        } else {
+            renderNextHostItem(false);
+
+            hostRenderInterval = setInterval(function() {
+                renderNextHostItem(false);
+            }, 500);
+        }
+    }
+
+    function updateActiveHosts(hostList){
+        var $container = $('#active-url-list');
+
+        if(!$container.length) return;
+
+        if(!Array.isArray(hostList)) {
+            hostList = [];
+        }
+
+        $container.find('.active-url-header').remove();
+
+        var currentKeys = [];
+        $container.find('.active-url-item').each(function() {
+            var key = $(this).data('host-key');
+            if (key) {
+                currentKeys.push(key);
+            }
+        });
+
+        var newHosts = [];
+        if(hostList && hostList.length > 0) {
+            hostList.forEach(function(newHost) {
+                var newKey = getHostKey(newHost);
+                if(currentKeys.indexOf(newKey) === -1 && cachedHostKeys.indexOf(newKey) === -1) {
+                    newHosts.push(newHost);
+                }
+            });
+        }
+
+        if(newHosts.length === 0 && currentKeys.length === 0 && !isRenderingHosts) {
+            $container.children().not('.active-url-header').remove();
+            var $noData = $('<div>').addClass('no-data').css({
+                'display': 'flex',
+                'align-items': 'center',
+                'justify-content': 'center',
+                'width': '100%',
+                'min-height': '60px',
+                'color': '#888',
+                'font-size': '14px',
+                'padding': '20px'
+            }).text(_NoData);
+            $container.append($noData);
+            return;
+        }
+
+        if(newHosts.length > 0) {
+            $container.find('.no-data').remove();
+            startHostRendering(newHosts);
+        }
+    }
+
+    function updateInterfaceTraffic(trafficData){
+        if(!lineWan) return;
+        if(!trafficData || !trafficData.interface || !trafficData.traffic) return;
+
+        var newInterface = trafficData.interface || '';
+        if(newInterface !== currentInterface){
+            currentInterface = newInterface;
+            updateTrafficTitle(currentInterface);
+        }
+
+        var upData = [];
+        var downData = [];
+        trafficData.traffic.forEach(function(item){
+            upData.push(item.up || 0);
+            downData.push(item.down || 0);
+        });
+
+        while(upData.length < TRAFFIC_SAMPLE_POINTS){
+            upData.unshift(0);
+            downData.unshift(0);
+        }
+        if(upData.length > TRAFFIC_SAMPLE_POINTS){
+            upData = upData.slice(-TRAFFIC_SAMPLE_POINTS);
+            downData = downData.slice(-TRAFFIC_SAMPLE_POINTS);
+        }
+
+        var dataChanged = false;
+        if(!up || up.length !== upData.length){
+            dataChanged = true;
+        } else {
+            for(var i = 0; i < upData.length; i++){
+                if(up[i] !== upData[i] || down[i] !== downData[i]){
+                    dataChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if(dataChanged){
+            var maxValue = 0;
+            for(var i = 0; i < upData.length; i++){
+                maxValue = Math.max(maxValue, upData[i], downData[i]);
+            }
+
+            var interval = calculateYAxisInterval(maxValue);
+
+            var suggestedMax = interval * 6;
+
+            up = upData;
+            down = downData;
+            lineWan.setOption({ 
+                yAxis: {
+                    interval: interval,
+                    max: suggestedMax
+                },
+                series:[
+                    {data:up},
+                    {data:down}
+                ],
+                animation: false,  
+                animationDurationUpdate: 0  
+            }, { notMerge: false, lazyUpdate: false });
+        }
+
+        var lastUp = upData.length > 0 ? upData[upData.length - 1] : 0;
+        var lastDown = downData.length > 0 ? downData[downData.length - 1] : 0;
+        updateWanRealtimeRate(lastUp, lastDown);
+    }
+
+    function updateHistoryTrafficChart(data, type){
+        type = type || 'today';
+        var list = [];
+        var labels = [];
+        var upData = [];
+        var downData = [];
+        var labelInterval = 0;
+
+        if (type === 'days30') {
+            list = data && Array.isArray(data.list) ? data.list : [];
+            labelInterval = Math.max(0, Math.floor(list.length / 8));
+
+            list.forEach(function(item){
+                var date = item.date_str || '';
+                labels.push(date.length >= 10 ? date.slice(5) : date);
+                upData.push(item.up_bytes || 0);
+                downData.push(item.down_bytes || 0);
+            });
+        } else {
+            var hourlyList = data && Array.isArray(data.hourly_traffic) ? data.hourly_traffic : [];
+            var hourMap = {};
+            labelInterval = 2;
+
+            hourlyList.forEach(function(item, index) {
+                var hourValue = parseInt(item && item.hour, 10);
+                if (!isNaN(hourValue) && hourValue >= 0 && hourValue < 24) {
+                    hourMap[hourValue] = item;
+                } else {
+                    hourMap[index] = item;
+                }
+            });
+
+            for (var hour = 0; hour < 24; hour++) {
+                var item = hourMap[hour] || {};
+                var traffic = item.traffic || {};
+                var hourLabel = (hour < 10 ? '0' : '') + hour + ':00';
+                var upBytes = traffic.up_bytes || item.up_bytes || 0;
+                var downBytes = traffic.down_bytes || item.down_bytes || 0;
+                labels.push(hourLabel);
+                upData.push(upBytes);
+                downData.push(downBytes);
+                list.push({
+                    date_str: hourLabel,
+                    up_bytes: upBytes,
+                    down_bytes: downBytes,
+                    total_bytes: upBytes + downBytes
+                });
+            }
+        }
+
+        var maxValue = 0;
+        upData.forEach(function(v) {
+            if (v > maxValue) { maxValue = v; }
+        });
+        downData.forEach(function(v) {
+            if (v > maxValue) { maxValue = v; }
+        });
+        var trafficInterval = calculateYAxisInterval(maxValue);
+        var trafficMax = Math.ceil(maxValue / trafficInterval) * trafficInterval;
+        if (trafficMax <= 0) {
+            trafficMax = trafficInterval * 6;
+        }
+
+        historyTraffic.setOption({
+            backgroundColor: 'transparent',
+            color: [userTrafficUpColor, userTrafficDownColor],
+            textStyle: { color: axisLabelColor },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'line',
+                    lineStyle: {
+                        color: splitLineDashedColor,
+                        width: 1
+                    }
+                },
+                backgroundColor: tooltipBg,
+                textStyle: { color: tooltipText },
+                formatter: function(params) {
+                    var index = params && params.length ? params[0].dataIndex : 0;
+                    var item = list[index] || {};
+                    var traffic = item.traffic || {};
+                    var label = type === 'days30' ? (item.date_str || labels[index] || '') : (labels[index] || '');
+                    var up = traffic.up_bytes || item.up_bytes || 0;
+                    var down = traffic.down_bytes || item.down_bytes || 0;
+                    return label + '<br/>' +
+                           _Upstream + ': ' + formatTraffic(up) + '<br/>' +
+                           _Downstream + ': ' + formatTraffic(down) + '<br/>' +
+                           _Total + ': ' + formatTraffic(item.total_bytes || (up + down));
+                }
+            },
+            legend: {
+                top: 0,
+                textStyle: { color: axisLabelColor }
+            },
+            grid: {
+                left: '2%',
+                right: '3%',
+                top: 34,
+                bottom: 24,
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: labels,
+                axisLabel: {
+                    color: axisLabelColor,
+                    interval: labelInterval
+                },
+                axisLine: axis.axisLine,
+                splitLine: { show: false }
+            },
+            yAxis: {
+                type: 'value',
+                interval: trafficInterval,
+                max: trafficMax,
+                axisLabel: {
+                    color: axisLabelColor,
+                    formatter: function(value) {
+                        return formatTraffic(value);
+                    }
+                },
+                axisLine: axis.axisLine,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        type: 'dashed',
+                        color: splitLineDashedColor,
+                        width: 1
+                    }
+                }
+            },
+            series: [
+                {
+                    name: _Upstream,
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 5,
+                    showSymbol: type === 'days30',
+                    lineStyle: {
+                        width: 1.3
+                    },
+                    areaStyle: {
+                        opacity: 0.08
+                    },
+                    data: upData
+                },
+                {
+                    name: _Downstream,
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 5,
+                    showSymbol: type === 'days30',
+                    lineStyle: {
+                        width: 1.3
+                    },
+                    areaStyle: {
+                        opacity: 0.08
+                    },
+                    data: downData
+                }
+            ]
+        });
+        resizeDashboardCharts();
+    }
+
+    function updateUserTrafficChart(data){
+        if(!data || !data.users || !Array.isArray(data.users)) {
+            barUserTraffic.setOption({
+                yAxis: [
+                    { data: [] },
+                    { data: [] }
+                ],
+                series: [
+                    { name: _Upstream, data: [] },
+                    { name: _Downstream, data: [] }
+                ]
+            });
+            resizeDashboardCharts();
+            return;
+        }
+
+        var users = data.users || [];
+        cacheUsersByMac(users);
+        var names = [];
+        var upValues = [];
+        var downValues = [];
+
+        users.forEach(function(user){
+            var nameInfo = formatUserDisplayName(user);
+            var displayName = nameInfo.display || _Unknown;
+            var fullName = nameInfo.full;
+            names.push(displayName);
+
+            var userInfo = {
+                name: displayName,  
+                fullName: fullName, 
+                mac: user.mac || '',
+                ip: user.ip || '',
+                hostname: user.hostname || '',
+                nickname: user.nickname || '',
+                up_bytes: user.up_bytes || 0,
+                down_bytes: user.down_bytes || 0,
+                total_bytes: user.total_bytes || 0,
+                _rawUser: user
+            };
+
+            upValues.push({
+                value: user.up_bytes || 0,
+                user: userInfo
+            });
+
+            downValues.push({
+                value: user.down_bytes || 0,
+                user: userInfo
+            });
+        });
+
+        names.reverse();
+        upValues.reverse();
+        downValues.reverse();
+
+        var userCount = users.length;
+        var gridConfig = {
+            left: 8,
+            right: 8,
+            top: '2%',  
+            bottom: '12%', 
+            containLabel: true
+        };
+
+        var maxTraffic = 0;
+        users.forEach(function(user) {
+            var total = (user.up_bytes || 0) + (user.down_bytes || 0);
+            if (total > maxTraffic) {
+                maxTraffic = total;
+            }
+        });
+
+        var calculatedMax = maxTraffic * 1.15;
+
+        var boundaryGapConfig = [0, 0]; 
+        var barCategoryGapValue = '50%'; 
+
+        if (userCount <= 3) {
+            boundaryGapConfig = [0, 0.5];
+            barCategoryGapValue = 10;
+        } else {
+            boundaryGapConfig = [0, 0];
+            barCategoryGapValue = '50%';
+        }
+
+        barUserTraffic.setOption({
+            grid: gridConfig,
+            xAxis: {
+                min: 0, 
+                max: calculatedMax 
+            },
+            yAxis: [
+                {
+                    data: names,
+                    boundaryGap: boundaryGapConfig, 
+                    axisLabel: {
+                        formatter: function(value, index) {
+                            return (names.length - index).toString();
+                        }
+                    }
+                },
+                {
+                    data: names,
+                    boundaryGap: boundaryGapConfig,  
+                    axisLabel: {
+                        show: false 
+                    }
+                }
+            ],
+            series: [
+                { 
+                    name: _Upstream,
+                    data: upValues,
+                    barWidth: 25,
+                    barCategoryGap: barCategoryGapValue,  
+                    label: {
+                        show: false 
+                    }
+                },
+                { 
+                    name: _Downstream,
+                    data: downValues,
+                    barWidth: 25,
+                    barCategoryGap: barCategoryGapValue, 
+                    label: {
+                        show: true, 
+                        position: 'right',  
+                        color: axisLabelColor,
+                        fontSize: 11,
+                        formatter: function(params) {
+                            if (params.data.user) {
+                                var totalBytes = (params.data.user.up_bytes || 0) + (params.data.user.down_bytes || 0);
+                                var totalTraffic = formatTraffic(totalBytes);
+
+                                var maxValue = calculatedMax;
+                                var percentage = totalBytes / maxValue;
+
+                                var rawUser = params.data.user._rawUser || params.data.user;
+                                var rawName = '';
+                                if (rawUser.nickname && rawUser.nickname.trim() !== '') {
+                                    rawName = rawUser.nickname;
+                                } else if (rawUser.hostname && rawUser.hostname.trim() !== '') {
+                                    rawName = rawUser.hostname;
+                                } else {
+                                    rawName = rawUser.mac || '';
+                                }
+
+                                var displayName = rawName;
+
+                                if (percentage < 0.5) {
+                                    if (isMacAddress(displayName)) {
+                                        displayName = formatMacAddress(displayName);
+                                    } else if (displayName) {
+                                        if (hasChinese(displayName)) {
+                                            var chineseChars = displayName.match(/[\u4e00-\u9fa5]/g);
+                                            if (chineseChars && chineseChars.length > 10) {
+                                                var count = 0;
+                                                var index = 0;
+                                                for (var i = 0; i < displayName.length; i++) {
+                                                    if (/[\u4e00-\u9fa5]/.test(displayName[i])) {
+                                                        count++;
+                                                        if (count === 10) {
+                                                            index = i + 1;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                displayName = displayName.substring(0, index) + '...';
+                                            }
+                                        } else {
+                                            if (displayName.length > 20) {
+                                                displayName = displayName.substring(0, 17) + '...';
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if (isMacAddress(displayName)) {
+                                        displayName = formatMacAddress(displayName);
+                                    } else if (displayName) {
+                                        if (hasChinese(displayName)) {
+                                            var chineseChars = displayName.match(/[\u4e00-\u9fa5]/g);
+                                            if (chineseChars && chineseChars.length > 5) {
+                                                var count = 0;
+                                                var index = 0;
+                                                for (var i = 0; i < displayName.length; i++) {
+                                                    if (/[\u4e00-\u9fa5]/.test(displayName[i])) {
+                                                        count++;
+                                                        if (count === 5) {
+                                                            index = i + 1;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                displayName = displayName.substring(0, index) + '...';
+                                            }
+                                        } else {
+                                            if (displayName.length > 12) {
+                                                var front = displayName.substring(0, 6);
+                                                var back = displayName.substring(displayName.length - 6);
+                                                displayName = front + '...' + back;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                return displayName + '(' + totalTraffic + ')';
+                            }
+                            return '';
+                        },
+                    distance: 3,
+                    overflow: 'truncate',
+                    width: 130
+                }
+            }
+        ]
+        });
+        resizeDashboardCharts();
+    }
+
+
+//]]></script>

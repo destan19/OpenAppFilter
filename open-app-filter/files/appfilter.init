@@ -1,27 +1,112 @@
 #!/bin/sh /etc/rc.common
+. /usr/share/libubox/jshn.sh
+. /lib/functions.sh
 
 START=96
 USE_PROCD=1
-OAFD_BIN="/usr/bin/oafd"
-FEATURE_FILE="/tmp/feature.cfg"
+FWXD_BIN="/usr/bin/oafd"
+CUSTOM_FEATURE_FILE="/etc/fwxd/custom_feature.cfg"
+LEGACY_CUSTOM_FEATURE_FILE="/etc/custom_feature.cfg"
+
+ensure_config_file()
+{
+	local file="$1"
+
+	[ -e "$file" ] && return
+	mkdir -p /etc/config
+	cat > "$file"
+	chmod 0644 "$file"
+}
+
+ensure_default_configs()
+{
+	ensure_config_file /etc/config/appfilter <<'EOF'
+EOF
+
+	ensure_config_file /etc/config/appfilter_whitelist <<'EOF'
+EOF
+
+	ensure_config_file /etc/config/fwx <<'EOF'
+config global global
+	option lan_ifname 'br-lan'
+	option tcp_rst '1'
+	option theme_mode '1'
+	option feature_token ''
+
+config appfilter appfilter
+	option enable 1
+
+config macfilter macfilter
+	option enable 1
+
+config record 'record'
+	option enable '1'
+	option record_time '3'
+	option app_valid_time '3'
+	option history_data_size '10'
+	option history_data_path '/tmp/oaf'
+	option base_data_path '/tmp/oaf'
+
+config network network
+	option work_mode 0
+
+config dashboard 'dashboard'
+
+config advanced 'advanced'
+	option disable_hnat '0'
+
+config status 'status'
+	option notice_status '0'
+EOF
+
+	ensure_config_file /etc/config/fwx_record <<'EOF'
+config whitelist 'whitelist'
+EOF
+
+	ensure_config_file /etc/config/macfilter <<'EOF'
+config global 'global'
+	option enable '1'
+EOF
+
+	ensure_config_file /etc/config/macfilter_whitelist <<'EOF'
+EOF
+
+	ensure_config_file /etc/config/mac_blacklist <<'EOF'
+config settings 'base'
+EOF
+
+	ensure_config_file /etc/config/user_info <<'EOF'
+EOF
+}
 
 stop_service(){
 	killall -9 oafd
+	killall -9 rule_manager
 }
 
 start_service(){
-	test -f $FEATURE_FILE &&{
-		rm $FEATURE_FILE
-	}
+	ensure_default_configs
 
-	if [ ! -f /etc/appfilter/feature.cfg ]; then
-		cp /etc/appfilter/feature_cn.cfg /etc/appfilter/feature.cfg
+	lsmod |grep "oaf" >/dev/null
+	if [ $? -ne 0 ];then
+		modprobe oaf
 	fi
-	hnat.sh 1
-	ln -s /etc/appfilter/feature.cfg $FEATURE_FILE
+
+	[ -x /usr/bin/hnat.sh ] && /usr/bin/hnat.sh 1
+
+	if [ -s "$LEGACY_CUSTOM_FEATURE_FILE" ] && [ ! -s "$CUSTOM_FEATURE_FILE" ]; then
+		mv -f "$LEGACY_CUSTOM_FEATURE_FILE" "$CUSTOM_FEATURE_FILE"
+		chmod 0644 "$CUSTOM_FEATURE_FILE"
+	fi
 	procd_open_instance
 	procd_set_param respawn 60 5 5
 	procd_set_param stderr 1
-	procd_set_param command "$OAFD_BIN"
+	procd_set_param command "$FWXD_BIN"
+	procd_close_instance
+	
+	procd_open_instance
+	procd_set_param respawn 60 5 5
+	procd_set_param stderr 1
+	procd_set_param command "/usr/bin/rule_manager"
 	procd_close_instance
 }

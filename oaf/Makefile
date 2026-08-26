@@ -9,17 +9,15 @@ PKG_AUTOLOAD:=oaf
 RSTRIP:=:
 
 define KernelPackage/oaf
-  SECTION:=TT Apps
-  CATEGORY:=TT Apps
-  TITLE:=OAF kernel DPI driver
+  SUBMENU:=Netfilter Extensions
+  TITLE:=OAF netfilter module
   FILES:=$(PKG_BUILD_DIR)/oaf.ko 
   DEPENDS:=+kmod-ipt-conntrack
   KCONFIG:=
-  # AUTOLOAD:=$(call AutoLoad,0,$(PKG_AUTOLOAD))
 endef
 
 define KernelPackage/oaf/description
-  open appfilter kernel module 
+  oaf netfilter module 
 endef
 
 KCFLAGS := -Wno-error=missing-prototypes \
@@ -29,7 +27,9 @@ KCFLAGS := -Wno-error=missing-prototypes \
            -Wno-error=implicit-fallthrough \
            -Wno-error=missing-braces \
            -Wno-error=parentheses \
-           -Wno-error=format
+           -Wno-error=format \
+           -Wno-frame-larger-than
+
 
 MAKE_OPTS:= \
 	$(KERNEL_MAKE_FLAGS) \
