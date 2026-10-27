@@ -44,7 +44,6 @@
 #include <libubox/list.h>
 
 extern fwx_status_t g_fwx_status;
-extern void reload_oaf_rule(void);
 
 static int ensure_feature_data_loaded(void)
 {
@@ -115,10 +114,6 @@ void ubus_response_json(struct ubus_context *ctx, struct ubus_request_data *req,
     blobmsg_add_object(&b_buf, response);
     ubus_send_reply(ctx, req, b_buf.head);
     blob_buf_free(&b_buf);
-}
-
-void reload_oaf_rule(){
-    system("/usr/bin/oaf_rule reload");
 }
 
 void get_hostname_by_mac(char *mac, char *hostname)
@@ -2766,7 +2761,6 @@ struct json_object *fwx_api_set_nickname(struct json_object *req_obj) {
     }
 
     fwx_uci_commit(uci_ctx, "user_info");
-    reload_oaf_rule();
     uci_free_context(uci_ctx);
 
     return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
@@ -4271,7 +4265,6 @@ static int handle_set_nickname(struct ubus_context *ctx, struct ubus_object *obj
 
   
     fwx_uci_commit(uci_ctx, "user_info");
-    reload_oaf_rule();
 
     uci_free_context(uci_ctx);
     struct blob_buf b = {};
@@ -4358,7 +4351,6 @@ static int handle_add_whitelist_user(struct ubus_context *ctx, struct ubus_objec
         fwx_uci_set_value(uci_ctx, "appfilter.@whitelist[-1].mac", (char *)json_object_get_string(mac_obj));
     }
     fwx_uci_commit(uci_ctx, "appfilter");
-    reload_oaf_rule();
 
     uci_free_context(uci_ctx);
     struct blob_buf b = {};
@@ -4407,7 +4399,6 @@ static int handle_del_whitelist_user(struct ubus_context *ctx, struct ubus_objec
     }
 
     fwx_uci_commit(uci_ctx, "appfilter");
-    reload_oaf_rule();
 
     uci_free_context(uci_ctx);
     struct blob_buf b = {};
