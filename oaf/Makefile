@@ -21,6 +21,7 @@ define KernelPackage/oaf/description
 endef
 
 KCFLAGS := -Wno-error=missing-prototypes \
+           -Wno-error=strict-prototypes \
            -Wno-error=missing-declarations \
            -Wno-error=unused-variable \
            -Wno-error=declaration-after-statement \
