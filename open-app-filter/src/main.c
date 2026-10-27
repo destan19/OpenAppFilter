@@ -32,8 +32,8 @@ int current_log_level = LOG_LEVEL_WARN;
 //int current_log_level = LOG_LEVEL_INFO;
 int g_fwxd_debug_mode = 0;
 
-#define CMD_GET_LAN_IP_FMT   "ifconfig %s | grep 'inet addr' | awk '{print $2}' | awk -F: '{print $2}'"
-#define CMD_GET_LAN_MASK_FMT "ifconfig %s | grep 'inet addr' | awk '{print $4}' | awk -F: '{print $2}'"
+#define CMD_GET_LAN_IP_FMT   "ifconfig %s 2>/dev/null | grep 'inet addr' | awk '{print $2}' | awk -F: '{print $2}'"
+#define CMD_GET_LAN_MASK_FMT "ifconfig %s 2>/dev/null | grep 'inet addr' | awk '{print $4}' | awk -F: '{print $2}'"
 #define CLIENT_BACKUP_SYNC_INTERVAL_SEC 600
 int g_fwx_config_chage = 1;
 int g_hnat_init = 0;
@@ -294,7 +294,7 @@ void update_lan_ip(void){
     if (!ctx)
         return;
 	
-    int ret = fwx_uci_get_value(ctx, "appfilter.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
+    int ret = fwx_uci_get_value(ctx, "fwx.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
     if (ret != 0){
         strcpy(lan_ifname, "br-lan");
     }
