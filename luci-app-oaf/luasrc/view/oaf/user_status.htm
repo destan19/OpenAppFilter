@@ -159,12 +159,22 @@
 		function getAllUsersData(page) {
 			new XHR().get("<%=url('admin/services/oaf/api/get_all_users')%>", {flag: 3, page: page, page_size: page_size},
 				function (x, data) {
+					var scrollContainer = document.querySelector('.user-status-content');
+					var scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+					var scrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
+					var pageScrollX = window.scrollX;
+					var pageScrollY = window.scrollY;
 					user_list_data = data.data;
 					total_num = data.data.total_num || 0;
 					total_page = data.data.total_page || 1;
 					cur_page = data.data.page || 1;
 					render_user_list(user_list_data);
 					render_pagination();
+					if (scrollContainer) {
+						scrollContainer.scrollTop = scrollTop;
+						scrollContainer.scrollLeft = scrollLeft;
+					}
+					window.scrollTo(pageScrollX, pageScrollY);
 				}
 			);
 		}
