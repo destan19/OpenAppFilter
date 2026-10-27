@@ -6,7 +6,7 @@ LUCI_DEPENDS:=+appfilter +kmod-oaf +luci-compat +luci-lib-jsonc
 
 PKG_NAME:=luci-app-oaf
 PKG_VERSION:=7.0
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 include $(TOPDIR)/feeds/luci/luci.mk
 

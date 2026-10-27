@@ -5,7 +5,7 @@
 */
 #ifndef __FWX_H__
 #define __FWX_H__
-#define FWX_VERSION "6.0.1"
+#define FWX_VERSION "7.0.2"
 #define MAX_FWX_NL_MSG_LEN 1024
 #define FWX_TIMER_INTERVAL 1
 #define MAX_HOST_LEN 40
